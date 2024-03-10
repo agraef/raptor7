@@ -1,0 +1,47 @@
+#N canvas 778 209 614 379 12;
+#X obj 40 120 cnv 15 156 127 empty empty empty 20 12 0 14 #e0e0e0 #404040
+0;
+#X msg 50 130 4 4;
+#X msg 100 130 3 4;
+#X msg 50 160 6 8;
+#X msg 100 160 7 8;
+#X msg 150 160 9 8;
+#X msg 150 220 11 9;
+#X msg 50 220 12 12;
+#X msg 150 130 4 4 3;
+#X msg 50 190 7 16;
+#X msg 100 190 9 16;
+#X msg 150 190 15 16;
+#X obj 50 259 t a;
+#X obj 100 259 t a;
+#X obj 150 259 t a;
+#X text 220 160 8th notes \, e.g. 6/8 = 2 groups of 3;
+#X text 220 190 16th notes \, e.g. 15/16 = 3 groups of 5;
+#X obj 100 309 outlet;
+#X text 220 130 common 4-based meters: 4/4 \, 3/4 \, 4/4 triplets;
+#X text 220 220 You can also use even more exotic time signatures such
+as 12/12 (which is effectively the same as 4 4 3) and 11/9 (= 11 3
+3). CAVEAT: Note that \, due to rounding issues \, denominators such
+as 9 that do *not* divide 96 = 3*2^5 evenly \, will not work well with
+MIDI clock sync \, resulting in a tempo which is slightly off. (Raptor's
+internal time base will work alright with these \, too.), f 52;
+#X text 40 20 Using the theories of Clarence Barlow \, raptor lets
+you use pretty much any time signature whatsoever \, and will produce
+convincing rhythms for any of them. Time signatures are specified as
+pairs n m \, or as triples n m d \, where d denotes a subdivision of
+the base pulse. (E.g. \, d=2 denotes duplets \, d=3 triplets \, d=5
+quintuplets etc.), f 79;
+#X connect 1 0 12 0;
+#X connect 2 0 13 0;
+#X connect 3 0 12 0;
+#X connect 4 0 13 0;
+#X connect 5 0 14 0;
+#X connect 6 0 14 0;
+#X connect 7 0 12 0;
+#X connect 8 0 14 0;
+#X connect 9 0 12 0;
+#X connect 10 0 13 0;
+#X connect 11 0 14 0;
+#X connect 12 0 17 0;
+#X connect 13 0 17 0;
+#X connect 14 0 17 0;
