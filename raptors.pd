@@ -30,7 +30,7 @@
 #X text 40 250 MIDI setup \, click the subpatch to view;
 #X obj 40 50 raptor7 pizz 1;
 #X obj 40 80 raptor7 weirdmod 2;
-#X msg 40 210 meter 11 8 \, tempo 132 \, latch 1;
+#X msg 40 210 meter 12 8 \, tempo 132 \, latch 1;
 #X connect 0 0 2 0;
 #X connect 0 0 4 0;
 #X connect 0 0 11 0;
