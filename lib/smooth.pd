@@ -1,0 +1,66 @@
+#N canvas 439 272 455 460 12;
+#X obj 40 20 inlet;
+#X obj 40 240 t f f;
+#X obj 40 80 t b f;
+#X obj 40 190 f;
+#X obj 40 215 expr $f3*$f1+(1-$f3)*$f2;
+#N canvas 595 212 510 541 init-filter 0;
+#X obj 30 50 swap;
+#X obj 30 75 pack f f;
+#X obj 30 100 route 0 1;
+#X obj 30 20 inlet;
+#X obj 30 125 t b f f;
+#X obj 30 150 outlet;
+#X obj 80 150 outlet;
+#X obj 80 20 tgl 15 0 empty empty empty 17 7 0 10 #fcfcfc #000000 #000000
+0 1;
+#X text 100 70 Branch 0 is only run once \, when we haven't received
+any values yet \, to get the filter initialized via outlet #2. Subsequently
+\, on branch 1 the current value is simply passed through on outlet
+#1., f 56;
+#X text 30 200 Non-standard order: During initialization \, outlet
+#2 gets the current value \, then outlet #1.;
+#X obj 106 20 inlet;
+#X connect 0 0 1 0;
+#X connect 0 1 1 1;
+#X connect 1 0 2 0;
+#X connect 2 0 4 0;
+#X connect 2 1 5 0;
+#X connect 3 0 0 0;
+#X connect 4 0 7 0;
+#X connect 4 1 5 0;
+#X connect 4 2 6 0;
+#X connect 7 0 0 1;
+#X connect 10 0 7 0;
+#X restore 40 50 pd init-filter;
+#X obj 40 269 outlet;
+#X obj 135 20 bng 15 250 50 0 empty empty empty 17 7 0 10 #fcfcfc #000000
+#000000;
+#X obj 90 20 inlet;
+#X obj 270 20 loadbang;
+#X obj 270 153 expr exp(-1/$f1);
+#X floatatom 270 175 5 0 0 0 - - -, f 5;
+#X floatatom 270 130 5 0 0 0 - - -, f 5;
+#X text 310 175 filter gain;
+#X obj 270 45 f \$1;
+#X obj 270 74 sel 0;
+#X msg 270 103 0.5;
+#X connect 0 0 5 0;
+#X connect 1 0 6 0;
+#X connect 1 1 3 1;
+#X connect 2 0 3 0;
+#X connect 2 1 4 1;
+#X connect 3 0 4 0;
+#X connect 4 0 1 0;
+#X connect 5 0 2 0;
+#X connect 5 1 3 1;
+#X connect 7 0 5 1;
+#X connect 8 0 7 0;
+#X connect 9 0 14 0;
+#X connect 10 0 11 0;
+#X connect 11 0 4 2;
+#X connect 12 0 10 0;
+#X connect 14 0 15 0;
+#X connect 15 0 16 0;
+#X connect 15 1 12 0;
+#X connect 16 0 12 0;

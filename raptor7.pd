@@ -13,7 +13,7 @@
 #000000 0 1;
 #X obj 310 20 raptor-panel \$0;
 #X obj 280 54 vradio 15 0 0 20 empty \$0-presetno empty 0 -8 0 10 #fcfcfc
-#000000 #000000 0;
+#000000 #000000 15;
 #X msg 144 240 4 4;
 #X msg 174 240 3 4;
 #N canvas 694 510 450 300 meter 0;
@@ -86,7 +86,7 @@
 #X msg 30 120 stop;
 #X text 90 120 special ops;
 #X text 153 318 tempo (bpm);
-#X floatatom 220 340 5 30 960 0 - - -, f 5;
+#X floatatom 220 340 5 30 960 0 - #0-tempo-sync -, f 5;
 #X text 130 156 meter examples (open the subpatch below for more examples)
 , f 22;
 #X obj 150 206 meter-examples;
@@ -251,21 +251,40 @@ SPP, f 30;
 #X obj 20 230 outlet;
 #X obj 120 20 inlet;
 #X obj 20 94 expr 60000/$f1*4/$f2;
+#X obj 180 20 inlet;
+#X floatatom 80 200 5 0 0 0 - - -, f 5;
+#X obj 180 45 bng 15 250 50 0 empty empty empty 17 7 0 10 #fcfcfc #000000
+#000000;
+#X obj 80 175 expr rint($f1);
+#X obj 80 150 smooth 5;
+#X text 200 100 We do another final smoothing step and round to integer
+bpm values here \, in order to deal with the seemingly inevitable jitter
+in the MIDI clocks. The argument of smooth is the filter coefficient.
+Larger values reduce jitter at the cost of increased response times.
+5 seems to be a good value on my Linux system \, but YMMV., f 37;
+#X obj 80 70 loadbang;
+#X msg 80 125 120;
 #X connect 0 0 7 0;
-#X connect 1 0 2 1;
+#X connect 1 0 12 0;
 #X connect 2 0 5 0;
 #X connect 3 0 0 0;
 #X connect 4 0 2 0;
 #X connect 6 0 7 1;
 #X connect 7 0 1 0;
+#X connect 8 0 10 0;
+#X connect 9 0 2 1;
+#X connect 10 0 12 1;
+#X connect 11 0 9 0;
+#X connect 12 0 11 0;
+#X connect 14 0 15 0;
+#X connect 15 0 12 0;
 #X restore 40 473 pd tempo;
-#X obj 86 500 tgl 15 0 empty empty empty 17 7 0 10 #fcfcfc #000000
-#000000 0 1;
+#X obj 100 440 tgl 15 1 empty empty empty 17 7 0 10 #fcfcfc #000000
+#000000 1 1;
 #X floatatom 40 498 5 0 0 0 - - -, f 5;
-#X msg 40 545 tempo \$1;
-#X obj 40 570 s all-arp;
-#X text 10 440 auto-update tempo;
-#X obj 40 520 spigot 0;
+#X obj 40 520 spigot;
+#X obj 40 547 s \$0-tempo-sync;
+#X text 30 440 tempo sync;
 #X connect 0 0 65 0;
 #X connect 1 0 61 0;
 #X connect 3 0 14 0;
@@ -302,6 +321,7 @@ SPP, f 30;
 #X connect 33 2 59 0;
 #X connect 35 0 71 1;
 #X connect 36 0 56 0;
+#X connect 36 0 71 3;
 #X connect 37 0 38 0;
 #X connect 38 0 41 0;
 #X connect 39 0 37 0;
@@ -339,10 +359,9 @@ SPP, f 30;
 #X connect 68 0 69 0;
 #X connect 69 0 70 0;
 #X connect 71 0 73 0;
-#X connect 72 0 77 1;
-#X connect 73 0 77 0;
+#X connect 72 0 74 1;
+#X connect 73 0 74 0;
 #X connect 74 0 75 0;
-#X connect 77 0 74 0;
 #X coords 0 -1 1 1 167 21 1 135 17;
 #X restore 30 30 pd time;
 #N canvas 325 568 450 300 input 0;
