@@ -1714,6 +1714,10 @@ local params = {
    { type = "input", name = "latch", min = 0, max = 1, default = 0, toggled = true, doc = "toggle latch mode" },
    { type = "input", name = "up", min = -2, max = 2, default = 1, integer = true, doc = "octave range up" },
    { type = "input", name = "down", min = -2, max = 2, default = -1, integer = true, doc = "octave range down" },
+   -- This isn't in the Ardour plugin, but it's occasionally useful to have
+   -- the option to transpose notes a given number of semitones up or down in
+   -- the stand-alone version, so that's what this option is for.
+   { type = "input", name = "transp", min = -64, max = 64, default = 0, integer = true, doc = "transpose by given number of semitones" },
    -- Raptor's usual default for the pattern is 0 = random, but 1 = up
    -- seems to be a more sensible choice.
    { type = "input", name = "mode", min = 0, max = 5, default = 1, enum = true, doc = "pattern style",
@@ -1856,7 +1860,7 @@ end
 function raptor:set_param_tables()
    -- this initializes the parameter setter callbacks; this needs to be redone
    -- after reloading the object (pdx.reload)
-   self.param_set = { self.set, self.set, self.set, self.arp.set_latch, self.arp.set_up, self.arp.set_down, self.arp.set_mode, self.arp.set_raptor, self.arp.set_minvel, self.arp.set_maxvel, self.arp.set_velmod, self.arp.set_gain, self.arp.set_gate, self.arp.set_gatemod, self.arp.set_wmin, self.arp.set_wmax, self.arp.set_pmin, self.arp.set_pmax, self.arp.set_pmod, self.arp.set_hmin, self.arp.set_hmax, self.arp.set_hmod, self.arp.set_pref, self.arp.set_prefmod, self.arp.set_smin, self.arp.set_smax, self.arp.set_smod, self.arp.set_nmax, self.arp.set_nmod, self.arp.set_uniq, self.arp.set_pitchhi, self.arp.set_pitchlo, self.arp.set_pitchtracker, self.set, self.set, arp_set_loopsize, self.arp.set_loop, self.set }
+   self.param_set = { self.set, self.set, self.set, self.arp.set_latch, self.arp.set_up, self.arp.set_down, self.set, self.arp.set_mode, self.arp.set_raptor, self.arp.set_minvel, self.arp.set_maxvel, self.arp.set_velmod, self.arp.set_gain, self.arp.set_gate, self.arp.set_gatemod, self.arp.set_wmin, self.arp.set_wmax, self.arp.set_pmin, self.arp.set_pmax, self.arp.set_pmod, self.arp.set_hmin, self.arp.set_hmax, self.arp.set_hmod, self.arp.set_pref, self.arp.set_prefmod, self.arp.set_smin, self.arp.set_smax, self.arp.set_smod, self.arp.set_nmax, self.arp.set_nmod, self.arp.set_uniq, self.arp.set_pitchhi, self.arp.set_pitchlo, self.arp.set_pitchtracker, self.set, self.set, arp_set_loopsize, self.arp.set_loop, self.set }
 end
 
 function raptor:initialize(sel, atoms)
@@ -1903,6 +1907,7 @@ function raptor:initialize(sel, atoms)
    self.inchan = 0
    self.outchan = 0
    self.chan = 1
+   self.transp = 0
 
    -- midi learn
    self.midi_map = {}
@@ -1992,7 +1997,9 @@ function raptor:in_1_bang()
       -- output the current pulse number and number of beats on outlet #2
       self:outlet(2, "list", { p, n })
       -- output the notes on outlet #1
-      for i, num in ipairs(notes) do
+      for i = 1, #notes do
+	 local num = notes[i]+self.transp -- apply transposition
+	 notes[i] = num
 	 if debug >= 3 then
 	    print(string.format("[out] note on %d %d", num, vel))
 	 end
@@ -2221,8 +2228,9 @@ end
 
 function raptor:in_1_note(atoms)
    if self.bypass ~= 0 then
-      -- pass through incoming notes
-      self:outlet(1, "note", atoms)
+      -- pass through incoming notes (with transposition applied)
+      local num, val, ch = table.unpack(atoms)
+      self:outlet(1, "note", {num+self.transp, val, ch})
    else
       local num, val, ch = table.unpack(atoms)
       if not ch then
@@ -2303,7 +2311,8 @@ function raptor:in_1_touch(atoms)
 end
 
 function raptor:in_1_polytouch(atoms)
-   self:outlet(1, "polytouch", atoms)
+   local num, val, ch = table.unpack(atoms)
+   self:outlet(1, "polytouch", {num+self.transp, val, ch})
 end
 
 function raptor:in_1_sysex(atoms)
