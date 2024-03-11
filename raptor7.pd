@@ -346,21 +346,21 @@ Larger values reduce jitter at the cost of increased response times.
 #N canvas 768 473 450 300 args 0;
 #X obj 20 30 loadbang;
 #X obj 20 55 del 300;
-#X obj 90 110 list append \$1;
-#X obj 90 135 sel 0;
-#X msg 90 170 preset \$1;
-#X obj 20 80 t b b;
-#X obj 20 110 f \$2;
+#X obj 20 110 list append \$1;
 #X obj 20 135 sel 0;
-#X msg 20 170 outchan \$1;
+#X msg 20 170 preset \$1;
+#X obj 20 80 t b b;
+#X obj 100 110 f \$2;
+#X obj 100 135 sel 0;
+#X msg 100 170 outchan \$1;
 #X obj 20 230 outlet;
 #X connect 0 0 1 0;
 #X connect 1 0 5 0;
 #X connect 2 0 3 0;
 #X connect 3 1 4 0;
 #X connect 4 0 9 0;
-#X connect 5 0 6 0;
-#X connect 5 1 2 0;
+#X connect 5 0 2 0;
+#X connect 5 1 6 0;
 #X connect 6 0 7 0;
 #X connect 7 1 8 0;
 #X connect 8 0 9 0;
@@ -401,7 +401,7 @@ Larger values reduce jitter at the cost of increased response times.
 #000000 #000000;
 #X obj 191 81 bng 25 250 50 0 \$0-play empty empty 17 7 0 10 #fcfcfc
 #000000 #000000;
-#X obj 204 105 ggee/image lib/autodom.gif 0;
+#X obj 204 105 ggee/image lib/autodom.gif;
 #X msg 30 80 learn;
 #X msg 30 100 unlearn;
 #X text 93 90 MIDI learn;
