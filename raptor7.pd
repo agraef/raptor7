@@ -397,11 +397,8 @@ Larger values reduce jitter at the cost of increased response times.
 #X connect 3 0 0 0;
 #X connect 4 0 1 1;
 #X restore 30 370 pd output;
-#X obj 191 106 bng 25 250 50 0 \$0-play empty empty 17 7 0 10 #fcfcfc
+#X obj 207 82 bng 25 250 50 0 \$0-play empty empty 17 7 0 10 #fcfcfc
 #000000 #000000;
-#X obj 191 81 bng 25 250 50 0 \$0-play empty empty 17 7 0 10 #fcfcfc
-#000000 #000000;
-#X obj 204 105 ggee/image lib/autodom.gif;
 #X msg 30 80 learn;
 #X msg 30 100 unlearn;
 #X text 93 90 MIDI learn;
@@ -433,6 +430,9 @@ Larger values reduce jitter at the cost of increased response times.
 #X connect 3 0 2 0;
 #X connect 5 0 2 1;
 #X restore 100 370 pd init;
+#X obj 182 77 cnv 15 70 38 empty empty Raptor7 9 17 0 14 #ffffff #404040
+0;
+#X text 193 108 (c) 2024;
 #X connect 3 0 31 0;
 #X connect 3 1 4 0;
 #X connect 3 2 7 0;
@@ -453,5 +453,5 @@ Larger values reduce jitter at the cost of increased response times.
 #X connect 28 0 13 0;
 #X connect 29 0 30 0;
 #X connect 30 0 3 0;
-#X connect 35 0 30 0;
-#X connect 36 0 30 0;
+#X connect 33 0 30 0;
+#X connect 34 0 30 0;
