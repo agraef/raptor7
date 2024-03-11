@@ -182,8 +182,8 @@
 #X floatatom 117 20 3 0 128 0 out #1-outchan -, f 3;
 #X obj 380 620 s \$1-arp;
 #X msg 117 721 outchan \$1;
-#X floatatom 65 20 3 0 128 0 in #1-inchan -, f 3;
-#X msg 65 751 inchan \$1;
+#X floatatom 73 20 3 0 128 0 in #1-inchan -, f 3;
+#X msg 73 751 inchan \$1;
 #X obj 43 236 tgl 15 0 empty \$1-raptor raptor 20 6 0 10 #fcfcfc #000000
 #000000 0 1;
 #X obj 258 22 tgl 15 0 empty \$1-mute M -10 6 0 10 #e8dc1c #000000
@@ -261,6 +261,33 @@ parameter values., f 27;
 #X text 190 347 meter;
 #X floatatom 82 213 4 -64 64 0 transp #1-transp -, f 4;
 #X msg 82 612 transp \$1;
+#X obj 40 20 bng 15 250 50 0 empty \$1-ccmaster empty 17 7 0 10 #fcfcfc
+#202020 #202020;
+#X obj 370 20 tgl 15 0 empty empty empty 17 7 0 10 #fcfcfc #000000
+#000000 0 1;
+#X obj 370 62 s all-arp;
+#N canvas 790 341 450 300 ccmaster 0;
+#X msg 130 106 color \$1 12 12;
+#X obj 130 80 * 18;
+#X obj 130 131 s \$1-ccmaster;
+#X obj 20 50 pack f \$1;
+#X msg 20 75 ccmaster \$1 \$2;
+#X obj 20 20 inlet;
+#X obj 20 100 outlet;
+#X obj 130 20 r \$1-ccmaster-status;
+#X obj 130 45 unpack f f;
+#X msg 240 80 set \$1;
+#X obj 240 105 outlet;
+#X connect 0 0 2 0;
+#X connect 1 0 0 0;
+#X connect 3 0 4 0;
+#X connect 4 0 6 0;
+#X connect 5 0 3 0;
+#X connect 7 0 8 0;
+#X connect 8 0 1 0;
+#X connect 8 1 9 0;
+#X connect 9 0 10 0;
+#X restore 370 40 pd ccmaster;
 #X connect 3 0 4 0;
 #X connect 4 0 74 0;
 #X connect 5 0 6 0;
@@ -370,4 +397,8 @@ parameter values., f 27;
 #X connect 129 0 126 0;
 #X connect 131 0 132 0;
 #X connect 132 0 74 0;
+#X connect 133 0 134 0;
+#X connect 134 0 136 0;
+#X connect 136 0 135 0;
+#X connect 136 1 134 0;
 #X coords 0 -1 1 1 275 371 2 32 15;

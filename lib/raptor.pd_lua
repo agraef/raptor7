@@ -1917,6 +1917,11 @@ function raptor:initialize(sel, atoms)
    self.midi_learn_var = nil
    self:load_map()
 
+   -- ccmaster is a flag which indicates whether we're responding to mapped
+   -- MIDI CC. This is on by default, but can be changed to a single raptor
+   -- instance by clicking the button in the upper left corner of the panel.
+   self.ccmaster = true
+
    -- instance id; this gets initialized later by the dump method, see below
    self.id = nil
 
@@ -2251,8 +2256,9 @@ function raptor:in_1_note(atoms)
    end
 end
 
--- pass through other incoming MIDI messages (CC, pitch bend, etc.)
--- remap the MIDI channel to wherever our note output goes to
+-- other incoming MIDI messages (CC, pitch bend, etc.), including:
+-- pass-through, remap the MIDI channel to wherever our note output goes to
+-- MIDI learn and mapping functionality
 
 function raptor:rechan(atoms)
    -- this should always be true, but if it isn't we simply use the channel
@@ -2277,7 +2283,7 @@ function raptor:in_1_ctl(atoms)
       end
    end
    local var = self:map_get(atoms[2], atoms[3])
-   if var then
+   if var and self.ccmaster then
       -- apply existing mapping
       local val = atoms[1]
       local i = param_i[var]
@@ -2577,6 +2583,30 @@ function raptor:in_1_unlearn()
       self:map_mode(1)
       print("MIDI learn mode, enter CC or wiggle a control")
       print("press learn again to abort")
+   end
+end
+
+function raptor:in_1_ccmaster(atoms)
+   local flag, id = table.unpack(atoms)
+   if type(id) == "number" then
+      id = string.format("%d", id)
+   end
+   if id and self.id then
+      if flag == 0 then
+	 -- omni
+	 self.ccmaster = true
+	 -- give feedback on the panel
+	 pd.send(string.format("%s-ccmaster-status", self.id), "list", {0, 0})
+      else
+	 -- only one raptor is receiving, check whether we're the one
+	 self.ccmaster = id==self.id
+	 -- give feedback on the panel
+	 flag = self.ccmaster and 1 or 0
+	 pd.send(string.format("%s-ccmaster-status", self.id), "list", {flag, flag})
+      end
+   else
+      -- no ids, assume omni
+      self.ccmaster = true
    end
 end
 
