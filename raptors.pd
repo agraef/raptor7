@@ -11,16 +11,16 @@
 #X msg 100 270 ctl 50 8 1 \, ctl 80 8 2;
 #X obj 270 420 declare -path lib;
 #X obj 100 300 midi-output;
-#X text 40 120 additional setup;
-#X text 200 70 This patch illustrates how to set up a multi-piece raptor
-ensemble \, and customize various parameters and MIDI settings along
-the way., f 32;
 #X text 40 20 2 raptors \, each with their own preset and MIDI channel:
 ;
-#X text 270 300 you can also send params to individual raptors like
+#X text 270 280 you can also send params to individual raptors like
 this:, f 22;
-#X msg 270 360 \; pizz-arp inchan 1;
 #X text 100 240 set pan on MIDI channels 1 and 2;
+#X text 200 70 This patch illustrates how to set up a multi-part raptor
+ensemble \, and customize various parameters and MIDI settings along
+the way., f 32;
+#X text 40 120 additional setup:;
+#X msg 270 340 \; pizz-arp inchan 1 \; weirdmod-arp inchan 1;
 #X connect 0 0 1 0;
 #X connect 0 0 7 0;
 #X connect 0 0 8 0;

@@ -2252,6 +2252,16 @@ function raptor:in_1_note(atoms)
 end
 
 -- pass through other incoming MIDI messages (CC, pitch bend, etc.)
+-- remap the MIDI channel to wherever our note output goes to
+
+function raptor:rechan(atoms)
+   -- this should always be true, but if it isn't we simply use the channel
+   -- information in the original message
+   if self.chan > 0 then
+      atoms[3] = self.chan
+   end
+   return atoms
+end
 
 function raptor:in_1_ctl(atoms)
    if self.midi_learn == 1 then
@@ -2289,30 +2299,31 @@ function raptor:in_1_ctl(atoms)
       end
    end
    -- simple pass-through
-   self:outlet(1, "ctl", atoms)
+   self:outlet(1, "ctl", self:rechan(atoms))
 end
 
 function raptor:in_1_pgm(atoms)
    -- kludge: this can be either an SMMF or a parameter set/get message, we
    -- deal with that here on the fly
    if #atoms > 1 then
-      self:outlet(1, "pgm", atoms)
+      self:outlet(1, "pgm", self:rechan(atoms))
    else
       self:in_1("pgm", atoms)
    end
 end
 
 function raptor:in_1_bend(atoms)
-   self:outlet(1, "bend", atoms)
+   self:outlet(1, "bend", self:rechan(atoms))
 end
 
 function raptor:in_1_touch(atoms)
-   self:outlet(1, "touch", atoms)
+   self:outlet(1, "touch", self:rechan(atoms))
 end
 
 function raptor:in_1_polytouch(atoms)
    local num, val, ch = table.unpack(atoms)
-   self:outlet(1, "polytouch", {num+self.transp, val, ch})
+   atoms[2] = atoms[2]+self.transp
+   self:outlet(1, "polytouch", self:rechan(atoms))
 end
 
 function raptor:in_1_sysex(atoms)
