@@ -1,28 +1,31 @@
-#N canvas 321 390 474 458 12;
+#N canvas 321 390 474 511 12;
 #X declare -path lib;
-#X obj 40 150 loadbang;
-#X msg 40 360 \; pizz vis 1;
-#X text 40 330 open the first raptor window;
-#X obj 40 420 s all-arp;
-#X text 100 180 set meter and tempo \, enable latch;
+#X obj 40 180 loadbang;
+#X msg 40 390 \; pizz vis 1;
+#X text 40 360 open the first raptor window;
+#X obj 40 450 s all-arp;
+#X text 100 210 set meter and tempo \, enable latch;
 #X obj 40 50 raptor7 pizz 1;
 #X obj 40 80 raptor7 weirdmod 2;
-#X msg 100 210 meter 12 8 \, tempo 132 \, latch 1;
-#X msg 100 270 ctl 50 8 1 \, ctl 80 8 2;
-#X obj 270 420 declare -path lib;
-#X obj 100 300 midi-output;
-#X text 40 20 2 raptors \, each with their own preset and MIDI channel:
-;
-#X text 270 280 you can also send params to individual raptors like
+#X msg 100 240 meter 12 8 \, tempo 132 \, latch 1;
+#X msg 100 300 ctl 50 8 1 \, ctl 80 8 2;
+#X obj 270 450 declare -path lib;
+#X obj 100 330 midi-output;
+#X text 270 310 you can also send params to individual raptors like
 this:, f 22;
-#X text 100 240 set pan on MIDI channels 1 and 2;
+#X text 100 270 set pan on MIDI channels 1 and 2;
 #X text 200 70 This patch illustrates how to set up a multi-part raptor
 ensemble \, and customize various parameters and MIDI settings along
 the way., f 32;
-#X text 40 120 additional setup:;
-#X msg 270 340 \; pizz-arp inchan 1 \; weirdmod-arp inchan 1;
+#X text 40 150 additional setup:;
+#X text 40 20 3 raptors \, each with their own preset and MIDI channel:
+;
+#X obj 40 110 raptor7 tr808 10;
+#X msg 270 370 \; pizz-arp inchan 1 \; weirdmod-arp inchan 1 \; tr808-arp
+inchan 10;
 #X connect 0 0 1 0;
 #X connect 0 0 7 0;
 #X connect 0 0 8 0;
+#X connect 0 0 17 0;
 #X connect 7 0 3 0;
 #X connect 8 0 10 0;
