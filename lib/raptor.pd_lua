@@ -908,14 +908,12 @@ function arpeggio:loop_get()
       res = self.loop[p+1]
       -- we always *read* exactly n steps in a cyclic buffer
       self.loopidx = (p+1) % n
+      local a, b = p // self.beats + 1, n // self.beats
+      self.loop_counter = {p, a, b}
       if p % self.beats == 0 then
-	 local a, b = p // self.beats + 1, n // self.beats
-	 print(string.format("loop: playing bar %d/%d", a, b))
+	 --print(string.format("loop: playing bar %d/%d", a, b))
       end
    end
-   -- we maybe should return the current loopidx here which is used to give
-   -- visual feedback about the loop cycle in the Pd external; not sure how to
-   -- do this in Ardour, though
    return res
 end
 
@@ -980,12 +978,12 @@ function arpeggio:loop_file(file, cmd)
 	    self.loopidx = self.idx % math.max(1, self.loopsize)
 	    self.loopstate = 1
 	    print(string.format("loop: %s: loaded %d steps", file, #loop))
-	    return self.loopsize
+	    return "loopsize", self.loopsize
 	 end
       end
    elseif cmd == 2 then
       -- check that file exists, report result
-      return fexists(path) and 1 or 0
+      return "loopcheck", fexists(path) and 1 or 0
    end
 end
 
@@ -1030,7 +1028,7 @@ function arpeggio:set_loopdir(x)
    end
    if type(x) == "table" and type(x[1]) == "string" then
       -- directory for file operations
-      self.loopdir = x[1] .. "/"
+      self.loopdir = x[1]
    end
 end
 
@@ -1092,6 +1090,7 @@ function arpeggio:pulse()
    -- so that a forced legato will still work if notes are filtered
    -- out. (Maybe this needs reworking in the Ardour plugin as well?)
    local gate, notes = self.gate, nil
+   self.loop_counter = nil
    if self.loopstate == 1 and self.loopsize > 0 then
       -- notes come straight from the loop, input is ignored
       notes, vel, gate = table.unpack(self:loop_get())
@@ -1888,6 +1887,9 @@ function raptor:initialize(sel, atoms)
    -- create the arpeggiator (default meter)
    self.arp = arpeggio:new(self.n * self.division)
 
+   -- set the base directory for the looper
+   self.arp:set_loopdir(self._canvaspath)
+
    -- Debugging output from the arpeggiator object (bitmask):
    -- 1 = pattern, 2 = input, 4 = output (e.g., 7 means "all")
    -- This is intended for debugging purposes only. it spits out *a lot* of
@@ -2022,6 +2024,10 @@ function raptor:in_1_bang()
 	 -- monitor memory usage of the Lua interpreter
 	 print(string.format("mem: %0.2f KB", collectgarbage("count")))
       end
+   end
+   -- provide feedback to the looper, if any
+   if self.arp.loop_counter then
+      self:outlet(1, "loopcounter", self.arp.loop_counter)
    end
 end
 
@@ -2177,7 +2183,7 @@ function raptor:in_1_save(atoms)
       self.user_preset_i[name] = i
       print(string.format("saved preset #%d: %s", i+n_presets, name))
       -- write the new preset to the preset file
-      local fname = self._canvaspath .. "lib/presets"
+      local fname = self._canvaspath .. "data/presets"
       local fp = io.open(fname, "a")
       fp:write(inspect(preset), "\n")
       fp:close()
@@ -2193,7 +2199,7 @@ function raptor:load_presets()
    -- load the user presets from the preset file if present
    self.user_presets = {}
    self.user_preset_i = {}
-   local fname = self._canvaspath .. "lib/presets"
+   local fname = self._canvaspath .. "data/presets"
    local fp = io.open(fname, "r")
    if fp then
       local line = fp:read()
@@ -2449,7 +2455,7 @@ end
 -- midi learn
 
 function raptor:load_map()
-   local fname = self._canvaspath .. "lib/midi_map.lua"
+   local fname = self._canvaspath .. "data/midi_map.lua"
    local fp = io.open(fname, "r")
    if fp then
       local midi_map = fp:read("a")
@@ -2476,7 +2482,7 @@ function raptor:save_map()
       end
    end
    self.midi_map = midi_map
-   local fname = self._canvaspath .. "lib/midi_map.lua"
+   local fname = self._canvaspath .. "data/midi_map.lua"
    local fp = io.open(fname, "w")
    if fp then
       fp:write(_inspect(self.midi_map))
@@ -2665,6 +2671,22 @@ function raptor:param(var, val)
 end
 
 function raptor:in_1(sel, atoms)
+   if sel == "loop" and type(atoms[1]) == "string" then
+      -- loop file command, this needs special treatment
+      local res, val = self.arp:loop_file(table.unpack(atoms))
+      if res then
+	 if res == "loopsize" then
+	    -- new loop was loaded, internal state is already updated, but we
+	    -- still need to update panel and looper applet
+	    val = math.floor(val/self.arp.beats)
+	    self:outlet(1, res, {val})
+	 else
+	    -- result of loop filename query
+	    self:outlet(1, res, {val})
+	 end
+      end
+      return
+   end
    if self.midi_learn == 1 then
       self.midi_learn_var = sel
       self:learn()
