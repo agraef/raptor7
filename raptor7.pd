@@ -10,7 +10,7 @@
 #000000 0 1;
 #X obj 310 27 raptor-panel \$0;
 #X obj 280 58 vradio 15 0 0 20 \$0-presetno-set \$0-presetno empty
-0 -8 0 10 #fcfcfc #000000 #000000 12;
+0 -8 0 10 #fcfcfc #000000 #000000 0;
 #X msg 144 250 4 4;
 #X msg 174 250 3 4;
 #N canvas 694 510 450 300 meter 0;
@@ -64,7 +64,7 @@
 #X obj 40 143 bng 15 50 10 0 pulse empty empty 17 7 0 10 #fcfcfc #000000
 #000000;
 #X obj 350 44 tgl 15 0 empty \$0-metro empty 17 7 0 10 #fcfcfc #000000
-#000000 1 1;
+#000000 0 1;
 #X obj 170 120 != 0;
 #X obj 260 120 == 0;
 #X obj 170 145 s \$0-master;
@@ -203,7 +203,7 @@ SPP, f 30;
 #X obj 185 380 mod 4;
 #X obj 350 290 s \$0-metro;
 #X obj 210 20 tgl 15 0 empty \$0-play empty 17 7 0 10 #fcfcfc #000000
-#000000 1 1;
+#000000 0 1;
 #X obj 170 90 t f f;
 #X obj 350 120 t f f;
 #X obj 350 150 sel 0;
@@ -331,12 +331,12 @@ Larger values reduce jitter at the cost of increased response times.
 #X connect 74 0 75 0;
 #X coords 0 -1 1 1 167 21 1 135 17;
 #X restore 30 30 pd time;
-#N canvas 325 568 450 325 input 0;
+#N canvas 349 256 423 356 input 0;
 #X obj 20 20 midi-input;
-#X obj 20 60 r \$0-arp;
-#X obj 20 40 r all-arp;
-#X obj 20 190 outlet;
-#X obj 20 110 inlet;
+#X obj 20 90 r \$0-arp;
+#X obj 20 70 r all-arp;
+#X obj 20 210 outlet;
+#X obj 20 140 inlet;
 #N canvas 735 555 450 300 args 0;
 #X obj 20 30 loadbang;
 #X obj 20 85 del 300;
@@ -371,17 +371,137 @@ Larger values reduce jitter at the cost of increased response times.
 #X connect 13 1 14 0;
 #X connect 14 0 11 1;
 #X connect 15 0 11 0;
-#X restore 40 150 pd args;
-#X obj 120 20 r \$0-midi-learn;
-#X obj 120 45 tgl 15 0 empty empty empty 17 7 0 10 #fcfcfc #000000
+#X restore 40 170 pd args;
+#X obj 130 20 r \$0-midi-learn;
+#X obj 130 45 tgl 15 0 empty empty empty 17 7 0 10 #fcfcfc #000000
 #000000 0 1;
-#X obj 120 68 sel 0 1;
-#X msg 120 93 10;
-#X msg 120 118 color \$1 12;
-#X obj 120 143 s \$0-learn-mode;
-#X msg 150 93 6;
-#X obj 20 80 r \$0-myarp;
-#X connect 0 0 3 0;
+#X obj 130 68 sel 0 1;
+#X msg 130 93 10;
+#X msg 130 118 color \$1 12;
+#X obj 130 143 s \$0-learn-mode;
+#X msg 160 93 6;
+#X obj 20 110 r \$0-myarp;
+#N canvas 592 327 531 631 launchcontrol 0;
+#X obj 94 200 route note ctl;
+#X obj 64 80 r \$0-arp-config;
+#X obj 64 105 route launchcontrol;
+#X obj 64 130 t f f;
+#X obj 64 155 == 0;
+#X obj 20 180 spigot 1;
+#X obj 127 155 == 1;
+#X obj 94 180 spigot;
+#X obj 20 130 t a a;
+#X obj 94 250 route 9;
+#X msg 94 225 \$3 \$1 \$2;
+#X obj 94 275 route 105;
+#X obj 94 300 > 0;
+#X msg 170 275 note \$2 \$3 \$1;
+#X obj 145 340 spigot;
+#X obj 145 365 unpack f f;
+#X obj 202 390 > 0;
+#X obj 145 420 spigot;
+#X obj 145 505 sel 73 74 75 76 89 90 91 92;
+#X msg 145 530 1;
+#X msg 175 530 2;
+#X msg 205 530 3;
+#X msg 235 530 4;
+#X msg 265 530 5;
+#X msg 295 530 6;
+#X msg 325 530 7;
+#X msg 355 530 8;
+#X msg 145 555 ccmaster_set \$1;
+#X obj 274 250 route 9;
+#X obj 200 105 tgl 15 0 empty empty empty 17 7 0 10 #fcfcfc #000000
+#000000 0 1;
+#X obj 274 340 spigot;
+#X msg 274 470 ccmaster_prev;
+#X msg 364 470 ccmaster_next;
+#X obj 20 20 inlet;
+#X obj 20 600 outlet;
+#X msg 274 225 \$3 \$2 \$1;
+#X msg 370 275 ctl \$3 \$2 \$1;
+#X obj 274 275 route 106 107;
+#X msg 370 305 ctl \$2 \$1 9;
+#X text 200 180 pass through anything that's not a note or cc 106/107
+message on channel 9, f 46;
+#X msg 274 300 0 \$1;
+#X msg 314 300 1 \$1;
+#X obj 274 365 unpack f f;
+#X obj 331 390 > 0;
+#X obj 274 420 spigot;
+#X text 200 70 you can enable this in raptor.pd_lua \, or check the
+toggle below, f 46;
+#X text 100 20 Novation LaunchControl XL support -- this assumes factory
+preset #1 on MIDI channel 9 \, and binds the device select and bank
+buttons to ccmaster_next \, ccmaster_prev \, and ccmaster_set, f 63
+;
+#X obj 274 445 sel 0 1;
+#X connect 0 0 10 0;
+#X connect 0 1 35 0;
+#X connect 0 2 34 0;
+#X connect 1 0 2 0;
+#X connect 2 0 3 0;
+#X connect 3 0 4 0;
+#X connect 3 1 6 0;
+#X connect 4 0 5 1;
+#X connect 5 0 34 0;
+#X connect 6 0 7 1;
+#X connect 7 0 0 0;
+#X connect 8 0 5 0;
+#X connect 8 1 7 0;
+#X connect 9 0 11 0;
+#X connect 9 1 13 0;
+#X connect 10 0 9 0;
+#X connect 11 0 12 0;
+#X connect 11 1 14 0;
+#X connect 12 0 14 1;
+#X connect 12 0 30 1;
+#X connect 13 0 34 0;
+#X connect 14 0 15 0;
+#X connect 15 0 17 0;
+#X connect 15 1 16 0;
+#X connect 16 0 17 1;
+#X connect 17 0 18 0;
+#X connect 18 0 19 0;
+#X connect 18 1 20 0;
+#X connect 18 2 21 0;
+#X connect 18 3 22 0;
+#X connect 18 4 23 0;
+#X connect 18 5 24 0;
+#X connect 18 6 25 0;
+#X connect 18 7 26 0;
+#X connect 19 0 27 0;
+#X connect 20 0 27 0;
+#X connect 21 0 27 0;
+#X connect 22 0 27 0;
+#X connect 23 0 27 0;
+#X connect 24 0 27 0;
+#X connect 25 0 27 0;
+#X connect 26 0 27 0;
+#X connect 27 0 34 0;
+#X connect 28 0 37 0;
+#X connect 28 1 36 0;
+#X connect 29 0 3 0;
+#X connect 30 0 42 0;
+#X connect 31 0 34 0;
+#X connect 32 0 34 0;
+#X connect 33 0 8 0;
+#X connect 35 0 28 0;
+#X connect 36 0 34 0;
+#X connect 37 0 40 0;
+#X connect 37 1 41 0;
+#X connect 37 2 38 0;
+#X connect 38 0 34 0;
+#X connect 40 0 30 0;
+#X connect 41 0 30 0;
+#X connect 42 0 44 0;
+#X connect 42 1 43 0;
+#X connect 43 0 44 1;
+#X connect 44 0 47 0;
+#X connect 47 0 31 0;
+#X connect 47 1 32 0;
+#X restore 20 45 pd launchcontrol;
+#X connect 0 0 14 0;
 #X connect 1 0 3 0;
 #X connect 2 0 3 0;
 #X connect 4 0 3 0;
@@ -394,6 +514,7 @@ Larger values reduce jitter at the cost of increased response times.
 #X connect 10 0 11 0;
 #X connect 12 0 10 0;
 #X connect 13 0 3 0;
+#X connect 14 0 3 0;
 #X restore 30 210 pd input;
 #N canvas 411 510 450 325 output 0;
 #X obj 20 190 midi-output;
@@ -470,13 +591,13 @@ Larger values reduce jitter at the cost of increased response times.
 #X text 193 108 (c) 2024;
 #N canvas 309 227 462 516 looper 0;
 #X floatatom 40 82 3 0 99 0 - - -, f 3;
-#X obj 70 82 bng 15 250 50 0 empty \$0-loop-load load 17 7 0 10 #fcfcfc
+#X obj 70 82 bng 15 250 50 0 empty \$0-loop-load load 17 7 0 10 #e0e0e0
 #202020 #202020;
 #X obj 260 40 r \$0-loop;
 #X obj 260 65 route set;
 #X obj 260 90 != 0;
 #X obj 260 115 tgl 15 0 empty empty empty 17 7 0 10 #fcfcfc #000000
-#000000 1 1;
+#000000 0 1;
 #X floatatom 257 297 5 0 0 0 - - -, f 5;
 #X msg 257 321 color \$1 12 12;
 #X obj 257 240 sel 1 0;
@@ -536,7 +657,7 @@ Larger values reduce jitter at the cost of increased response times.
 #X obj 260 140 change;
 #X obj 260 165 bng 15 250 50 0 empty empty empty 17 7 0 10 #fcfcfc
 #000000 #000000;
-#X obj 116 82 bng 15 250 50 0 empty \$0-loop-save save 17 7 0 10 #fcfcfc
+#X obj 116 82 bng 15 250 50 0 empty \$0-loop-save save 17 7 0 10 #fc2828
 #202020 #202020;
 #N canvas 165 240 458 431 filename 0;
 #X obj 40 80 symbol;
