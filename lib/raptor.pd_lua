@@ -2354,9 +2354,14 @@ function raptor:in_1_ctl(atoms)
       local i = param_i[var]
       if i then
 	 if params[i].toggled then
+	    self:param(var, val > 0 and 1 or 0)
+	 --[[ Some devices have buttons which only ever report a value > 0, we
+	    might want to use something like this (but we don't currently have
+	    a way to add this as an option to the binding data):
 	    if val > 0 then
 	       self:param(var, self.param_val[i] == 0 and 1 or 0)
 	    end
+	 ]]
 	 else
 	    -- make sure that 64 gets mapped to the half-way value
 	    local min, max = params[i].min, params[i].max
@@ -2794,7 +2799,7 @@ function raptor:in_1(sel, atoms)
       end
       return
    end
-   if self.midi_learn == 1 then
+   if self.midi_learn == 1 and self.midi_learn_var ~= sel then
       self.midi_learn_var = sel
       self:learn()
    end
