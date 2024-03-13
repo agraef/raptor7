@@ -48,6 +48,12 @@ local debug_level = 1
 -- functionality.
 local launchcontrol = 1
 
+-- midimap_name: The name of the file in the data directory in which MIDI
+-- bindings are stored. You can change this if you frequently switch between
+-- different MIDI setups, but note that this file is modified any time you add
+-- or remove a binding using raptor's MIDI learn facility.
+local midimap_name = "midi_map.lua"
+
 -- -------------------------------------------------------------------------
 
 -- print is used for debugging purposes, output goes to the Pd console
@@ -2511,7 +2517,7 @@ end
 -- midi learn
 
 function raptor:load_map()
-   local fname = self._canvaspath .. "data/midi_map.lua"
+   local fname = self._canvaspath .. "data/" .. midimap_name
    local fp = io.open(fname, "r")
    if fp then
       local midi_map = fp:read("a")
@@ -2538,7 +2544,7 @@ function raptor:save_map()
       end
    end
    self.midi_map = midi_map
-   local fname = self._canvaspath .. "data/midi_map.lua"
+   local fname = self._canvaspath .. "data/" .. midimap_name
    local fp = io.open(fname, "w")
    if fp then
       fp:write(_inspect(self.midi_map))
