@@ -21,6 +21,35 @@
 
 local raptor = pd.Class:new():register("raptor")
 
+-- Global configuration data that gets sent to the main patch during the
+-- startup sequence.
+
+-- debug_level: This only affects the plugin code. The available levels are:
+-- 1: print preset changes only, 2: also print the current beat and other
+-- important state information, 3: also print note output, 4: print
+-- everything, including note input. Output goes to the Pd console.
+-- NOTE: To debug the internal state of the arpeggiator object, including
+-- pattern changes and note generation, use the arp.debug setting below.
+local debug_level = 1
+
+-- launchcontrol: This enables some hard-wired MIDI bindings for the Novation
+-- LaunchControl XL which makes it easy to switch the global ccmaster (the
+-- target instance which receives MIDI-mapped controls if you're running
+-- multiple raptor instances, see the MIDI learn and ccmaster ops below).
+
+-- These bindings will only work if the LaunchControl is switched
+-- to the first factory preset (which transmits on MIDI channel 9), and of
+-- course the LaunchControl needs to be connected to Pd's first MIDI input. It
+-- binds the Device Hold + Prev/Next Device Select and Device Hold + Device
+-- Bank button combinations so that they will switch the ccmaster accordingly.
+
+-- For convenience, we have this enabled by default, which shouldn't normally
+-- cause any issues, but you can disable this here if you don't need this
+-- functionality.
+local launchcontrol = 1
+
+-- -------------------------------------------------------------------------
+
 -- print is used for debugging purposes, output goes to the Pd console
 
 local function print(...)
@@ -1693,34 +1722,6 @@ end
 
 local pdx = require 'pdx'
 
--- Global configuration data that gets sent to the main patch during the
--- initial setup. Currently we only transmit the debug and launchcontrol
--- flags, and only the latter is actually used in the patch.
-
--- debug level: This only affects the plugin code. The available levels are:
--- 1: print preset changes only, 2: also print the current beat and other
--- important state information, 3: also print note output, 4: print
--- everything, including note input. Output goes to the Pd console.
--- NOTE: To debug the internal state of the arpeggiator object, including
--- pattern changes and note generation, use the arp.debug setting below.
-local debug = 1
-
--- launchcontrol: This enables some hard-wired MIDI bindings for the Novation
--- LaunchControl XL which makes it easy to switch the global ccmaster (the
--- target instance which receives MIDI-mapped controls if you're running
--- multiple raptor instances, see the MIDI learn and ccmaster ops below).
-
--- These bindings will only work if the LaunchControl is switched
--- to the first factory preset (which transmits on MIDI channel 9), and of
--- course the LaunchControl needs to be connected to Pd's first MIDI input. It
--- binds the Device Hold + Prev/Next Device Select and Device Hold + Device
--- Bank button combinations so that they will switch the ccmaster accordingly.
-
--- For convenience, we have this enabled by default, which shouldn't normally
--- cause any issues, but you can disable this here if you don't need this
--- functionality.
-local launchcontrol = 1
-
 -- Parameter and preset tables. These are the same as in the Ardour plugin.
 -- Note that some of the fields aren't used in the Pd implementation.
 
@@ -2001,7 +2002,7 @@ function raptor:notes_off()
    if self.last_notes then
       -- kill the old notes
       for _, num in ipairs(self.last_notes) do
-	 if debug >= 3 then
+	 if debug_level >= 3 then
 	    print(string.format("[out] note off %d", num))
 	 end
 	 self:outlet(1, "note", { num, 0, self.last_chan })
@@ -2020,7 +2021,7 @@ function raptor:in_1_bang()
    if self.bypass ~= 0 or self.mute ~= 0 then
       return
    end
-   if debug >= 2 then
+   if debug_level >= 2 then
       -- print some debugging information: fractional beat number, current
       -- meter, current tempo
       print (string.format("%g - %d/%d - %g bpm",
@@ -2057,7 +2058,7 @@ function raptor:in_1_bang()
       for i = 1, #notes do
 	 local num = notes[i]+self.transp -- apply transposition
 	 notes[i] = num
-	 if debug >= 3 then
+	 if debug_level >= 3 then
 	    print(string.format("[out] note on %d %d", num, vel))
 	 end
 	 self:outlet(1, "note", { num, vel, self.chan })
@@ -2070,7 +2071,7 @@ function raptor:in_1_bang()
 	 -- note-offs get triggered automatically above.
 	 self.clock:delay(gate_time)
       end
-      if debug >= 2 then
+      if debug_level >= 2 then
 	 -- monitor memory usage of the Lua interpreter
 	 print(string.format("mem: %0.2f KB", collectgarbage("count")))
       end
@@ -2143,7 +2144,7 @@ function raptor:recall_preset(preset)
    if self.user_preset_i[preset.name] then
       i = self.user_preset_i[preset.name] + n_presets
    end
-   if debug >= 1 then
+   if debug_level >= 1 then
       print(string.format("preset #%d: %s", i, preset.name))
    end
    local function check(var, val)
@@ -2310,7 +2311,7 @@ function raptor:in_1_note(atoms)
 	 ch = 1
       end
       if type(num) == "number" and type(val) == "number" and type(ch) == "number" and self:check_chan(ch) then
-	 if debug >= 4 then
+	 if debug_level >= 4 then
 	    if val > 0 then
 	       print(string.format("[in] note on %d %d", num, val))
 	    else
@@ -2491,11 +2492,11 @@ function raptor:in_1_dump(atoms)
    pd.send(string.format("%s-%s", id, "meter-denom"), "set", {self.m})
    pd.send(string.format("%s-%s", id, "division"), "set", {self.division})
    -- transmit various config data
-   pd.send(string.format("%s-%s", id, "arp-config"), "debug", {debug})
+   pd.send(string.format("%s-%s", id, "arp-config"), "debug_level", {debug_level})
    pd.send(string.format("%s-%s", id, "arp-config"), "launchcontrol", {launchcontrol})
    if init then
       pd.send(string.format("%s-%s", id, "preset"), "symbol", {"default"})
-      if debug >= 1 then
+      if debug_level >= 1 then
 	 print(string.format("raptor (id %d) is up and running!", id))
 	 -- this prints the names of all presets in the console
 	 self:in_1_preset({})
