@@ -1862,6 +1862,23 @@ function raptor:set_param_tables()
    self.param_set = { self.set, self.set, self.set, self.arp.set_latch, self.arp.set_up, self.arp.set_down, self.set, self.arp.set_mode, self.arp.set_raptor, self.arp.set_minvel, self.arp.set_maxvel, self.arp.set_velmod, self.arp.set_gain, self.arp.set_gate, self.arp.set_gatemod, self.arp.set_wmin, self.arp.set_wmax, self.arp.set_pmin, self.arp.set_pmax, self.arp.set_pmod, self.arp.set_hmin, self.arp.set_hmax, self.arp.set_hmod, self.arp.set_pref, self.arp.set_prefmod, self.arp.set_smin, self.arp.set_smax, self.arp.set_smod, self.arp.set_nmax, self.arp.set_nmod, self.arp.set_uniq, self.arp.set_pitchhi, self.arp.set_pitchlo, self.arp.set_pitchtracker, self.set, self.set, arp_set_loopsize, self.arp.set_loop, self.set }
 end
 
+-- table of the ids of all running raptor instances
+raptor.instances = {}
+
+function raptor:get_instance(id1)
+   if not id1 then
+      id1 = self.id
+   end
+   if id1 then
+      for i, id2 in ipairs(raptor.instances) do
+	 if id2 == id1 then
+	    return i
+	 end
+      end
+   end
+   return 0 -- indicates not found or id not set
+end
+
 function raptor:initialize(sel, atoms)
    pdx.reload(self)
 
@@ -1920,9 +1937,9 @@ function raptor:initialize(sel, atoms)
    self:load_map()
 
    -- ccmaster is a flag which indicates whether we're responding to mapped
-   -- MIDI CC. This is on by default, but can be changed to a single raptor
-   -- instance by clicking the button in the upper left corner of the panel.
-   self.ccmaster = true
+   -- MIDI CC. This is nil (indicating omni mode) by default, but can be
+   -- changed to a single raptor instance with the mastercc message.
+   self.ccmaster = nil
 
    -- instance id; this gets initialized later by the dump method, see below
    self.id = nil
@@ -1940,9 +1957,22 @@ function raptor:initialize(sel, atoms)
    return true
 end
 
+function raptor:check_ccmaster()
+   return not self.ccmaster or self.ccmaster == self.id
+end
+
 function raptor:finalize()
    self.clock:destruct()
    self.recv:destruct()
+   if self.ccmaster and self:check_ccmaster() then
+      -- tell all running raptors that we're back to omni
+      pd.send("all-arp", "ccmaster", {0, self.id})
+   end
+   local i = self:get_instance()
+   if i > 0 then
+      -- remove ourself from the instances table
+      table.remove(raptor.instances, i)
+   end
 end
 
 -- pulses
@@ -2291,7 +2321,7 @@ function raptor:in_1_ctl(atoms)
       end
    end
    local var = self:map_get(atoms[2], atoms[3])
-   if var and self.ccmaster then
+   if var and self:check_ccmaster() then
       -- apply existing mapping
       local val = atoms[1]
       local i = param_i[var]
@@ -2447,8 +2477,10 @@ function raptor:in_1_dump(atoms)
 	 -- this prints the names of all presets in the console
 	 self:in_1_preset({})
       end
-      -- we keep track of the id for later preset operations
+      -- we keep track of the id for various operations
       self.id = id
+      -- we also keep track of the ids of all running raptor instances
+      table.insert(raptor.instances, id)
    end
 end
 
@@ -2613,19 +2645,64 @@ function raptor:in_1_ccmaster(atoms)
    if id and self.id then
       if flag == 0 then
 	 -- omni
-	 self.ccmaster = true
+	 self.ccmaster = nil
 	 -- give feedback on the panel
-	 pd.send(string.format("%s-ccmaster-status", self.id), "list", {0, 0})
+	 pd.send(string.format("%s-ccmaster-status", self.id), "float", {0})
       else
-	 -- only one raptor is receiving, check whether we're the one
-	 self.ccmaster = id==self.id
+	 -- only the given raptor is receiving
+	 self.ccmaster = id
 	 -- give feedback on the panel
-	 flag = self.ccmaster and 1 or 0
-	 pd.send(string.format("%s-ccmaster-status", self.id), "list", {flag, flag})
+	 flag = self:check_ccmaster() and 1 or 0
+	 pd.send(string.format("%s-ccmaster-status", self.id), "float", {flag})
       end
    else
       -- no ids, assume omni
-      self.ccmaster = true
+      self.ccmaster = nil
+   end
+end
+
+-- switch between ccmasters
+
+function raptor:in_1_ccmaster_set(atoms)
+   -- this message gets broadcast to all raptor instance, but only a single
+   -- instance should respond to it
+   if self.id and self.id == raptor.instances[1] then
+      local i = atoms[1]
+      if not i then
+	 pd.send("all-arp", "ccmaster", {0, self.id})
+      elseif type(i) == "number" then
+	 local id = raptor.instances[i]
+	 if not id then
+	    pd.send("all-arp", "ccmaster", {0, self.id})
+	 elseif id ~= self.ccmaster then
+	    -- tell everyone about the new ccmaster
+	    pd.send("all-arp", "ccmaster", {1, id})
+	 end
+      end
+   end
+end
+
+function raptor:in_1_ccmaster_next()
+   if self.id and self.id == raptor.instances[1] then
+      local i = self.ccmaster and self:get_instance(self.ccmaster) or 0
+      if i == 0 then
+	 i = 1
+      else
+	 i = i % (#raptor.instances) + 1
+      end
+      self:in_1_ccmaster_set({i})
+   end
+end
+
+function raptor:in_1_ccmaster_prev()
+   if self.id and self.id == raptor.instances[1] then
+      local i = self.ccmaster and self:get_instance(self.ccmaster) or 0
+      if i == 0 then
+	 i = #raptor.instances
+      else
+	 i = (i-2) % (#raptor.instances) + 1
+      end
+      self:in_1_ccmaster_set({i})
    end
 end
 

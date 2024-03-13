@@ -10,13 +10,13 @@
 #X floatatom 164 52 6 0 127 2 maxvel #1-maxvel -, f 6;
 #X msg 164 462 maxvel \$1;
 #X obj 214 54 hsl 64 15 -1 1 0 0 empty \$1-velmod velmod -3 -12 0 10
-#fcfcfc #000000 #000000 0 1;
+#fcfcfc #000000 #000000 6300 1;
 #X msg 214 462 velmod \$1;
 #X msg 323 54 1;
 #X obj 286 54 bng 15 250 50 0 empty empty empty 17 7 0 10 #fcfcfc #000000
 #000000;
 #X obj 214 88 hsl 64 15 -1 1 0 0 empty \$1-pmod pmod -3 -12 0 10 #fcfcfc
-#000000 #000000 0 1;
+#000000 #000000 3150 1;
 #X msg 323 88 0;
 #X floatatom 117 88 6 0 1 2 pmin #1-pmin -, f 6;
 #X floatatom 164 88 6 0 1 2 pmax #1-pmax -, f 6;
@@ -26,10 +26,10 @@
 #X obj 286 88 bng 15 250 50 0 empty empty empty 17 7 0 10 #fcfcfc #000000
 #000000;
 #X obj 117 157 hsl 64 15 0 1 0 0 empty \$1-gate gate -1 -12 0 10 #fcfcfc
-#000000 #000000 0 1;
+#000000 #000000 6300 1;
 #X msg 117 551 gate \$1;
 #X obj 214 157 hsl 64 15 -1 1 0 0 empty \$1-gatemod gatemod -2 -12
-0 10 #fcfcfc #000000 #000000 0 1;
+0 10 #fcfcfc #000000 #000000 3150 1;
 #X msg 323 157 0;
 #X msg 214 551 gatemod \$1;
 #X obj 286 157 bng 15 250 50 0 empty empty empty 17 7 0 10 #fcfcfc
@@ -39,33 +39,33 @@
 #X floatatom 164 20 4 1 128 0 pgm #1-pgm -, f 4;
 #X msg 164 751 pgm \$1;
 #X obj 214 191 hsl 64 15 -1 1 0 0 empty \$1-hmod hmod -3 -12 0 10 #fcfcfc
-#000000 #000000 0 1;
+#000000 #000000 3150 1;
 #X msg 323 191 0;
 #X floatatom 117 191 6 0 1 2 hmin #1-hmin -, f 6;
 #X floatatom 164 191 6 0 1 2 hmax #1-hmax -, f 6;
 #X obj 286 191 bng 15 250 50 0 empty empty empty 17 7 0 10 #fcfcfc
 #000000 #000000;
 #X obj 214 226 hsl 64 15 -1 1 0 0 empty \$1-prefmod prefmod -3 -12
-0 10 #fcfcfc #000000 #000000 0 1;
+0 10 #fcfcfc #000000 #000000 3150 1;
 #X msg 323 226 0;
 #X floatatom 164 226 6 -1 1 2 pref #1-pref -, f 6;
 #X obj 286 226 bng 15 250 50 0 empty empty empty 17 7 0 10 #fcfcfc
 #000000 #000000;
 #X obj 214 261 hsl 64 15 -1 1 0 0 empty \$1-smod smod -3 -12 0 10 #fcfcfc
-#000000 #000000 0 1;
+#000000 #000000 3150 1;
 #X msg 323 261 0;
 #X floatatom 117 261 6 -127 127 2 smin #1-smin -, f 6;
 #X floatatom 164 261 6 -127 127 2 smax #1-smax -, f 6;
 #X obj 286 261 bng 15 250 50 0 empty empty empty 17 7 0 10 #fcfcfc
 #000000 #000000;
 #X obj 214 297 hsl 64 15 -1 1 0 0 empty \$1-nmod nmod -3 -12 0 10 #fcfcfc
-#000000 #000000 0 1;
+#000000 #000000 3150 1;
 #X msg 323 297 0;
 #X floatatom 164 297 6 0 10 2 nmax #1-nmax -, f 6;
 #X obj 286 297 bng 15 250 50 0 empty empty empty 17 7 0 10 #fcfcfc
 #000000 #000000;
 #X obj 117 297 tgl 15 0 empty \$1-uniq uniq -1 -10 0 10 #fcfcfc #000000
-#000000 0 1;
+#000000 1 1;
 #X msg 117 581 hmin \$1;
 #X msg 164 551 hmax \$1;
 #X msg 214 581 hmod \$1;
@@ -78,9 +78,9 @@
 #X msg 164 641 nmax \$1;
 #X msg 214 671 nmod \$1;
 #X obj 43 62 vradio 15 0 0 5 empty \$1-downval dn 0 -8 0 10 #fcfcfc
-#000000 #000000 0;
+#000000 #000000 3;
 #X obj 62 62 vradio 15 0 0 5 empty \$1-upval up 0 -8 0 10 #fcfcfc #000000
-#000000 0;
+#000000 1;
 #N canvas 497 416 590 404 octave 0;
 #X obj 20 20 inlet;
 #X obj 20 100 t b f;
@@ -160,7 +160,7 @@
 #X text 83 107 -1;
 #X text 83 122 -2;
 #X obj 43 254 vradio 15 0 0 6 empty \$1-mode empty 0 -8 0 10 #fcfcfc
-#000000 #000000 0;
+#000000 #000000 1;
 #X text 62 267 up;
 #X text 62 282 down;
 #X text 62 297 up-down;
@@ -240,7 +240,7 @@
 #X obj 380 200 loadbang;
 #X obj 380 225 f \$1;
 #X obj 214 122 hsl 64 15 -1 1 0 0 empty \$1-gain gain -3 -12 0 10 #fcfcfc
-#000000 #000000 0 1;
+#000000 #000000 6300 1;
 #X msg 323 122 1;
 #X obj 286 122 bng 15 250 50 0 empty empty empty 17 7 0 10 #fcfcfc
 #000000 #000000;
@@ -275,18 +275,18 @@ parameter values., f 27;
 #X obj 20 20 inlet;
 #X obj 20 100 outlet;
 #X obj 130 20 r \$1-ccmaster-status;
-#X obj 130 45 unpack f f;
 #X msg 240 80 set \$1;
 #X obj 240 105 outlet;
+#X obj 130 45 t f f;
 #X connect 0 0 2 0;
 #X connect 1 0 0 0;
 #X connect 3 0 4 0;
 #X connect 4 0 6 0;
 #X connect 5 0 3 0;
-#X connect 7 0 8 0;
-#X connect 8 0 1 0;
-#X connect 8 1 9 0;
-#X connect 9 0 10 0;
+#X connect 7 0 10 0;
+#X connect 8 0 9 0;
+#X connect 10 0 1 0;
+#X connect 10 1 8 0;
 #X restore 370 40 pd ccmaster;
 #X connect 3 0 4 0;
 #X connect 4 0 74 0;
