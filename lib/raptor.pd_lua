@@ -1961,6 +1961,7 @@ function raptor:initialize(sel, atoms)
    self.midi_learn_cc = nil
    self.midi_learn_ch = nil
    self.midi_learn_var = nil
+   self.midi_learn_tgl = nil
    self:load_map()
 
    -- ccmaster is a flag which indicates whether we're responding to mapped
@@ -2343,25 +2344,32 @@ function raptor:in_1_ctl(atoms)
 	  self.midi_learn_ch ~= atoms[3]) then
 	 self.midi_learn_cc = atoms[2]
 	 self.midi_learn_ch = atoms[3]
+	 if atoms[1] == 127 then
+	    -- switch to special toggle mode (in this case, rather than
+	    -- controlling the value directly, the controller's off value is
+	    -- ignored, and the on value toggles the existing value)
+	    self.midi_learn_tgl = true
+	 end
 	 self:learn()
 	 return
       end
    end
-   local var = self:map_get(atoms[2], atoms[3])
+   local var, tgl = self:map_get(atoms[2], atoms[3])
    if var and self:check_ccmaster() then
       -- apply existing mapping
       local val = atoms[1]
       local i = param_i[var]
       if i then
 	 if params[i].toggled then
-	    self:param(var, val > 0 and 1 or 0)
-	 --[[ Some devices have buttons which only ever report a value > 0, we
-	    might want to use something like this (but we don't currently have
-	    a way to add this as an option to the binding data):
-	    if val > 0 then
-	       self:param(var, self.param_val[i] == 0 and 1 or 0)
+	    if tgl then
+	       -- special toggle mode
+	       if val > 0 then
+		  self:param(var, self.param_val[i] == 0 and 1 or 0)
+	       end
+	    else
+	       -- continuous controller, interpreted as toggle
+	       self:param(var, val > 0 and 1 or 0)
 	    end
-	 ]]
 	 else
 	    -- make sure that 64 gets mapped to the half-way value
 	    local min, max = params[i].min, params[i].max
@@ -2563,19 +2571,28 @@ end
 function raptor:map_get(cc, ch)
    local map = self.midi_map[cc]
    if map then
-      return map[ch]
+      local var = map[ch]
+      if type(var) == "table" then
+	 return table.unpack(var)
+      else
+	 return var
+      end
    else
       return nil
    end
 end
 
-function raptor:map_set(cc, ch, var)
+function raptor:map_set(cc, ch, var, tgl)
    local map = self.midi_map[cc]
    if not map then
       map = {}
       self.midi_map[cc] = map
    end
-   map[ch] = var
+   if tgl then
+      map[ch] = {var, tgl}
+   else
+      map[ch] = var
+   end
 end
 
 function raptor:map_find(var)
@@ -2600,10 +2617,12 @@ end
 
 function raptor:learn()
    if self.midi_learn_cc and self.midi_learn_var then
+      local i = param_i[self.midi_learn_var]
+      local tgl = i and params[i].toggled and self.midi_learn_tgl or false
       local var = self:map_get(self.midi_learn_cc, self.midi_learn_ch)
-      self:map_set(self.midi_learn_cc, self.midi_learn_ch, self.midi_learn_var)
+      self:map_set(self.midi_learn_cc, self.midi_learn_ch, self.midi_learn_var, tgl)
       self:map_mode(0)
-      print(string.format("CC%d-%d %smapped to %s", self.midi_learn_cc, self.midi_learn_ch, var and "re" or "", self.midi_learn_var))
+      print(string.format("CC%d-%d %smapped to %s%s", self.midi_learn_cc, self.midi_learn_ch, var and "re" or "", self.midi_learn_var, tgl and " [toggle]" or ""))
       self:save_map()
    elseif self.midi_learn_cc then
       local var = self:map_get(self.midi_learn_cc, self.midi_learn_ch)
@@ -2632,6 +2651,7 @@ function raptor:in_1_learn()
       self.midi_learn_cc = nil
       self.midi_learn_ch = nil
       self.midi_learn_var = nil
+      self.midi_learn_tgl = nil
       self:map_mode(1)
       print("MIDI learn mode, enter CC or wiggle a control")
       print("press learn again to abort")
@@ -2666,6 +2686,7 @@ function raptor:in_1_unlearn()
       self.midi_learn_cc = nil
       self.midi_learn_ch = nil
       self.midi_learn_var = nil
+      self.midi_learn_tgl = nil
       self:map_mode(1)
       print("MIDI learn mode, enter CC or wiggle a control")
       print("press learn again to abort")
@@ -2799,7 +2820,7 @@ function raptor:in_1(sel, atoms)
       end
       return
    end
-   if self.midi_learn == 1 and self.midi_learn_var ~= sel then
+   if self.midi_learn == 1 and self.midi_learn_var ~= sel and param_i[sel] then
       self.midi_learn_var = sel
       self:learn()
    end
