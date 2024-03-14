@@ -11,10 +11,15 @@
 -- single value (besides the mod value), in which case I mapped both A and B
 -- to that value.
 
--- The faders are mapped as follows: 1 = hi, 2 = lo, 3 = transp, 4 = raptor
--- toggle, 5 = mode (random, up, down, etc.), 6 = loop size, 7 = loop toggle,
--- 8 = division. Note that the toggles will be engaged for any non-zero value,
--- so they can easily be turned on and off with just a tiny fader movement.
+-- The faders are mapped as follows: 1 = hi, 2 = lo, 3 = raptor toggle, 4 =
+-- mode (random, up, down, etc.), 5 = loop size, 6 = meter numerator, 7 =
+-- meter denominator, 8 = division. Note that the toggles will be engaged for
+-- any non-zero value, so they can easily be turned on and off with just a
+-- tiny fader movement.
+
+-- Finally, the track select buttons are mapped to the transport and loop
+-- controls (left = loop, right = play).
+
 -- You might want to remap some or all of these, if you use other controls
 -- more often.
 
@@ -98,21 +103,27 @@
     [9] = "pitchlo"
   },
   [79] = {
-    [9] = "transp"
-  },
-  [80] = {
     [9] = "raptor"
   },
-  [81] = {
+  [80] = {
     [9] = "mode"
   },
-  [82] = {
+  [81] = {
     [9] = "loopsize"
   },
+  [82] = {
+    [9] = "meter-num"
+  },
   [83] = {
-    [9] = "loop"
+    [9] = "meter-denom"
   },
   [84] = {
     [9] = "division"
+  },
+  [106] = {
+    [9] = { "loop", true }
+  },
+  [107] = {
+    [9] = { "play", true }
   }
 }
