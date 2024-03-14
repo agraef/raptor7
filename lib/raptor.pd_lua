@@ -2181,6 +2181,9 @@ function raptor:recall_preset(preset)
    local function check(var, val)
       if param_skip[var] then
 	 return false
+      elseif var == "loopsize" and self.arp.loopstate == 1 then
+	 -- avoid thrashing the loop size if we're currently playing a loop
+	 return false
       elseif (var == "inchan" or var == "outchan") and val == 0 then
 	 -- In order to not disrupt live performances, we don't recall these
 	 -- if zero (i.e., not an actual MIDI channel). However, in contrast
