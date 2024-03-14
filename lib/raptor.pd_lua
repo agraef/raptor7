@@ -2036,6 +2036,12 @@ function raptor:in_1_bang()
    -- grab some notes from the arpeggiator
    local p = self.arp.idx
    local notes, vel, gate, w, n = self.arp:pulse()
+   -- calculate the current delay (note-off time) in ms
+   local delay = 60000/self.tempo * 4/self.m/self.division
+   -- output the delay time until the next pulse is due on outlet #3
+   self:outlet(3, "float", { delay })
+   -- output the current pulse number and number of beats on outlet #2
+   self:outlet(2, "list", { p, n })
    -- check if we're bypassed or muted
    if self.bypass ~= 0 or self.mute ~= 0 then
       return
@@ -2050,8 +2056,6 @@ function raptor:in_1_bang()
    -- Make sure that the gate is clamped to the 0-1 range, since we don't
    -- support overlapping notes in the current implementation.
    gate = math.max(0, math.min(1, gate))
-   -- calculate the note-off time in ms
-   local delay = 60000/self.tempo * 4/self.m/self.division
    local gate_time = delay * gate
    --print(string.format("[%d] notes %s %d %g %g %d", p, inspect(notes), vel, gate, w, n))
    -- the arpeggiator may return a singleton note, make sure that it's always
@@ -2069,10 +2073,6 @@ function raptor:in_1_bang()
       if legato then
 	 self:notes_off()
       end
-      -- output the delay time until the next pulse is due on outlet #3
-      self:outlet(3, "float", { delay })
-      -- output the current pulse number and number of beats on outlet #2
-      self:outlet(2, "list", { p, n })
       -- output the notes on outlet #1
       for i = 1, #notes do
 	 local num = notes[i]+self.transp -- apply transposition
