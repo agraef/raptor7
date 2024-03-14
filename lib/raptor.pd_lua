@@ -1789,6 +1789,7 @@ local params = {
    { type = "input", name = "loopsize", min = 0, max = 16, default = 4, integer = true, doc = "loop size (number of bars)" },
    { type = "input", name = "loop", min = 0, max = 1, default = 0, toggled = true, doc = "toggle loop mode" },
    { type = "input", name = "mute", min = 0, max = 1, default = 0, toggled = true, doc = "turn the arpeggiator off, suppress all note output" },
+   { type = "input", name = "play", min = 0, max = 1, default = 0, toggled = true, doc = "start or stop playback" },
 }
 
 local n_params = #params
@@ -1844,6 +1845,7 @@ param_skip["bypass"] = true
 param_skip["mute"] = true
 param_skip["latch"] = true
 param_skip["loop"] = true
+param_skip["play"] = true
 -- division and meter
 param_skip["division"] = true
 param_skip["meter-num"] = true
@@ -1861,6 +1863,7 @@ function raptor:set(param, x)
    -- not the arpeggiator
    local last_bypass = self.bypass
    local last_mute = self.mute
+   local last_play = self.play
    local last_n = self.n
    local last_division = self.division
    local last_inchan = self.inchan
@@ -1893,12 +1896,17 @@ function raptor:set(param, x)
 	 self:outlet(1, "pgm", { self.pgm, self.chan })
       end
    end
+   if self.play ~= last_play then
+      if self.master and self.id == self.master then
+	 pd.send(string.format("%s-%s", self.id, "play"), "float", {self.play})
+      end
+   end
 end
 
 function raptor:set_param_tables()
    -- this initializes the parameter setter callbacks; this needs to be redone
    -- after reloading the object (pdx.reload)
-   self.param_set = { self.set, self.set, self.set, self.set, self.set, self.arp.set_latch, self.arp.set_up, self.arp.set_down, self.set, self.arp.set_mode, self.arp.set_raptor, self.arp.set_minvel, self.arp.set_maxvel, self.arp.set_velmod, self.arp.set_gain, self.arp.set_gate, self.arp.set_gatemod, self.arp.set_wmin, self.arp.set_wmax, self.arp.set_pmin, self.arp.set_pmax, self.arp.set_pmod, self.arp.set_hmin, self.arp.set_hmax, self.arp.set_hmod, self.arp.set_pref, self.arp.set_prefmod, self.arp.set_smin, self.arp.set_smax, self.arp.set_smod, self.arp.set_nmax, self.arp.set_nmod, self.arp.set_uniq, self.arp.set_pitchhi, self.arp.set_pitchlo, self.arp.set_pitchtracker, self.set, self.set, arp_set_loopsize, self.arp.set_loop, self.set }
+   self.param_set = { self.set, self.set, self.set, self.set, self.set, self.arp.set_latch, self.arp.set_up, self.arp.set_down, self.set, self.arp.set_mode, self.arp.set_raptor, self.arp.set_minvel, self.arp.set_maxvel, self.arp.set_velmod, self.arp.set_gain, self.arp.set_gate, self.arp.set_gatemod, self.arp.set_wmin, self.arp.set_wmax, self.arp.set_pmin, self.arp.set_pmax, self.arp.set_pmod, self.arp.set_hmin, self.arp.set_hmax, self.arp.set_hmod, self.arp.set_pref, self.arp.set_prefmod, self.arp.set_smin, self.arp.set_smax, self.arp.set_smod, self.arp.set_nmax, self.arp.set_nmod, self.arp.set_uniq, self.arp.set_pitchhi, self.arp.set_pitchlo, self.arp.set_pitchtracker, self.set, self.set, arp_set_loopsize, self.arp.set_loop, self.set, self.set }
 end
 
 -- table of the ids of all running raptor instances
@@ -1934,11 +1942,15 @@ function raptor:initialize(sel, atoms)
    self.bypass = 0
    self.mute = 0
 
-   -- default  meter (numerator, denominator, and subdivision) and tempo
+   -- default meter (numerator, denominator, and subdivision) and tempo
    self.n = 4
    self.m = 4
    self.division = 1
    self.tempo = 120
+
+   -- transport
+   self.master = nil
+   self.play = 0
 
    -- create the arpeggiator (default meter)
    self.arp = arpeggio:new(self.n * self.division)
@@ -2458,7 +2470,8 @@ function raptor:update_meter()
    -- update the meter in the arpeggiator
    self.arp:set_meter(self.n*self.division)
    -- we also need to update the loop size here
-   local loopsize = self.param_val[n_params-2]
+   local i = param_i["loopsize"]
+   local loopsize = self.param_val[i]
    arp_set_loopsize(self.arp, loopsize)
 end
 
@@ -2772,6 +2785,18 @@ function raptor:in_1_ccmaster_prev()
       end
       self:in_1_ccmaster_set({i})
    end
+end
+
+-- transport
+
+function raptor:in_1_master(atoms)
+   local id = atoms[1]
+   if type(id) == "number" then
+      id = string.format("%d", id)
+   elseif type(id) ~= "string" then
+      return
+   end
+   self.master = id
 end
 
 -- generic param setter/getter
