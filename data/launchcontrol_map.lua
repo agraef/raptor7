@@ -16,11 +16,7 @@
 -- 8 = division. Note that the toggles will be engaged for any non-zero value,
 -- so they can easily be turned on and off with just a tiny fader movement.
 -- You might want to remap some or all of these, if you use other controls
--- more often. But note that the meter (numerator and denominator) aren't
--- mappable. (Presumably these might be controlled via plugin parameters when
--- running in a DAW, via plugdata. In the future the meter might also be
--- picked up through Ableton Link, but the current Raptor version doesn't
--- support this yet.)
+-- more often.
 
 {
   [13] = {

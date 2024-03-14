@@ -1736,6 +1736,11 @@ local hrm_scalepoints = { ["0.09 (minor 7th and 3rd)"] = 0.09, ["0.1 (major 2nd 
 local params = {
    { type = "input", name = "bypass", min = 0, max = 1, default = 0, toggled = true, doc = "bypass the arpeggiator, pass through input notes" },
    { type = "input", name = "division", min = 1, max = 7, default = 1, integer = true, doc = "number of subdivisions of the beat" },
+   -- These aren't in the Ardour plugin, as the meter gets set through the
+   -- DAW's timeline, but it's useful to have these values as parameters in
+   -- the stand-alone version, so that they can be mapped via MIDI learn.
+   { type = "input", name = "meter-num", min = 1, max = 16, default = 4, integer = true, doc = "number of beats per bar" },
+   { type = "input", name = "meter-denom", min = 1, max = 16, default = 4, integer = true, doc = "note value of the beat" },
    { type = "input", name = "pgm", min = 0, max = 128, default = 0, integer = true, doc = "program change", scalepoints = { default = 0 } },
    { type = "input", name = "latch", min = 0, max = 1, default = 0, toggled = true, doc = "toggle latch mode" },
    { type = "input", name = "up", min = -2, max = 2, default = 1, integer = true, doc = "octave range up" },
@@ -1839,9 +1844,10 @@ param_skip["bypass"] = true
 param_skip["mute"] = true
 param_skip["latch"] = true
 param_skip["loop"] = true
--- division parameter (no need to exclude meter here, since it isn't in the
--- arpeggiator params)
+-- division and meter
 param_skip["division"] = true
+param_skip["meter-num"] = true
+param_skip["meter-denom"] = true
 
 -- param setters
 
@@ -1855,9 +1861,15 @@ function raptor:set(param, x)
    -- not the arpeggiator
    local last_bypass = self.bypass
    local last_mute = self.mute
+   local last_n = self.n
    local last_division = self.division
    local last_inchan = self.inchan
    local last_pgm = self.pgm
+   if param == "meter-num" then
+      param = "n"
+   elseif param == "meter-denom" then
+      param = "m"
+   end
    self[param] = x
    -- various state changes that need special treatment
    if (self.bypass ~= last_bypass and self.bypass ~= 0) or
@@ -1865,7 +1877,7 @@ function raptor:set(param, x)
       -- turn off any sounding notes from the arpeggiator
       self:notes_off()
    end
-   if self.division ~= last_division then
+   if self.n*self.division ~= last_n*last_division then
       -- update the meter
       self:update_meter()
    end
@@ -1886,7 +1898,7 @@ end
 function raptor:set_param_tables()
    -- this initializes the parameter setter callbacks; this needs to be redone
    -- after reloading the object (pdx.reload)
-   self.param_set = { self.set, self.set, self.set, self.arp.set_latch, self.arp.set_up, self.arp.set_down, self.set, self.arp.set_mode, self.arp.set_raptor, self.arp.set_minvel, self.arp.set_maxvel, self.arp.set_velmod, self.arp.set_gain, self.arp.set_gate, self.arp.set_gatemod, self.arp.set_wmin, self.arp.set_wmax, self.arp.set_pmin, self.arp.set_pmax, self.arp.set_pmod, self.arp.set_hmin, self.arp.set_hmax, self.arp.set_hmod, self.arp.set_pref, self.arp.set_prefmod, self.arp.set_smin, self.arp.set_smax, self.arp.set_smod, self.arp.set_nmax, self.arp.set_nmod, self.arp.set_uniq, self.arp.set_pitchhi, self.arp.set_pitchlo, self.arp.set_pitchtracker, self.set, self.set, arp_set_loopsize, self.arp.set_loop, self.set }
+   self.param_set = { self.set, self.set, self.set, self.set, self.set, self.arp.set_latch, self.arp.set_up, self.arp.set_down, self.set, self.arp.set_mode, self.arp.set_raptor, self.arp.set_minvel, self.arp.set_maxvel, self.arp.set_velmod, self.arp.set_gain, self.arp.set_gate, self.arp.set_gatemod, self.arp.set_wmin, self.arp.set_wmax, self.arp.set_pmin, self.arp.set_pmax, self.arp.set_pmod, self.arp.set_hmin, self.arp.set_hmax, self.arp.set_hmod, self.arp.set_pref, self.arp.set_prefmod, self.arp.set_smin, self.arp.set_smax, self.arp.set_smod, self.arp.set_nmax, self.arp.set_nmod, self.arp.set_uniq, self.arp.set_pitchhi, self.arp.set_pitchlo, self.arp.set_pitchtracker, self.set, self.set, arp_set_loopsize, self.arp.set_loop, self.set }
 end
 
 -- table of the ids of all running raptor instances
