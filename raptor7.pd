@@ -201,7 +201,7 @@ SPP, f 30;
 #X obj 40 122 metro 500;
 #X obj 185 380 mod 4;
 #X obj 350 290 s \$0-metro;
-#X obj 210 20 tgl 15 0 empty \$0-play empty 17 7 0 10 #fcfcfc #000000
+#X obj 210 20 tgl 15 0 empty \$0-play empty 17 7 0 10 #9de493 #000000
 #000000 0 1;
 #X obj 170 90 t f f;
 #X obj 350 120 t f f;
