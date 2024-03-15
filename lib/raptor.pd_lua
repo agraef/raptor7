@@ -2753,14 +2753,14 @@ function raptor:in_1_ccmaster_set(atoms)
    if self.id and self.id == raptor.instances[1] then
       local i = atoms[1]
       if not i then
-	 pd.send("all-arp", "ccmaster", {0, self.id})
+	 pd.send("all-arp", "ccmaster", {0, tonumber(self.id)})
       elseif type(i) == "number" then
 	 local id = raptor.instances[i]
 	 if not id then
-	    pd.send("all-arp", "ccmaster", {0, self.id})
+	    pd.send("all-arp", "ccmaster", {0, tonumber(self.id)})
 	 elseif id ~= self.ccmaster then
 	    -- tell everyone about the new ccmaster
-	    pd.send("all-arp", "ccmaster", {1, id})
+	    pd.send("all-arp", "ccmaster", {1, tonumber(id)})
 	 end
       end
    end
