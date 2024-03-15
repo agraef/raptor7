@@ -417,10 +417,6 @@ Larger values reduce jitter at the cost of increased response times.
 #X obj 20 480 outlet;
 #X text 200 70 you can enable this in raptor.pd_lua \, or check the
 toggle below, f 46;
-#X text 100 20 Novation LaunchControl XL support -- this assumes factory
-preset #1 on MIDI channel 9 \, and binds the device select and bank
-buttons to ccmaster_next \, ccmaster_prev \, and ccmaster_set, f 63
-;
 #X obj 20 350 spigot 1;
 #X obj 94 325 == 0;
 #X text 250 210 pass through anything that's not a note or cc message
@@ -545,9 +541,14 @@ on channel 9, f 34;
 #X connect 5 0 6 0;
 #X connect 6 0 4 2;
 #X restore 380 130 pd ccmaster;
+#X text 100 10 Novation LaunchControl XL support -- this assumes factory
+preset #1 on MIDI channel 9 \, and binds the device select and bank
+buttons to ccmaster_next \, ccmaster_prev \, and ccmaster_set \, and
+the mute \, solo \, rec arm buttons to mute \, latch \, and bypass
+, f 63;
 #X connect 0 0 10 0;
-#X connect 0 1 22 0;
-#X connect 0 1 24 0;
+#X connect 0 1 21 0;
+#X connect 0 1 23 0;
 #X connect 0 2 15 0;
 #X connect 1 0 2 0;
 #X connect 2 0 3 0;
@@ -559,38 +560,38 @@ on channel 9, f 34;
 #X connect 7 0 0 0;
 #X connect 8 0 5 0;
 #X connect 8 1 7 0;
-#X connect 9 0 25 0;
+#X connect 9 0 24 0;
 #X connect 9 1 12 0;
 #X connect 10 0 9 0;
-#X connect 11 0 19 0;
-#X connect 11 0 24 1;
+#X connect 11 0 18 0;
 #X connect 11 0 23 1;
+#X connect 11 0 22 1;
 #X connect 12 0 15 0;
 #X connect 13 0 3 0;
 #X connect 14 0 8 0;
-#X connect 18 0 15 0;
-#X connect 19 0 18 1;
-#X connect 22 0 18 0;
+#X connect 17 0 15 0;
+#X connect 18 0 17 1;
+#X connect 21 0 17 0;
+#X connect 22 0 15 0;
 #X connect 23 0 15 0;
-#X connect 24 0 15 0;
-#X connect 25 0 11 0;
-#X connect 25 1 26 0;
-#X connect 25 2 29 0;
-#X connect 25 3 32 0;
-#X connect 25 4 23 0;
-#X connect 26 0 27 0;
-#X connect 27 0 39 0;
-#X connect 29 0 30 0;
-#X connect 30 0 40 0;
-#X connect 32 0 33 0;
-#X connect 33 0 41 0;
-#X connect 38 0 39 1;
-#X connect 38 0 41 1;
-#X connect 38 0 40 1;
-#X connect 39 0 35 0;
-#X connect 40 0 37 0;
-#X connect 41 0 36 0;
-#X connect 42 0 38 0;
+#X connect 24 0 11 0;
+#X connect 24 1 25 0;
+#X connect 24 2 28 0;
+#X connect 24 3 31 0;
+#X connect 24 4 22 0;
+#X connect 25 0 26 0;
+#X connect 26 0 38 0;
+#X connect 28 0 29 0;
+#X connect 29 0 39 0;
+#X connect 31 0 32 0;
+#X connect 32 0 40 0;
+#X connect 37 0 38 1;
+#X connect 37 0 40 1;
+#X connect 37 0 39 1;
+#X connect 38 0 34 0;
+#X connect 39 0 36 0;
+#X connect 40 0 35 0;
+#X connect 41 0 37 0;
 #X restore 20 45 pd launchcontrol;
 #X connect 0 0 14 0;
 #X connect 1 0 3 0;
