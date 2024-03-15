@@ -5,17 +5,17 @@ Computer Music Dept., Institute of Art History and Musicology
 Johannes Gutenberg University (JGU) Mainz, Germany  
 This document is licensed under [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/).
 
-## Introduction
-
 In memory of Clarence Barlow (27 December 1945 – 29 June 2023).
 
-This is version 7 of the Raptor patch, an experimental arpeggiator program based on the mathematical music theories of the late composer and computer music pioneer Clarence Barlow. This version is a backport of the [Ardour plugin](https://github.com/agraef/ardour-lua) included in [Ardour version 8](https://ardour.org/news/8.1.html) and later, which in turn was based on the original Lua version, [Raptor 6](https://github.com/agraef/ardour-lua). The present version is compatible with the Ardour plugin in terms of the underlying arpeggiator core (written in Lua), as well as the parameters and factory presets. While it's based on Raptor 6, the patch was completely rewritten to provide an improved and simplified interface, and also offers some important new features, such as latch mode, an improved looper applet, and a built-in MIDI learn facility. Here's Raptor running in [Purr Data][], Jonathan Wilkes' modern Pd flavor:
+## Introduction
 
-<img src="raptor7.png" alt="raptor7" style="zoom: 100%;" />
+This is version 7 of the Raptor patch, an experimental arpeggiator program based on the mathematical music theories of the composer and computer music pioneer Clarence Barlow. This version is a backport of the [Ardour plugin](https://github.com/agraef/ardour-lua) included in [Ardour version 8](https://ardour.org/news/8.1.html) and later, which in turn was based on the original Lua version, [Raptor 6](https://github.com/agraef/ardour-lua). The present version is compatible with the Ardour plugin in terms of the underlying arpeggiator core (written in Lua), as well as the parameters and factory presets. While it's based on Raptor 6, the patch was completely rewritten to provide an improved and simplified interface, and also offers some important new features, such as latch mode, an improved looper applet, and a built-in MIDI learn facility. Here's Raptor running in [Purr Data][]:
+
+<img src="raptor7.png" alt="raptor7" style="zoom:60%;" />
 
 Raptor is quite advanced as arpeggiators go, it's really a full-blown algorithmic composition tool, although it offers the usual run-of-the-mill deterministic and random arpeggios as well. But the real magic starts when you turn on `raptor` mode and start playing around with the parameters in the panel. The algorithm behind Raptor is briefly sketched out in my [ICMC 2006 paper][] (cf. Section 8), and you'll find some practical information to get you started below. But if you'd like to get a deeper understanding of how the algorithm actually works, you'll have to dive into the source code and read Barlow's article in the [Ratio book][].
 
-Using the patch is easy enough, however. Open the patch in Pd, hook up your MIDI keyboard and synthesizer to Pd's MIDI input and output, respectively, choose a preset, press the green play toggle in the time subpatch, and start playing chords. Note that Raptor only generates MIDI data, so you absolutely need some sound-generating device to make music with it. But it works just fine with a free software synth such as [Qsynth][]. Of course, Raptor can also be used with a DAW or outboard gear such as a hardware synth or a groovebox, and can be synced by sending MIDI clocks to its MIDI input. We discuss all this in more detail in the following sections.
+Using the patch is easy enough, however. Basically, you open raptor7.pd in Pd, hook up your MIDI keyboard and synthesizer to Pd's MIDI input and output, respectively, choose a preset, press the green play toggle in the time subpatch, and start playing chords. Note that Raptor only generates MIDI data, so you need some sound-generating device to make music with it. But it works just fine with a free software synth such as [Qsynth][]. Of course, Raptor can also be used with a DAW or outboard gear such as a hardware synth or a groovebox, and can be synced to those by sending MIDI clocks to its MIDI input. We discuss all this in more detail in the following sections.
 
 ## Getting Started
 
@@ -168,5 +168,4 @@ In a similar vein, Raptor's MIDI learn facility is also fairly basic. It's only 
 [Ableton Link]: https://www.ableton.com/link/
 [bug report]: https://github.com/agraef/raptor7/issues
 [pull request]: https://github.com/agraef/raptor7/pulls
-
 
