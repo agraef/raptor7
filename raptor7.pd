@@ -683,7 +683,7 @@ the mute \, solo \, rec arm buttons to mute \, latch \, and bypass
 #X text 193 108 (c) 2024;
 #N canvas 309 227 462 516 looper 0;
 #X floatatom 40 82 3 0 99 0 - - -, f 3;
-#X obj 70 82 bng 15 250 50 0 empty \$0-loop-load load 17 7 0 10 #e0e0e0
+#X obj 70 82 bng 15 250 50 0 empty \$0-loop-load load 17 7 0 10 #fcfcfc
 #202020 #202020;
 #X obj 260 40 r \$0-loop;
 #X obj 260 65 route set;
@@ -749,7 +749,7 @@ the mute \, solo \, rec arm buttons to mute \, latch \, and bypass
 #X obj 260 140 change;
 #X obj 260 165 bng 15 250 50 0 empty empty empty 17 7 0 10 #fcfcfc
 #000000 #000000;
-#X obj 116 82 bng 15 250 50 0 empty \$0-loop-save save 17 7 0 10 #fc2828
+#X obj 116 82 bng 15 250 50 0 empty \$0-loop-save save 17 7 0 10 #fcfcfc
 #202020 #202020;
 #N canvas 165 240 458 431 filename 0;
 #X obj 40 80 symbol;
@@ -777,6 +777,7 @@ the mute \, solo \, rec arm buttons to mute \, latch \, and bypass
 #X msg 397 267 0;
 #X obj 257 346 s \$0-loop-load;
 #X obj 357 346 s \$0-loop-save;
+#X obj 170 20 r \$0-preset-nam;
 #X connect 0 0 16 0;
 #X connect 0 0 20 1;
 #X connect 0 0 32 1;
@@ -824,6 +825,7 @@ the mute \, solo \, rec arm buttons to mute \, latch \, and bypass
 #X connect 37 0 38 0;
 #X connect 38 0 41 0;
 #X connect 39 0 37 0;
+#X connect 42 0 13 0;
 #X coords 0 -1 1 1 125 36 1 36 64;
 #X restore 130 160 pd looper;
 #N canvas 702 453 450 300 counter 0;

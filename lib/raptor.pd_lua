@@ -79,8 +79,11 @@ end
 local _inspect = require('inspect')
 
 -- adjust the formatting options
-local function inspect(x)
-   return _inspect(x, {newline = " ", indent = ""})
+local function inspect(x, options)
+   if not options then
+      options = {newline = " ", indent = ""}
+   end
+   return _inspect(x, options)
 end
 
 -- -------------------------------------------------------------------------
@@ -979,8 +982,11 @@ function arpeggio:loop_file(file, cmd)
 	 print(string.format("loop: %s", err))
 	 return
       end
-      -- shorten the table to the current loop size if needed
       local loop, n = {}, math.min(#self.loop, self.loopsize)
+      -- make sure to keep meter and tempo information if we have it
+      loop.meter = self.loop.meter
+      loop.tempo = self.loop.tempo
+      -- shorten the table to the current loop size if needed
       table.move(self.loop, 1, n, 1, loop)
       -- add some pretty-printing
       local function bars(level, count)
@@ -2588,7 +2594,7 @@ function raptor:save_map()
    local fname = self._canvaspath .. "data/" .. midimap_name
    local fp = io.open(fname, "w")
    if fp then
-      fp:write(_inspect(self.midi_map))
+      fp:write(inspect(self.midi_map, {}))
       fp:close()
       -- broadcast a message to all raptor instances so that they can update
       -- themselves
@@ -2846,11 +2852,58 @@ end
 function raptor:in_1(sel, atoms)
    if sel == "loop" and type(atoms[1]) == "string" then
       -- loop file command, this needs special treatment
+      if self.arp.loopstate == 1 then
+	 -- loop is playing, update meter and tempo information
+	 if self.division > 1 then
+	    self.arp.loop.meter = {self.n, self.m, self.division}
+	 else
+	    self.arp.loop.meter = {self.n, self.m}
+	 end
+	 self.arp.loop.tempo = self.tempo
+      end
       local res, val = self.arp:loop_file(table.unpack(atoms))
       if res then
 	 if res == "loopsize" then
 	    -- new loop was loaded, internal state is already updated, but we
 	    -- still need to update panel and looper applet
+	    if self.arp.loop.meter or self.arp.loop.tempo then
+	       -- loop has meter and/or tempo data attached to it
+	       if self.arp.loop.meter and type(self.arp.loop.meter) == "table" then
+		  local n, m, division = table.unpack(self.arp.loop.meter)
+		  if not division then
+		     division = 1
+		  end
+		  if type(n) == "number" and type(m) == "number" and
+		     type(division) == "number" then
+		     n = math.max(1, math.floor(n))
+		     m = math.max(1, math.floor(m))
+		     division = math.max(1, math.floor(division))
+		  end
+		  local check = n*division ~= self.n*self.division
+		  self.n = n
+		  self.m = m
+		  self.division = division
+		  if check then
+		     -- update the meter
+		     self.arp:set_meter(self.n*self.division)
+		  end
+		  if self.id then
+		     local id = self.id
+		     pd.send(string.format("%s-%s", id, "meter-num"), "set", {self.n})
+		     pd.send(string.format("%s-%s", id, "meter-denom"), "set", {self.m})
+		     pd.send(string.format("%s-%s", id, "division"), "set", {self.division})
+		  end
+	       end
+	       if self.arp.loop.tempo and type(self.arp.loop.tempo) == "number" then
+		  local tempo = math.max(1, self.arp.loop.tempo)
+		  if tempo ~= self.tempo then
+		     self.tempo = tempo
+		     if self.id then
+			pd.send(string.format("%s-%s", self.id, "tempo"), "set", {self.tempo})
+		     end
+		  end
+	       end
+	    end
 	    val = math.floor(val/self.arp.beats)
 	    self:outlet(1, res, {val})
 	 else
