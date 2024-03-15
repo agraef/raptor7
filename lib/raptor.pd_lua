@@ -1796,6 +1796,8 @@ local params = {
    { type = "input", name = "loop", min = 0, max = 1, default = 0, toggled = true, doc = "toggle loop mode" },
    { type = "input", name = "mute", min = 0, max = 1, default = 0, toggled = true, doc = "turn the arpeggiator off, suppress all note output" },
    { type = "input", name = "play", min = 0, max = 1, default = 0, toggled = true, doc = "start or stop playback" },
+   { type = "input", name = "pulse", min = 0, max = 1, default = 0, toggled = true, doc = "trigger pulses manually" },
+   { type = "input", name = "pos", min = -24, max = 24, default = 0, integer = true, doc = "anacrusis control" },
 }
 
 local n_params = #params
@@ -1852,10 +1854,18 @@ param_skip["mute"] = true
 param_skip["latch"] = true
 param_skip["loop"] = true
 param_skip["play"] = true
+param_skip["pulse"] = true
+param_skip["pos"] = true
 -- division and meter
 param_skip["division"] = true
 param_skip["meter-num"] = true
 param_skip["meter-denom"] = true
+
+-- these don't actually live in the panel, skip panel updates
+local panel_skip = {}
+panel_skip["play"] = true
+panel_skip["pulse"] = true
+panel_skip["pos"] = true
 
 -- param setters
 
@@ -1870,6 +1880,8 @@ function raptor:set(param, x)
    local last_bypass = self.bypass
    local last_mute = self.mute
    local last_play = self.play
+   local last_pulse = self.pulse
+   local last_pos = self.pos
    local last_n = self.n
    local last_division = self.division
    local last_inchan = self.inchan
@@ -1907,12 +1919,20 @@ function raptor:set(param, x)
 	 pd.send(string.format("%s-%s", self.id, "play"), "float", {self.play})
       end
    end
+   if self.pos ~= last_pos then
+      if self.master and self.id == self.master then
+	 pd.send(string.format("%s-%s", self.id, "pos"), "float", {self.pos})
+      end
+   end
+   if self.pulse ~= last_pulse and self.pulse >= 0 then
+      pd.send(string.format("%s-%s", self.id, "pulse"), "bang", {})
+   end
 end
 
 function raptor:set_param_tables()
    -- this initializes the parameter setter callbacks; this needs to be redone
    -- after reloading the object (pdx.reload)
-   self.param_set = { self.set, self.set, self.set, self.set, self.set, self.arp.set_latch, self.arp.set_up, self.arp.set_down, self.set, self.arp.set_mode, self.arp.set_raptor, self.arp.set_minvel, self.arp.set_maxvel, self.arp.set_velmod, self.arp.set_gain, self.arp.set_gate, self.arp.set_gatemod, self.arp.set_wmin, self.arp.set_wmax, self.arp.set_pmin, self.arp.set_pmax, self.arp.set_pmod, self.arp.set_hmin, self.arp.set_hmax, self.arp.set_hmod, self.arp.set_pref, self.arp.set_prefmod, self.arp.set_smin, self.arp.set_smax, self.arp.set_smod, self.arp.set_nmax, self.arp.set_nmod, self.arp.set_uniq, self.arp.set_pitchhi, self.arp.set_pitchlo, self.arp.set_pitchtracker, self.set, self.set, arp_set_loopsize, self.arp.set_loop, self.set, self.set }
+   self.param_set = { self.set, self.set, self.set, self.set, self.set, self.arp.set_latch, self.arp.set_up, self.arp.set_down, self.set, self.arp.set_mode, self.arp.set_raptor, self.arp.set_minvel, self.arp.set_maxvel, self.arp.set_velmod, self.arp.set_gain, self.arp.set_gate, self.arp.set_gatemod, self.arp.set_wmin, self.arp.set_wmax, self.arp.set_pmin, self.arp.set_pmax, self.arp.set_pmod, self.arp.set_hmin, self.arp.set_hmax, self.arp.set_hmod, self.arp.set_pref, self.arp.set_prefmod, self.arp.set_smin, self.arp.set_smax, self.arp.set_smod, self.arp.set_nmax, self.arp.set_nmod, self.arp.set_uniq, self.arp.set_pitchhi, self.arp.set_pitchlo, self.arp.set_pitchtracker, self.set, self.set, arp_set_loopsize, self.arp.set_loop, self.set, self.set, self.set, self.set }
 end
 
 -- table of the ids of all running raptor instances
@@ -1957,6 +1977,8 @@ function raptor:initialize(sel, atoms)
    -- transport
    self.master = nil
    self.play = 0
+   self.pulse = 0
+   self.pos = 0
 
    -- create the arpeggiator (default meter)
    self.arp = arpeggio:new(self.n * self.division)
@@ -2122,7 +2144,12 @@ end
 -- (re)set the pulse index
 
 function raptor:in_1_float(p)
-   self.arp:set_idx(p)
+   if type(p) == "number" then
+      p = math.floor(p)
+      self.arp:set_idx(p % self.arp.beats)
+      -- synthetic pos param, this can be MIDI-mapped
+      self:in_1("pos", {p})
+   end
 end
 
 function raptor:in_1_reset()
@@ -2406,6 +2433,12 @@ function raptor:in_1_ctl(atoms)
 	 else
 	    -- make sure that 64 gets mapped to the half-way value
 	    local min, max = params[i].min, params[i].max
+	    if var == "pos" then
+	       -- this one is special, it has a nominal range of -24..24, but
+	       -- we want to clamp it to the actual number of beats instead
+	       max = math.min(max, self.arp.beats)
+	       min = -max
+	    end
 	    val = val==127 and max or val/128*(max-min)+min
 	    if params[i].integer then
 	       val = math.floor(val+0.5)
@@ -2839,7 +2872,7 @@ function raptor:param(var, val)
 	       -- these all live in the arpeggiator
 	       self.param_set[i](self.arp, v)
 	    end
-	    if self.id then
+	    if self.id and not panel_skip[var] then
 	       -- report changes to the panel
 	       local id = self.id
 	       pd.send(string.format("%s-%s", id, var), "set", {v})
