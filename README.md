@@ -11,7 +11,7 @@ In memory of Clarence Barlow (27 December 1945 – 29 June 2023).
 
 This is version 7 of the Raptor patch, an experimental arpeggiator program based on the mathematical music theories of the composer and computer music pioneer Clarence Barlow. This version is a backport of the [Ardour plugin](https://github.com/agraef/ardour-lua) included in [Ardour version 8](https://ardour.org/news/8.1.html) and later, which in turn was based on the original Lua version, [Raptor 6](https://github.com/agraef/ardour-lua). The present version is compatible with the Ardour plugin in terms of the underlying arpeggiator core (written in Lua), as well as the parameters and factory presets. While it's based on Raptor 6, the patch was completely rewritten to provide an improved and simplified interface, and also offers some important new features, such as latch mode, an improved looper applet, and a built-in MIDI learn facility. Here's Raptor running in [Purr Data][]:
 
-<img src="raptor7.png" alt="raptor7" style="zoom:60%;" />
+<img src="pic/raptor7.png" alt="raptor7"  />
 
 Raptor is quite advanced as arpeggiators go, it's really a full-blown algorithmic composition tool, although it offers the usual run-of-the-mill deterministic and random arpeggios as well. But the real magic starts when you turn on `raptor` mode and start playing around with the parameters in the panel. The algorithm behind Raptor is briefly sketched out in my [ICMC 2006 paper][] (cf. Section 8), and you'll find some practical information to get you started below. But if you'd like to get a deeper understanding of how the algorithm actually works, you'll have to dive into the source code and read Barlow's article in the [Ratio book][].
 
@@ -89,7 +89,7 @@ Basic usage is quite simple. For starters, you might want to pick one of the pre
 
 Then start playback with the green play toggle in the time subpatch. Start playing chords and you should hear the generated notes sound on the connected synthesizer. Engage latch mode if needed. If you have a nice pattern going, engage the looper, fire up another Raptor instance and play along. E.g., try the tr808 preset (preset #10 on the quick dial) to get a simple drum pattern going.
 
-If you have a MIDI controller with a built-in chord generator or sequencer, then you might want to use that device to provide input to the arpeggiator, so that you have your hands free to twiddle the controls in the panel. In that case, see the discussion of MIDI clock sync in the next section in order to sync Raptor with the device.
+If you have a MIDI controller or groovebox with a built-in chord generator and/or sequencer, then you might want to use that device to provide input to the arpeggiator, so that you have your hands free to twiddle the controls in the panel. See the discussion of MIDI clock sync in the next section in order to sync Raptor with the device.
 
 ### Transport and Sync
 
@@ -119,19 +119,19 @@ Raptor has a lot of parameters which you might want to work with during live per
 - Click or move the control on the MIDI device. This can be any knob, fader, or button, but only controls generating MIDI CC messages are supported at this time.
 - Click or wiggle the control in the time patch or panel that you want to bind the CC message to.
 
-You can also first operate the control in the patch and then the MIDI control, if you prefer. And you can abort the process at any time by clicking `learn` again. It's also possible to delete an existing binding by clicking `unlearn` after choosing the MIDI or Raptor control. Raptor will provide feedback and guide you through the process with some messages in the Pd console. In particular, it will tell you if there is an existing binding for the same MIDI control or parameter value, so that you can still get rid of it if needed.
+You can also first operate the control in the patch and then the MIDI control, if you prefer. And you can abort the process at any time by clicking `learn` again. It's also possible to delete an existing binding by clicking `unlearn` after choosing the MIDI or Raptor control. Raptor will provide feedback and guide you through the process with some messages in the Pd console. In particular, it will tell you if there is an existing binding for the same MIDI control or parameter value, so that you can get rid of it if needed.
 
-The learned MIDI binding will be in effect immediately, in *all* running Raptor instances. It will also be stored in the midi_map.lua file in the data directory, from where all bindings will be reloaded next time you fire up Raptor.
+The learned MIDI binding will be in effect immediately, in *all* running Raptor instances. It will also be stored in the midi_map.lua file in the data directory, from where all bindings will be reloaded next time you fire up Raptor. Note that while it's possible to map different MIDI controls to the same Raptor parameter, at present you can't have a MIDI control change multiple parameters at once (no macro controls, sorry!).
 
-Note that while it's possible to map different MIDI controls to the same Raptor parameter, at present you can't have a MIDI control change multiple parameters at once (no macro controls, sorry!)
+Also note that if you're running multiple Raptor instances, normally MIDI controls will affect them all at the same time, so their parameters will change in lockstep. If you want to operate a single Raptor instance instead, you can click the unlabeled button in the top left corner of the panel. The button will turn blue to indicate the instance that is receiving the control data. You can switch instances at any time, and clicking the blue button again will return the Raptor controls to omni mode.
 
-If you're running multiple Raptor instances, MIDI controls will operate them all at the same time, so their parameters will change in lockstep. We also call this (MIDI map) omni mode. However, it's possible to have a single Raptor instance receive all the mapped controls by clicking the button in the top left corner of the panel. The button will turn blue to indicate the instance that is receiving the control data. You can switch instances at any time, and clicking the same button again will return the Raptor controls to omni mode.
+#### Launch Control
 
-Finally, we also have special support for the [Novation Launch Control XL][], a popular mixer-style controller with lots of knobs and faders. First, there's a file launchcontrol_map.lua file in the data directory with ready-made MIDI bindings for that device. To use it, just copy that file to midi_map.lua and you should be set. Check the comments at the beginning of the file for information on the bindings.
+The [Novation Launch Control XL][] is a popular mixer-style controller with lots of knobs and faders, which makes for a nice Raptor control surface, so Raptor has special support for it. First, there's a file launchcontrol_map.lua file in the data directory with ready-made MIDI bindings for that device. To use it, just copy that file to midi_map.lua and you should be set. Check the comments at the beginning of the file for information on the bindings.
 
 Second, Raptor includes some hard-wired MIDI bindings for the Launch Control which let you switch the target Raptor instance for MIDI control easily and quickly. To do this, press (and hold) the "Device Hold" button, while you push one of the "Device Select" (left/right) buttons to cycle through the Raptor instances, or the "Device Bank" buttons labelled 1-8 to directly change to the corresponding instance.
 
-There are other, similar controllers, such as the [AKAI MIDIMIX][], which I don't have. If anyone can add support for one of these, please submit a [pull request][]!
+Moreover, the "Mute", "Solo", and "Record Arm" buttons are bound to the mute, latch, and bypass controls (the `M`, `L`, and `B` buttons in the top right corner) of the panel.
 
 ## Quirks and Limitations
 
@@ -152,6 +152,8 @@ Overdubbing and more advanced loop editing capabilities would be nice to have; b
 ### MIDI Learn
 
 In a similar vein, Raptor's MIDI learn facility is also fairly basic. It's only possible to map MIDI CC messages at present; having support for note messages and aftertouch would certainly be useful. We can hopefully add this in a future update. Also, there's no support for macro controls. That's unlikely to change in the near future, as it would require a lot of additional machinery in order to adjust the value mapping.
+
+At present, special support is only available for the Launch Control XL. There are other popular (and more budget-friendly) controllers. Thus, if anyone can contribute MIDI maps or special support for other devices, please submit a [pull request][]!
 
 
 [ICMC 2006 paper]: https://github.com/agraef/raptor7/blob/main/scale.pdf
