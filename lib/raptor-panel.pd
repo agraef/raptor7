@@ -34,7 +34,7 @@
 #X msg 214 551 gatemod \$1;
 #X obj 286 157 bng 15 250 50 0 empty empty empty 17 7 0 10 #fcfcfc
 #000000 #000000;
-#X obj 286 22 tgl 15 0 empty \$1-latch L -10 6 0 10 #3cc840 #000000
+#X obj 258 22 tgl 15 0 empty \$1-latch L -10 6 0 10 #3cc840 #000000
 #000000 0 1;
 #X floatatom 164 20 4 1 128 0 pgm #1-pgm -, f 4;
 #X msg 164 751 pgm \$1;
@@ -186,7 +186,7 @@
 #X msg 73 751 inchan \$1;
 #X obj 43 236 tgl 15 0 empty \$1-raptor raptor 20 6 0 10 #fcfcfc #000000
 #000000 0 1;
-#X obj 258 22 tgl 15 0 empty \$1-mute M -10 6 0 10 #e8dc1c #000000
+#X obj 229 22 tgl 15 0 empty \$1-mute M -10 6 0 10 #e8dc1c #000000
 #000000 0 1;
 #X msg 380 462 mute \$1;
 #X floatatom 164 330 6 0 16 2 loop #1-loopsize -, f 6;
@@ -212,7 +212,7 @@
 #X floatatom 164 122 6 0 1 2 wmax #1-wmax -, f 6;
 #X msg 117 521 wmin \$1;
 #X msg 164 521 wmax \$1;
-#X obj 228 22 tgl 15 0 empty \$1-bypass B -10 6 0 10 #fc5858 #000000
+#X obj 287 22 tgl 15 0 empty \$1-bypass B -10 6 0 10 #fc5858 #000000
 #000000 0 1;
 #X msg 438 462 bypass \$1;
 #X obj 193 157 tgl 15 0 empty empty empty 17 7 0 10 #fcfcfc #000000
