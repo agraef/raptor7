@@ -2706,20 +2706,20 @@ function raptor:learn()
       local var = self:map_get(self.midi_learn_cc, self.midi_learn_ch)
       self:map_set(self.midi_learn_cc, self.midi_learn_ch, self.midi_learn_var, tgl)
       self:map_mode(0)
-      print(string.format("CC%d-%d %smapped to %s%s", self.midi_learn_cc, self.midi_learn_ch, var and "re" or "", self.midi_learn_var, tgl and " [toggle]" or ""))
+      print(string.format("%s %smapped to %s%s", self:cctostring(), var and "re" or "", self.midi_learn_var, tgl and " [toggle]" or ""))
       self:save_map()
    elseif self.midi_learn_cc then
       local var = self:map_get(self.midi_learn_cc, self.midi_learn_ch)
       if var then
-	 print(string.format("remapping CC%d-%d currently mapped to %s, wiggle a control", self.midi_learn_cc, self.midi_learn_ch, var))
+	 print(string.format("remapping %s currently mapped to %s, wiggle a control", self:cctostring(), var))
 	 print("press learn again to abort, or press unlearn to unmap")
       else
-	 print(string.format("mapping CC%d-%d, wiggle a control", self.midi_learn_cc, self.midi_learn_ch))
+	 print(string.format("mapping %s, wiggle a control", self:cctostring()))
       end
    elseif self.midi_learn_var then
       local cc, ch = self:map_find(self.midi_learn_var)
       if cc then
-	 print(string.format("mapping param %s already mapped to CC%d-%d, enter CC", self.midi_learn_var, cc, ch))
+	 print(string.format("mapping param %s already mapped to %s, enter CC", self.midi_learn_var, self:cctostring(cc, ch)))
 	 print("press learn again to abort, or press unlearn to unmap")
       else
 	 print(string.format("mapping param %s, enter CC", self.midi_learn_var))
@@ -2742,6 +2742,13 @@ function raptor:in_1_learn()
    end
 end
 
+function raptor:cctostring(cc, ch)
+   if not cc then
+      cc, ch = self.midi_learn_cc, self.midi_learn_ch
+   end
+   return string.format("CC%d-%d", cc, ch)
+end
+
 function raptor:in_1_unlearn()
    if self.midi_learn == 1 then
       local done = false
@@ -2749,7 +2756,7 @@ function raptor:in_1_unlearn()
 	 local var = self:map_get(self.midi_learn_cc, self.midi_learn_ch)
 	 if var then
 	    self:map_set(self.midi_learn_cc, self.midi_learn_ch, nil)
-	    print(string.format("CC%d-%d unmapped", self.midi_learn_cc, self.midi_learn_ch))
+	    print(string.format("%s unmapped", self:cctostring()))
 	    self:save_map()
 	    done = true
 	 end
@@ -2757,7 +2764,7 @@ function raptor:in_1_unlearn()
 	 local cc, ch = self:map_find(self.midi_learn_var)
 	 if cc then
 	    self:map_set(cc, ch, nil)
-	    print(string.format("CC%d-%d unmapped", cc, ch))
+	    print(string.format("%s unmapped", self:cctostring(cc, ch)))
 	    self:save_map()
 	    done = true
 	 end
