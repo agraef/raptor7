@@ -93,13 +93,15 @@ If you have a MIDI controller or groovebox with a built-in chord generator and/o
 
 ### Transport, Sync, and Time
 
-The easiest way to get transport rolling is with the green play toggle in the time subpatch. Alternatively, you can also click on the `Raptor7` logo in the main patch to toggle playback. (You can also bind the transport function to a MIDI command, see the MIDI Learn section below.) Playback usually starts at the beginning of a bar, but you can also have an *anacrusis* (an upbeat) if you enter the pulse offset (counting from zero) into the little numbox in the time subpatch. This value can also be negative, to indicate a position relative to the *end* of a bar (e.g., -1 tells Raptor to start on the *last* beat of a bar).
+The easiest way to get transport rolling is with the green play toggle in the time subpatch. Alternatively, you can also click on the `Raptor7` logo in the main patch to toggle playback. Playback usually starts at the beginning of a bar, but you can also have an *anacrusis* (an upbeat) if you enter the pulse offset (counting from zero) into the little numbox in the time subpatch. This value can also be negative, to indicate a position relative to the *end* of a bar (e.g., -1 tells Raptor to start on the *last* beat of a bar).
 
 Note that if you have multiple Raptor instances playing in concert, only one of them can be the time master (`M` toggle). Normally you don't need to mess with that toggle, it will be engaged automatically if needed, if you press the play button in an instance.
 
-The time subpatch also has built-in MIDI sync support, which is enabled by default (you can configure this with the `S` toggle in the time subpatch). If you have software or hardware that can act as a MIDI clock source (most DAWs, sequencers, and grooveboxes have that functionality), you can just hook up the MIDI device which outputs the clocks to Pd's MIDI input. Once transport starts rolling on the device, Raptor will play along with it and the two should stay in sync. In this case the play control in the time subpatch is without function, as the external time source drives playback.
+The time subpatch also has built-in MIDI sync support, which is enabled by default (you can configure this with the `S` toggle in the time subpatch). If you have software or hardware that can act as a MIDI clock source (most DAWs, sequencers, and grooveboxes have that functionality), you can just hook up the MIDI device which outputs the clocks to Pd's MIDI input. Once transport starts rolling on the device, Raptor will play along with it and the two should stay in sync. In this case the playback toggle in the time subpatch is without function, as the external time source drives playback.
 
-In any case, once transport is rolling, the time subpatch displays the beats by flashing the pulse indicator (bang control) on the right. If transport is *not* rolling, you can also click that control to manually trigger the next pulse. This is useful, e.g., if you want to listen to the generated arpeggio in "slow motion".
+In any case, once transport is rolling, the time subpatch displays the beats by flashing the pulse indicator (bang control) on the right. You can also click that control to manually trigger the next pulse. This is useful, e.g., to listen to the generated notes in "slow motion" (with transport turned off), or even to trigger extra pulses at any time while transport is rolling. In fact, the anacrusis can also be used as a position control while transport is rolling, which gives a kind of scrubbing effect.
+
+The transport controls we mentioned (play, anacrusis, pulse trigger) can also be mapped to MIDI commands, using the MIDI Learn facility discussed below, which makes them usable in a live performance.
 
 Finally, the frequency at which pulses are being triggered depends on the meter (including division) and, of course, the tempo. One important thing to note here is that by convention, the tempo is *always* specified in *quarter* beats per minute, no matter what the actual base pulse of the meter is. This means that you can switch meters on a whim without having to constantly adjust the tempo when changing the base pulse.
 
@@ -119,7 +121,7 @@ The loop files themselves are just Lua tables, so you can also edit them in any 
 
 ### MIDI Learn
 
-Raptor has a lot of parameters which you might want to work with during live performances. Fortunately, it's possible to map most of these using the built-in MIDI learn facility. You can assign MIDI control changes to any of the controls in the panel, as well as the playback toggle in the time subpatch, as follows:
+Raptor has a lot of parameters which you might want to work with during live performances. Fortunately, it's possible to map most of these using the built-in MIDI learn facility. You can assign MIDI control changes to any of the controls in the panel, as well as some of the controls in the time subpatch, as follows:
 
 - Click the `learn` message in the main patch. The background of the "MIDI Learn" label in the main patch will turn a light green to indicate that you're in MIDI mapping mode.
 - Click or move the control on the MIDI device. This can be any knob, fader, or button, but only controls generating MIDI CC messages are supported at this time.
@@ -127,9 +129,9 @@ Raptor has a lot of parameters which you might want to work with during live per
 
 You can also first operate the control in the patch and then the MIDI control, if you prefer. And you can abort the process at any time by clicking `learn` again. It's also possible to delete an existing binding by clicking `unlearn` after choosing the MIDI or Raptor control. Raptor will provide feedback and guide you through the process with some messages in the Pd console. In particular, it will tell you if there is an existing binding for the same MIDI control or parameter value, so that you can get rid of it if needed.
 
-The learned MIDI binding will be in effect immediately, in *all* running Raptor instances. It will also be stored in the midi_map.lua file in the data directory, from where all bindings will be reloaded next time you fire up Raptor. Note that while it's possible to map different MIDI controls to the same Raptor parameter, at present you can't have a MIDI control change multiple parameters at once (no macro controls, sorry!).
+The learned MIDI binding will be in effect immediately, in *all* running Raptor instances. It will also be stored in the midi_map.lua file in the data directory, from where all bindings will be reloaded next time you fire up Raptor. Note that while it's possible to map different MIDI controls to the same Raptor parameter, at present you can't have a MIDI control affect multiple parameters at once (no macro controls, sorry!).
 
-Also note that if you're running multiple Raptor instances, normally MIDI controls will affect them all at the same time, so their parameters will change in lockstep. If you want to operate a single Raptor instance instead, you can click the unlabeled button in the top left corner of the panel. The button will turn blue to indicate the instance that is receiving the control data. You can switch instances at any time, and clicking the blue button again will return the Raptor controls to omni mode.
+Also note that if you're running multiple Raptor instances, normally MIDI controls will affect them all, so their parameters will change in lockstep. If you want to operate a single Raptor instance instead, you can click the unlabeled button in the top left corner of the panel. The button will turn blue to indicate the instance that is receiving the control data. You can switch instances at any time, and clicking the blue button again will return the Raptor controls to omni mode.
 
 #### Launch Control
 
