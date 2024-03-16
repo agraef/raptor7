@@ -1798,6 +1798,7 @@ local params = {
    { type = "input", name = "play", min = 0, max = 1, default = 0, toggled = true, doc = "start or stop playback" },
    { type = "input", name = "pulse", min = 0, max = 1, default = 0, toggled = true, doc = "trigger pulses manually" },
    { type = "input", name = "pos", min = -24, max = 24, default = 0, integer = true, doc = "anacrusis control" },
+   { type = "input", name = "rewind", min = 0, max = 1, default = 0, toggled = true, doc = "rewind (relocate the playhead to the anacrusis)" },
 }
 
 local n_params = #params
@@ -1853,9 +1854,11 @@ param_skip["bypass"] = true
 param_skip["mute"] = true
 param_skip["latch"] = true
 param_skip["loop"] = true
+-- transport
 param_skip["play"] = true
 param_skip["pulse"] = true
 param_skip["pos"] = true
+param_skip["rewind"] = true
 -- division and meter
 param_skip["division"] = true
 param_skip["meter-num"] = true
@@ -1866,6 +1869,7 @@ local panel_skip = {}
 panel_skip["play"] = true
 panel_skip["pulse"] = true
 panel_skip["pos"] = true
+panel_skip["rewind"] = true
 
 -- param setters
 
@@ -1882,6 +1886,7 @@ function raptor:set(param, x)
    local last_play = self.play
    local last_pulse = self.pulse
    local last_pos = self.pos
+   local last_rewind = self.rewind
    local last_n = self.n
    local last_division = self.division
    local last_inchan = self.inchan
@@ -1924,6 +1929,11 @@ function raptor:set(param, x)
 	 pd.send(string.format("%s-%s", self.id, "pos"), "float", {self.pos})
       end
    end
+   if self.rewind ~= last_rewind and self.rewind >= 0 then
+      if self.master and self.id == self.master then
+	 pd.send(string.format("%s-%s", self.id, "rewind"), "bang", {})
+      end
+   end
    if self.pulse ~= last_pulse and self.pulse >= 0 then
       pd.send(string.format("%s-%s", self.id, "pulse"), "bang", {})
    end
@@ -1932,7 +1942,7 @@ end
 function raptor:set_param_tables()
    -- this initializes the parameter setter callbacks; this needs to be redone
    -- after reloading the object (pdx.reload)
-   self.param_set = { self.set, self.set, self.set, self.set, self.set, self.arp.set_latch, self.arp.set_up, self.arp.set_down, self.set, self.arp.set_mode, self.arp.set_raptor, self.arp.set_minvel, self.arp.set_maxvel, self.arp.set_velmod, self.arp.set_gain, self.arp.set_gate, self.arp.set_gatemod, self.arp.set_wmin, self.arp.set_wmax, self.arp.set_pmin, self.arp.set_pmax, self.arp.set_pmod, self.arp.set_hmin, self.arp.set_hmax, self.arp.set_hmod, self.arp.set_pref, self.arp.set_prefmod, self.arp.set_smin, self.arp.set_smax, self.arp.set_smod, self.arp.set_nmax, self.arp.set_nmod, self.arp.set_uniq, self.arp.set_pitchhi, self.arp.set_pitchlo, self.arp.set_pitchtracker, self.set, self.set, arp_set_loopsize, self.arp.set_loop, self.set, self.set, self.set, self.set }
+   self.param_set = { self.set, self.set, self.set, self.set, self.set, self.arp.set_latch, self.arp.set_up, self.arp.set_down, self.set, self.arp.set_mode, self.arp.set_raptor, self.arp.set_minvel, self.arp.set_maxvel, self.arp.set_velmod, self.arp.set_gain, self.arp.set_gate, self.arp.set_gatemod, self.arp.set_wmin, self.arp.set_wmax, self.arp.set_pmin, self.arp.set_pmax, self.arp.set_pmod, self.arp.set_hmin, self.arp.set_hmax, self.arp.set_hmod, self.arp.set_pref, self.arp.set_prefmod, self.arp.set_smin, self.arp.set_smax, self.arp.set_smod, self.arp.set_nmax, self.arp.set_nmod, self.arp.set_uniq, self.arp.set_pitchhi, self.arp.set_pitchlo, self.arp.set_pitchtracker, self.set, self.set, arp_set_loopsize, self.arp.set_loop, self.set, self.set, self.set, self.set, self.set }
 end
 
 -- table of the ids of all running raptor instances
@@ -1979,6 +1989,7 @@ function raptor:initialize(sel, atoms)
    self.play = 0
    self.pulse = 0
    self.pos = 0
+   self.rewind = 0
 
    -- create the arpeggiator (default meter)
    self.arp = arpeggio:new(self.n * self.division)
@@ -2147,6 +2158,12 @@ function raptor:in_1_float(p)
    if type(p) == "number" then
       p = math.floor(p)
       self.arp:set_idx(p % self.arp.beats)
+      if self.midi_learn ~= 0 and self.midi_learn_var == "rewind" then
+	 -- kludge: there's already a MIDI learn for "rewind" going on, which
+	 -- in turn triggered this update -- bail out so that we don't
+	 -- interfere with the pending operation
+	 return
+      end
       -- synthetic pos param, this can be MIDI-mapped
       self:in_1("pos", {p})
    end
