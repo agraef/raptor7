@@ -1,6 +1,6 @@
 #N canvas 385 377 531 600 10;
 #X obj 94 200 route note ctl;
-#X obj 64 80 r \$0-arp-config;
+#X obj 64 80 r \$1-arp-config;
 #X obj 64 105 route launchcontrol;
 #X obj 64 130 t f f;
 #X obj 64 155 == 0;
@@ -118,9 +118,9 @@ on channel 9, f 34;
 #X obj 440 300 > 0;
 #X obj 440 325 sel 1;
 #X text 440 270 rec arm;
-#X obj 300 373 s \$0-mute;
-#X obj 440 373 s \$0-bypass;
-#X obj 370 373 s \$0-latch;
+#X obj 300 373 s \$1-mute;
+#X obj 440 373 s \$1-bypass;
+#X obj 370 373 s \$1-latch;
 #X obj 380 160 tgl 15 0 empty empty empty 17 7 0 10 #fcfcfc #000000
 #000000 0 1;
 #X obj 300 350 spigot 1;

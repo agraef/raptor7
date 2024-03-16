@@ -466,7 +466,7 @@ to detect synthetic pulse triggers vs actual clicks on the pulse control
 #X obj 130 143 s \$0-learn-mode;
 #X msg 160 93 6;
 #X obj 20 110 r \$0-myarp;
-#X obj 20 45 launchcontrol;
+#X obj 20 45 launchcontrol \$0;
 #X connect 0 0 14 0;
 #X connect 1 0 3 0;
 #X connect 2 0 3 0;
