@@ -2644,7 +2644,7 @@ function raptor:save_map()
    local fname = self._canvaspath .. "data/" .. midimap_name
    local fp = io.open(fname, "w")
    if fp then
-      fp:write(inspect(self.midi_map, {}))
+      fp:write(inspect(self.midi_map, { alttab = true }))
       fp:close()
       -- broadcast a message to all raptor instances so that they can update
       -- themselves

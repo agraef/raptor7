@@ -111,9 +111,14 @@ local function getSequenceLength(t)
   return len - 1
 end
 
-local function getNonSequentialKeys(t)
+local function getNonSequentialKeys(t, alttab)
   local keys, keysLength = {}, 0
   local sequenceLength = getSequenceLength(t)
+  if alttab and sequenceLength == 1 then
+     -- ag: alttab option: if the sequential part is just a singleton, then
+     -- pretend that all entries are non-sequential
+     sequenceLength = 0
+  end
   for k,_ in rawpairs(t) do
     if not isSequenceKey(k, sequenceLength) then
       keysLength = keysLength + 1
@@ -242,8 +247,9 @@ function Inspector:putTable(t)
   else
     if self.tableAppearances[t] > 1 then self:puts('<', self:getId(t), '>') end
 
-    local nonSequentialKeys, nonSequentialKeysLength, sequenceLength = getNonSequentialKeys(t)
+    local nonSequentialKeys, nonSequentialKeysLength, sequenceLength = getNonSequentialKeys(t, self.alttab)
     local mt                = getmetatable(t)
+    local multiline = nonSequentialKeysLength > 1 or not self.alttab and nonSequentialKeysLength > 0
 
     self:puts('{')
     self:down(function()
@@ -273,10 +279,16 @@ function Inspector:putTable(t)
         count = count + 1
       end
 
+      -- ag: alttab: only indent non-sequential elements if there's more than
+      -- one of them
       for i=1, nonSequentialKeysLength do
         local k = nonSequentialKeys[i]
         if count > 0 then self:puts(',') end
-        self:tabify()
+        if multiline then
+           self:tabify()
+        else
+           self:puts(' ')
+        end
         self:putKey(k)
         self:puts(' = ')
         self:putValue(t[k])
@@ -291,9 +303,9 @@ function Inspector:putTable(t)
       end
     end)
 
-    if self.level < self.extra and sequenceLength > 0 or nonSequentialKeysLength > 0 or type(mt) == 'table' then -- result is multi-lined. Justify closing }
+    if self.level < self.extra and sequenceLength > 0 or multiline or type(mt) == 'table' then -- result is multi-lined. Justify closing }
       self:tabify()
-    elseif self.level >= self.extra and sequenceLength > 0 then -- array tables have one extra space before closing }
+    elseif self.level >= self.extra and sequenceLength > 0 or not multiline then -- array tables have one extra space before closing }
       self:puts(' ')
     end
 
@@ -325,6 +337,7 @@ function inspect.inspect(root, options)
   local extra   = options.extra   or 0
   local newline = options.newline or '\n'
   local indent  = options.indent  or '  '
+  local alttab  = options.alttab and true or false
   local addin   = options.addin
   local process = options.process
 
@@ -341,6 +354,7 @@ function inspect.inspect(root, options)
     maxIds           = {},
     newline          = newline,
     indent           = indent,
+    alttab           = alttab,
     addin            = addin,
     tableAppearances = countTableAppearances(root)
   }, Inspector_mt)
