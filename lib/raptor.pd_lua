@@ -1742,11 +1742,12 @@ local hrm_scalepoints = { ["0.09 (minor 7th and 3rd)"] = 0.09, ["0.1 (major 2nd 
 local params = {
    { type = "input", name = "bypass", min = 0, max = 1, default = 0, toggled = true, doc = "bypass the arpeggiator, pass through input notes" },
    { type = "input", name = "division", min = 1, max = 7, default = 1, integer = true, doc = "number of subdivisions of the beat" },
-   -- These aren't in the Ardour plugin, as the meter gets set through the
-   -- DAW's timeline, but it's useful to have these values as parameters in
-   -- the stand-alone version, so that they can be mapped via MIDI learn.
+   -- These aren't in the Ardour plugin, as meter and tempo get set through
+   -- the DAW's timeline, but it's useful to have these values as parameters
+   -- in the stand-alone version, so that they can be mapped via MIDI learn.
    { type = "input", name = "meter-num", min = 1, max = 16, default = 4, integer = true, doc = "number of beats per bar" },
    { type = "input", name = "meter-denom", min = 1, max = 16, default = 4, integer = true, doc = "note value of the beat" },
+   { type = "input", name = "tempo", min = 0, max = 240, default = 120, integer = true, doc = "tempo (bpm)" },
    { type = "input", name = "pgm", min = 0, max = 128, default = 0, integer = true, doc = "program change", scalepoints = { default = 0 } },
    { type = "input", name = "latch", min = 0, max = 1, default = 0, toggled = true, doc = "toggle latch mode" },
    { type = "input", name = "up", min = -2, max = 2, default = 1, integer = true, doc = "octave range up" },
@@ -1863,6 +1864,7 @@ param_skip["rewind"] = true
 param_skip["division"] = true
 param_skip["meter-num"] = true
 param_skip["meter-denom"] = true
+param_skip["tempo"] = true
 
 -- these don't actually live in the panel, skip panel updates
 local panel_skip = {}
@@ -1942,7 +1944,7 @@ end
 function raptor:set_param_tables()
    -- this initializes the parameter setter callbacks; this needs to be redone
    -- after reloading the object (pdx.reload)
-   self.param_set = { self.set, self.set, self.set, self.set, self.set, self.arp.set_latch, self.arp.set_up, self.arp.set_down, self.set, self.arp.set_mode, self.arp.set_raptor, self.arp.set_minvel, self.arp.set_maxvel, self.arp.set_velmod, self.arp.set_gain, self.arp.set_gate, self.arp.set_gatemod, self.arp.set_wmin, self.arp.set_wmax, self.arp.set_pmin, self.arp.set_pmax, self.arp.set_pmod, self.arp.set_hmin, self.arp.set_hmax, self.arp.set_hmod, self.arp.set_pref, self.arp.set_prefmod, self.arp.set_smin, self.arp.set_smax, self.arp.set_smod, self.arp.set_nmax, self.arp.set_nmod, self.arp.set_uniq, self.arp.set_pitchhi, self.arp.set_pitchlo, self.arp.set_pitchtracker, self.set, self.set, arp_set_loopsize, self.arp.set_loop, self.set, self.set, self.set, self.set, self.set }
+   self.param_set = { self.set, self.set, self.set, self.set, self.set, self.set, self.arp.set_latch, self.arp.set_up, self.arp.set_down, self.set, self.arp.set_mode, self.arp.set_raptor, self.arp.set_minvel, self.arp.set_maxvel, self.arp.set_velmod, self.arp.set_gain, self.arp.set_gate, self.arp.set_gatemod, self.arp.set_wmin, self.arp.set_wmax, self.arp.set_pmin, self.arp.set_pmax, self.arp.set_pmod, self.arp.set_hmin, self.arp.set_hmax, self.arp.set_hmod, self.arp.set_pref, self.arp.set_prefmod, self.arp.set_smin, self.arp.set_smax, self.arp.set_smod, self.arp.set_nmax, self.arp.set_nmod, self.arp.set_uniq, self.arp.set_pitchhi, self.arp.set_pitchlo, self.arp.set_pitchtracker, self.set, self.set, arp_set_loopsize, self.arp.set_loop, self.set, self.set, self.set, self.set, self.set }
 end
 
 -- table of the ids of all running raptor instances
@@ -2509,21 +2511,6 @@ function raptor:in_1_sysex(atoms)
 end
 
 -- instance parameters (these need special treatment)
-
-function raptor:in_1_tempo(atoms)
-   if #atoms == 0 then
-      -- report the current value
-      self:outlet(1, "float", {self.tempo})
-   elseif type(atoms[1]) == "number" then
-      -- make sure that this is positive
-      self.tempo = math.max(1, atoms[1])
-      if self.id then
-	 -- make sure to update the panel as well
-	 local id = self.id
-	 pd.send(string.format("%s-%s", id, "tempo"), "set", {self.tempo})
-      end
-   end
-end
 
 function raptor:update_meter()
    -- update the meter in the arpeggiator
