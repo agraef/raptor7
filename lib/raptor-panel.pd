@@ -237,8 +237,8 @@
 parameter values., f 27;
 #X symbolatom 42 363 18 0 0 2 preset #1-preset -, f 18;
 #X msg 380 400 save \$1;
-#X obj 80 346 bng 15 250 50 0 empty empty save 17 7 0 10 #fcfcfc #000000
-#fc5858;
+#X obj 80 346 bng 15 250 50 0 empty empty save 17 7 0 10 #fc2828 #000000
+#000000;
 #X obj 380 360 symbol;
 #X obj 440 360 symbol;
 #X msg 440 402 preset \$1;
