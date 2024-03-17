@@ -249,41 +249,63 @@ function Inspector:putTable(t)
 
     local nonSequentialKeys, nonSequentialKeysLength, sequenceLength = getNonSequentialKeys(t, self.alttab)
     local mt                = getmetatable(t)
+    -- ag: alttab: only indent non-sequential elements if there's more than
+    -- one of them
     local multiline = nonSequentialKeysLength > 1 or not self.alttab and nonSequentialKeysLength > 0
 
     self:puts('{')
+    local function make_addin(count, multiline)
+      if self.addin then
+        if multiline then
+          self:tabify()
+          local s = self.addin(self.level, count)
+          if s then
+            self:puts(s)
+            self:tabify()
+          end
+        else
+          self:puts(' ')
+          local s = self.addin(self.level, count)
+          if s then
+            self:puts(s)
+            self:puts(' ')
+          end
+        end
+      end
+    end
+    local function make_addout(count)
+      if self.addout then
+        local s = self.addout(self.level, count)
+        if s then
+          self:puts(' ')
+          self:puts(s)
+        end
+      end
+    end
     self:down(function()
       local count = 0
+      local ml = self.level <= self.extra
       for i=1, sequenceLength do
-        if count > 0 then self:puts(',') end
-        if self.level > self.extra then
-	   self:puts(' ')
-	   if self.addin then
-	      local s = self.addin(self.level, count)
-	      if s then
-		 self:puts(s)
-		 self:puts(' ')
-	      end
-	   end
-	else
-	   self:tabify()
-	   if self.addin then
-	      local s = self.addin(self.level, count)
-	      if s then
-		 self:puts(s)
-		 self:tabify()
-	      end
-	   end
-	end
+        if count > 0 then
+          self:puts(',')
+          make_addout(count)
+        end
+        make_addin(count, ml)
         self:putValue(t[i])
         count = count + 1
       end
+      if count > 0 and nonSequentialKeysLength == 0 then
+        make_addout(count)
+      end
 
-      -- ag: alttab: only indent non-sequential elements if there's more than
-      -- one of them
       for i=1, nonSequentialKeysLength do
         local k = nonSequentialKeys[i]
-        if count > 0 then self:puts(',') end
+        if count > 0 then
+          self:puts(',')
+          if i == 1 then
+            make_addout(count)
+          end
+        end
         if multiline then
            self:tabify()
         else
@@ -339,6 +361,7 @@ function inspect.inspect(root, options)
   local indent  = options.indent  or '  '
   local alttab  = options.alttab and true or false
   local addin   = options.addin
+  local addout  = options.addout
   local process = options.process
 
   if process then
@@ -356,6 +379,7 @@ function inspect.inspect(root, options)
     indent           = indent,
     alttab           = alttab,
     addin            = addin,
+    addout           = addout,
     tableAppearances = countTableAppearances(root)
   }, Inspector_mt)
 

@@ -994,8 +994,34 @@ function arpeggio:loop_file(file, cmd)
 	    return string.format("-- bar %d", count//self.beats+1)
 	 end
       end
+      -- We use the most likely spellings here, but of course this will depend
+      -- on the key you're in, so feel free to change this as wanted.
+      local notename = {"C", "C#", "D", "Eb", "E", "F", "F#", "G", "G#", "A", "Bb", "C"}
+      local function asa_pitch(n)
+	 n = math.floor(n)
+	 local pc, oct = n % 12, n // 12
+	 -- using ASA standard octave numbering
+	 return string.format("%s%d", notename[pc+1], oct-1)
+      end
+      local function notes(level, count)
+	 local ns = loop[count][1]
+	 if type(ns) == "number" then
+	    ns = {ns}
+	 elseif type(ns) == "table" then
+	    -- make sure that we take a copy here
+	    ns = {table.unpack(ns)}
+	 else
+	    return
+	 end
+	 if level == 1 and next(ns) then
+	    for i = 1, #ns do
+	       ns[i] = asa_pitch(ns[i])
+	    end
+	    return string.format("-- %s", table.concat(ns, ", "))
+	 end
+      end
       f:write(string.format("-- saved by Raptor %s\n", os.date()))
-      f:write(inspect(loop, {extra = 1, addin = bars}))
+      f:write(inspect(loop, {extra = 1, addin = bars, addout = notes}))
       f:close()
       print(string.format("loop: %s: saved %d steps", file, n))
    elseif cmd == 0 then
