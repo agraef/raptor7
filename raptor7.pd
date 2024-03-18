@@ -548,9 +548,23 @@ to detect synthetic pulse triggers vs actual clicks on the pulse control
 #X floatatom 20 70 5 0 99 0 - - -, f 5;
 #X obj 200 100 declare -path lib;
 #X obj 71 30 r \$0-presetno-set;
+#X msg 20 153 pgmset \$1;
+#X obj 20 178 s \$0-arp;
+#X text 100 130 pgmset mode \, if enabled \, interprets program changes
+as preset selection (this is disabled by default \, meaning that program
+changes will be passed through to MIDI output instead), f 51;
+#X obj 350 200 loadbang;
+#X obj 20 130 tgl 15 0 empty empty empty 17 7 0 10 #fcfcfc #000000
+#000000 0 1;
+#X text 20 200 You can enable pgmset mode by default by connecting
+the loadbang with the toggle above. This may be useful for automation
+purposes (e.g. when running Raptor as a plugin) \, but note that this
+prevents program changes to be passed through., f 51;
 #X connect 1 0 0 0;
 #X connect 3 0 2 0;
 #X connect 5 0 2 1;
+#X connect 6 0 7 0;
+#X connect 10 0 6 0;
 #X restore 100 370 pd init;
 #X obj 182 77 cnv 15 70 38 empty empty Raptor7 9 17 0 14 #ffffff #404040
 0;
