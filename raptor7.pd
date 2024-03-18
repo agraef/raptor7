@@ -10,7 +10,7 @@
 #000000 0 1;
 #X obj 310 27 raptor-panel \$0;
 #X obj 280 58 vradio 15 0 0 20 \$0-presetno-set \$0-presetno empty
-0 -8 0 10 #fcfcfc #000000 #000000 0;
+0 -8 0 10 #fcfcfc #000000 #000000 14;
 #X msg 144 250 4 4;
 #X msg 174 250 3 4;
 #N canvas 694 510 450 300 meter 0;
@@ -557,13 +557,13 @@ to detect synthetic pulse triggers vs actual clicks on the pulse control
 #X text 193 108 (c) 2024;
 #N canvas 309 227 462 545 looper 0;
 #X floatatom 40 82 3 0 99 0 - - -, f 3;
-#X obj 70 82 bng 15 250 50 0 empty \$0-loop-load load 17 7 0 10 #e0e0e0
+#X obj 70 82 bng 15 250 50 0 empty \$0-loop-load load 17 7 0 10 #fcfcfc
 #202020 #202020;
 #X obj 260 40 r \$0-loop;
 #X obj 260 65 route set;
 #X obj 260 90 != 0;
 #X obj 260 115 tgl 15 0 empty empty empty 17 7 0 10 #fcfcfc #000000
-#000000 1 1;
+#000000 0 1;
 #X floatatom 257 297 5 0 0 0 - - -, f 5;
 #X msg 257 321 color \$1 12 12;
 #X obj 257 240 sel 1 0;
@@ -623,7 +623,7 @@ to detect synthetic pulse triggers vs actual clicks on the pulse control
 #X obj 260 140 change;
 #X obj 260 165 bng 15 250 50 0 empty empty empty 17 7 0 10 #fcfcfc
 #000000 #000000;
-#X obj 116 82 bng 15 250 50 0 empty \$0-loop-save save 17 7 0 10 #fc2828
+#X obj 116 82 bng 15 250 50 0 empty \$0-loop-save save 17 7 0 10 #fcfcfc
 #202020 #202020;
 #N canvas 165 240 458 431 filename 0;
 #X obj 40 80 symbol;
@@ -680,7 +680,7 @@ to detect synthetic pulse triggers vs actual clicks on the pulse control
 #X connect 13 1 4 0;
 #X connect 13 2 9 0;
 #X connect 13 3 10 0;
-#X restore 40 430 pd looper-remote;
+#X restore 40 20 pd looper-remote;
 #X connect 0 0 16 0;
 #X connect 0 0 20 1;
 #X connect 0 0 32 1;
