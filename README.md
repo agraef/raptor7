@@ -145,6 +145,8 @@ Second, Raptor includes some hard-wired MIDI bindings for the Launch Control whi
 
 Moreover, the "Mute", "Solo", and "Record Arm" buttons are bound to the mute, latch, and bypass controls (the `M`, `L`, and `B` buttons in the top right corner) of the panel.
 
+Some additional looper controls are available as well. Press (and hold) the "Device Hold" button, while you click the up and down buttons to select a loop in the looper subpatch, or the "Mute", "Solo", and "Record Arm" buttons to load and save a loop, and toggle the loop control in the panel, respectively.
+
 ## Quirks and Limitations
 
 Here are some known issues and how to work around them. Anything else that seems to be missing or not working properly? File a [bug report][], or (better yet) submit a [pull request][]!
