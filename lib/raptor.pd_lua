@@ -2046,6 +2046,7 @@ function raptor:initialize(sel, atoms)
    self.outchan = 0
    self.chan = 1
    self.transp = 0
+   self.shift = false
 
    -- midi learn
    self.midi_map = {}
@@ -2386,6 +2387,82 @@ function raptor:load_presets()
    end
 end
 
+-- Launch Control XL support
+
+-- This assumes factory preset #1 on MIDI channel 9. It uses the device hold
+-- button as a shift button, and binds the device select and bank buttons to
+-- ccmaster_next, ccmaster_prev, and ccmaster_set. The (unshifted) mute, solo,
+-- rec arm buttons are bound to mute, latch, and bypass, while the shifted
+-- mute, solo, rec arm buttons are bound to looper save/load and the loop
+-- toggle.
+
+function raptor:launchcontrol_note(atoms)
+   local num, val, ch = table.unpack(atoms)
+   if ch == 9 then
+      if num == 105 then
+	 -- device hold status
+	 self.shift = val > 0
+      elseif val == 0 then
+	 -- no-op
+      elseif num > 72 and num <= 76 then
+	 -- 73-76 = buttons 1-4
+	 self:in_1_ccmaster_set({num-72})
+      elseif num > 88 and num <= 92 then
+	 -- 89-92 = buttons 5-8
+	 self:in_1_ccmaster_set({num-84})
+      elseif self.id and self:check_ccmaster() then
+	 -- This could all be implemented with direct calls to raptor methods,
+	 -- but atm we're lazy and just do a synthetic click of the
+	 -- corresponding controls in the panel and the looper, just like the
+	 -- previous launchcontrol Pd abstraction did.
+	 local id = self.id
+	 if self.shift then
+	    -- 106, 107, 108 = mute, solo, rec arm
+	    if num == 106 then
+	       pd.send(string.format("%s-%s", id, "looper-remote"), "load", {})
+	    elseif num == 107 then
+	       pd.send(string.format("%s-%s", id, "looper-remote"), "save", {})
+	    elseif num == 108 then
+	       pd.send(string.format("%s-%s", id, "loop"), "bang", {})
+	    end
+	 else
+	    -- 106, 107, 108 = mute, solo, rec arm
+	    if num == 106 then
+	       pd.send(string.format("%s-%s", id, "mute"), "bang", {})
+	    elseif num == 107 then
+	       pd.send(string.format("%s-%s", id, "latch"), "bang", {})
+	    elseif num == 108 then
+	       pd.send(string.format("%s-%s", id, "bypass"), "bang", {})
+	    end
+	 end
+      end
+      return true
+   end
+end
+
+function raptor:launchcontrol_ctl(atoms)
+   local val, num, ch = table.unpack(atoms)
+   if ch == 9 and self.shift then
+      if val > 0 then
+	 local id = self.id
+	 -- 106, 107 = left, right (ccmaster select)
+	 if num == 106 then
+	    self:in_1_ccmaster_prev()
+	 elseif num == 107 then
+	    self:in_1_ccmaster_next()
+	 elseif id and self:check_ccmaster() then
+	    -- 104, 105 = up, down (loop select)
+	    if id and num == 104 then
+	       pd.send(string.format("%s-%s", id, "looper-remote"), "next", {})
+	    elseif id and num == 105 then
+	       pd.send(string.format("%s-%s", id, "looper-remote"), "prev", {})
+	    end
+	 end
+      end
+      return true
+   end
+end
+
 -- note input (SMMF format)
 
 function raptor:get_chan(ch)
@@ -2411,6 +2488,9 @@ function raptor:rechan(atoms)
 end
 
 function raptor:in_1_note(atoms)
+   if self:launchcontrol_note(atoms) then
+      return
+   end
    if self.bypass ~= 0 then
       -- pass through incoming notes (with transposition applied)
       if self:check_chan(atoms[3]) then
@@ -2442,6 +2522,9 @@ end
 -- MIDI learn and mapping functionality
 
 function raptor:in_1_ctl(atoms)
+   if self:launchcontrol_ctl(atoms) then
+      return
+   end
    if self.midi_learn == 1 then
       -- midi learn for CC
       if atoms[1] > 0 and
@@ -2621,9 +2704,6 @@ function raptor:in_1_dump(atoms)
    pd.send(string.format("%s-%s", id, "meter-num"), "set", {self.n})
    pd.send(string.format("%s-%s", id, "meter-denom"), "set", {self.m})
    pd.send(string.format("%s-%s", id, "division"), "set", {self.division})
-   -- transmit various config data
-   pd.send(string.format("%s-%s", id, "arp-config"), "debug_level", {debug_level})
-   pd.send(string.format("%s-%s", id, "arp-config"), "launchcontrol", {launchcontrol})
    if init then
       pd.send(string.format("%s-%s", id, "preset"), "symbol", {"default"})
       if debug_level >= 1 then

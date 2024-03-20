@@ -466,8 +466,7 @@ to detect synthetic pulse triggers vs actual clicks on the pulse control
 #X obj 130 143 s \$0-learn-mode;
 #X msg 160 93 6;
 #X obj 20 110 r \$0-myarp;
-#X obj 20 45 launchcontrol \$0;
-#X connect 0 0 14 0;
+#X connect 0 0 3 0;
 #X connect 1 0 3 0;
 #X connect 2 0 3 0;
 #X connect 4 0 3 0;
@@ -480,7 +479,6 @@ to detect synthetic pulse triggers vs actual clicks on the pulse control
 #X connect 10 0 11 0;
 #X connect 12 0 10 0;
 #X connect 13 0 3 0;
-#X connect 14 0 3 0;
 #X restore 30 210 pd input;
 #N canvas 411 510 450 325 output 0;
 #X obj 20 190 midi-output;
