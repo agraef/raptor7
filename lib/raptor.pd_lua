@@ -1004,16 +1004,16 @@ function arpeggio:loop_file(file, cmd)
 	 return string.format("%s%d", notename[pc+1], oct-1)
       end
       local function notes(level, count)
-	 local ns = loop[count][1]
-	 if type(ns) == "number" then
-	    ns = {ns}
-	 elseif type(ns) == "table" then
-	    -- make sure that we take a copy here
-	    ns = {table.unpack(ns)}
-	 else
-	    return
-	 end
-	 if level == 1 and next(ns) then
+	 if level == 1 then
+	    local ns = loop[count][1]
+	    if type(ns) == "number" then
+	       ns = {ns}
+	    elseif type(ns) == "table" and next(ns) then
+	       -- make sure that we take a copy here
+	       ns = {table.unpack(ns)}
+	    else
+	       return
+	    end
 	    for i = 1, #ns do
 	       ns[i] = asa_pitch(ns[i])
 	    end
