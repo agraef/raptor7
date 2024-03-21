@@ -1935,6 +1935,14 @@ function raptor:set(param, x)
       -- update the meter
       self:update_meter()
    end
+   -- calculate the new delay (note-off time) in ms
+   local delay = 60000/self.tempo * 4/self.m/self.division
+   if self.last_delay and delay ~= self.last_delay then
+      -- we want to update the delay time immediately if it has changed, so
+      -- that we don't get stuck waiting for the next pulse if the previous
+      -- delay time was very large or even infinite (tempo = 0)
+      self:outlet(3, "float", { delay })
+   end
    if self.inchan ~= last_inchan and self.inchan > 0 then
       -- change of input channel, kill off chord memory and stop notes
       self.arp:panic()
@@ -2119,6 +2127,7 @@ function raptor:in_1_bang()
    local notes, vel, gate, w, n = self.arp:pulse()
    -- calculate the current delay (note-off time) in ms
    local delay = 60000/self.tempo * 4/self.m/self.division
+   self.last_delay = delay
    -- output the delay time until the next pulse is due on outlet #3
    self:outlet(3, "float", { delay })
    -- output the current pulse number and number of beats on outlet #2
