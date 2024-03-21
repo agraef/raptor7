@@ -2405,9 +2405,14 @@ end
 -- mute, solo, rec arm buttons are bound to looper save/load and the loop
 -- toggle.
 
+-- NOTE: We assume the Launch Control XL to be connected to Pd's MIDI input
+-- port #2, so that the note and CC messages from the device don't interfere
+-- with messages from the primary MIDI input devices on port #1. Therefore the
+-- actual MIDI channel that we're listening on is 25 = 16+9.
+
 function raptor:launchcontrol_note(atoms)
    local num, val, ch = table.unpack(atoms)
-   if ch == 9 then
+   if ch == 25 then
       if num == 105 then
 	 -- device hold status
 	 self.shift = val > 0
@@ -2451,7 +2456,7 @@ end
 
 function raptor:launchcontrol_ctl(atoms)
    local val, num, ch = table.unpack(atoms)
-   if ch == 9 and self.shift then
+   if ch == 25 and self.shift then
       if val > 0 then
 	 local id = self.id
 	 -- 106, 107 = left, right (ccmaster select)
