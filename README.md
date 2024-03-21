@@ -139,9 +139,11 @@ Also note that if you're running multiple Raptor instances, normally MIDI contro
 
 #### Launch Control
 
-The [Novation Launch Control XL][] is a popular mixer-style controller with lots of knobs and faders, which makes for a nice Raptor control surface, so Raptor has special support for it. First, there's a file launchcontrol_map.lua file in the data directory with ready-made MIDI bindings for that device. To use it, just copy that file to midi_map.lua and you should be set. Check the comments at the beginning of the file for information on the bindings.
+The [Novation Launch Control XL][] is a popular mixer-style controller with lots of knobs and faders, which makes for a nice Raptor control surface, so Raptor has special support for it. To make this work, you need to connect the Launch Control XL to Pd's *second* MIDI input port. This ensures that messages from the controller don't interfere with MIDI data from the primary input device on Pd's first MIDI input port, where you'd typically connect your MIDI keyboard, pad controller, etc.
 
-Second, Raptor includes some hard-wired MIDI bindings for the Launch Control which let you switch the target Raptor instance for MIDI control easily and quickly. To do this, press (and hold) the "Device Hold" button, while you push one of the "Device Select" (left/right) buttons to cycle through the Raptor instances, or the "Device Bank" buttons labelled 1-8 to directly change to the corresponding instance.
+The Launch Control XL support consists of two parts. First, there's a file launchcontrol_map.lua file in the data directory with ready-made MIDI bindings for the device. To use it, just copy that file to midi_map.lua and you should be set. Check the comments at the beginning of the file for information on the bindings.
+
+Second, Raptor includes some hard-wired MIDI bindings for the Launch Control which let you switch the target Raptor instance for MIDI control easily and quickly. To do this, press (and hold) the "Device Hold" button, while you push one of the "Device Select" (left/right) buttons to cycle through the Raptor instances, or the "Device Bank" buttons labeled 1-8 to directly change to the corresponding instance (or switch back to "omni" if the given instance was already selected).
 
 Moreover, the "Mute", "Solo", and "Record Arm" buttons are bound to the mute, latch, and bypass controls (the `M`, `L`, and `B` buttons in the top right corner) of the panel.
 
