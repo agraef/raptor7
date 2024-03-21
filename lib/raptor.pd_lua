@@ -2497,7 +2497,7 @@ function raptor:rechan(atoms)
 end
 
 function raptor:in_1_note(atoms)
-   if self:launchcontrol_note(atoms) then
+   if launchcontrol ~= 0 and self:launchcontrol_note(atoms) then
       return
    end
    if self.bypass ~= 0 then
@@ -2531,7 +2531,7 @@ end
 -- MIDI learn and mapping functionality
 
 function raptor:in_1_ctl(atoms)
-   if self:launchcontrol_ctl(atoms) then
+   if launchcontrol ~= 0 and self:launchcontrol_ctl(atoms) then
       return
    end
    if self.midi_learn == 1 then
