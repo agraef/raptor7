@@ -255,23 +255,25 @@ function Inspector:putTable(t)
 
     self:puts('{')
     local function make_addin(count, multiline)
-      if self.addin then
-        if multiline then
+       if multiline then
           self:tabify()
-          local s = self.addin(self.level, count)
-          if s then
-            self:puts(s)
-            self:tabify()
-          end
-        else
+	  if self.addin then
+	     local s = self.addin(self.level, count)
+	     if s then
+		self:puts(s)
+		self:tabify()
+	     end
+	  end
+       else
           self:puts(' ')
-          local s = self.addin(self.level, count)
-          if s then
-            self:puts(s)
-            self:puts(' ')
-          end
-        end
-      end
+	  if self.addin then
+	     local s = self.addin(self.level, count)
+	     if s then
+		self:puts(s)
+		self:puts(' ')
+	     end
+	  end
+       end
     end
     local function make_addout(count)
       if self.addout then
