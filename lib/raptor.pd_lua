@@ -2418,10 +2418,10 @@ function raptor:launchcontrol_note(atoms)
 	 self.shift = val > 0
       elseif val == 0 then
 	 -- no-op
-      elseif num > 72 and num <= 76 then
+      elseif num > 72 and num <= 76 and self.shift then
 	 -- 73-76 = buttons 1-4
 	 self:in_1_ccmaster_set({num-72})
-      elseif num > 88 and num <= 92 then
+      elseif num > 88 and num <= 92 and self.shift then
 	 -- 89-92 = buttons 5-8
 	 self:in_1_ccmaster_set({num-84})
       elseif self.id and self:check_ccmaster() then
