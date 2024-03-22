@@ -52,7 +52,7 @@ local launchcontrol = 1
 -- bindings are stored. You can change this if you frequently switch between
 -- different MIDI setups, but note that this file is modified any time you add
 -- or remove a binding using raptor's MIDI learn facility.
-local midimap_name = "midi_map.lua"
+local midimap_name = "midi.map"
 
 -- -------------------------------------------------------------------------
 
