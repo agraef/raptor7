@@ -1,0 +1,72 @@
+-- -*- mode: lua -*-
+
+-- MIDI map for the AKAI MIDIMIX. Albert Gräf <agggraef@gmail.com>, 2024
+
+-- To use this, copy this file to midi.map, connect the MIDIMIX to Pd's second
+-- MIDI input, and you should be set.
+
+-- This is similar to the Launch Control XL map. The mapping of the knobs and
+-- faders is virtually the same (although the CC numbers differ). Please check
+-- the launchcontrol.map file for details on how these are mapped.
+
+-- The binding of the other functions is a bit quirky, though, due to the
+-- MIDIMIX's comparative dearth of buttons. Note that in the hardwired support
+-- for the MIDIMIX, the looper functions are on BANK LEFT/RIGHT (prev, next
+-- loop) and the three rightmost MUTE buttons (load, save, loop toggle).
+
+-- I tried to map out the remaining buttons in the two button rows in a
+-- somewhat logical way, like this:
+
+--   - voice controls -                       - looper controls -
+-- [mute] [latch] [bypass]  [      ] [      ] [load] [save] [loop]
+--                [raptor]  [rewind]                        [play]
+
+-- So the play button sits right below the loop button, and the raptor and
+-- rewind buttons sit right above the faders with the anacrusis/scrub and
+-- pattern mode parameters to which they are related. I hope that this makes
+-- at least some sense. :)
+
+-- NB: We could have done a similar mapping with the two button rows of the
+-- Launch Control XL, but that device has some extra arrow buttons, so we put
+-- these to good use instead.
+
+{
+  [16] = { [17] = "minvel" },
+  [17] = { [17] = "maxvel" },
+  [18] = { [17] = "velmod" },
+  [19] = { [17] = "pitchhi" },
+  [20] = { [17] = "pmin" },
+  [21] = { [17] = "pmax" },
+  [22] = { [17] = "pmod" },
+  [23] = { [17] = "pitchlo" },
+  [24] = { [17] = "wmin" },
+  [25] = { [17] = "wmax" },
+  [26] = { [17] = "gain" },
+  [27] = { [17] = "mode" },
+  [28] = { [17] = "gate" },
+  [29] = { [17] = "gate" },
+  [30] = { [17] = "gatemod" },
+  [31] = { [17] = "pos" },
+  [46] = { [17] = "hmin" },
+  [47] = { [17] = "hmax" },
+  [48] = { [17] = "hmod" },
+  [49] = { [17] = "tempo" },
+  [50] = { [17] = "pref" },
+  [51] = { [17] = "pref" },
+  [52] = { [17] = "prefmod" },
+  [53] = { [17] = "meter-num" },
+  [54] = { [17] = "smin" },
+  [55] = { [17] = "smax" },
+  [56] = { [17] = "smod" },
+  [57] = { [17] = "meter-denom" },
+  [58] = { [17] = "uniq" },
+  [59] = { [17] = "nmax" },
+  [60] = { [17] = "nmod" },
+  [61] = { [17] = "division" },
+  [129] = { [17] = { "mute", true } },
+  [132] = { [17] = { "latch", true } },
+  [135] = { [17] = { "bypass", true } },
+  [137] = { [17] = { "raptor", true } },
+  [140] = { [17] = { "rewind", true } },
+  [152] = { [17] = { "play", true } },
+}

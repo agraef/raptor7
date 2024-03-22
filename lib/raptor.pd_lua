@@ -48,6 +48,16 @@ local debug_level = 1
 -- functionality.
 local launchcontrol = 1
 
+-- midimix: Special support for the AKAI Professional MIDIMIX. This works
+-- pretty much like the Launch Control XL support above. The MIDIMIX needs to
+-- be on factory settings and connected to Pd's second MIDI input.
+
+-- The MIDIMIX binding is a bit quirky as the device lacks some of the buttons
+-- that the Launch Control XL has. The SOLO button is used as a shift button
+-- in lieu of the Launch Control's Device Hold button. SOLO + BANK LEFT/RIGHT
+-- and SOLO + REC ARM 1-8 can then be used to switch the ccmaster.
+local midimix = 1
+
 -- midimap_name: The name of the file in the data directory in which MIDI
 -- bindings are stored. You can change this if you frequently switch between
 -- different MIDI setups, but note that this file is modified any time you add
@@ -2508,6 +2518,70 @@ function raptor:launchcontrol_ctl(atoms)
    return false
 end
 
+-- AKAI Professional MIDIMIX support
+
+function raptor:midimix_note(atoms)
+   local num, val, ch = table.unpack(atoms)
+   if ch == 17 then -- channel 1 on second input port
+      if num == 27 then
+	 -- SOLO status (used as a shift key)
+	 self.shift = val > 0
+      elseif not self.shift then
+	 -- The looper bindings are a bit quirky because of the dearth of
+	 -- buttons on the MIDIMIX. So we use unshifted buttons here. At
+	 -- present, we have the loop selection on BANK LEFT/RIGHT, and the
+	 -- other loop controls (load, save, and the loop toggle) on the
+	 -- rightmost three MUTE buttons.
+	 local id = self.id
+	 local ok = val>0 and id and self:check_ccmaster()
+	 if num == 25 then
+	    if ok then
+	       pd.send(string.format("%s-%s", id, "looper-remote"), "prev", {})
+	    end
+	 elseif num == 26 then
+	    if ok then
+	       pd.send(string.format("%s-%s", id, "looper-remote"), "next", {})
+	    end
+	 elseif num == 16 then
+	    if ok then
+	       pd.send(string.format("%s-%s", id, "looper-remote"), "load", {})
+	    end
+	 elseif num == 19 then
+	    if ok then
+	       pd.send(string.format("%s-%s", id, "looper-remote"), "save", {})
+	    end
+	 elseif num == 22 then
+	    if ok then
+	       pd.send(string.format("%s-%s", id, "loop"), "bang", {})
+	    end
+	 else
+	    -- Make sure to leave all other unshifted buttons unbound so that
+	    -- they can be used with MIDI learn.
+	    return false
+	 end
+      elseif num == 25 or num == 26 or num <= 24 and num % 3 == 0 then
+	 -- All the other bindings use shifted buttons,
+	 -- 25 = BANK LEFT, 26 = BANK RIGHT, the other numbers denote the
+	 -- buttons 1-8 in the bottom row.
+	 if val == 0 then
+	    -- no-op
+	 elseif num <= 24 then
+	    self:in_1_ccmaster_set({num // 3})
+	 elseif num == 25 then
+	    self:in_1_ccmaster_prev()
+	 elseif num == 26 then
+	    self:in_1_ccmaster_next()
+	 end
+      else
+	 -- Make sure to leave all other shifted buttons unbound so that they
+	 -- can be used with MIDI learn.
+	 return false
+      end
+      return true
+   end
+   return false
+end
+
 -- note input (SMMF format)
 
 function raptor:get_chan(ch)
@@ -2534,6 +2608,9 @@ end
 
 function raptor:in_1_note(atoms)
    if launchcontrol ~= 0 and self:launchcontrol_note(atoms) then
+      return
+   end
+   if midimix ~= 0 and self:midimix_note(atoms) then
       return
    end
    -- for the purposes of MIDI learn, notes are treated as if they were
