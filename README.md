@@ -125,17 +125,17 @@ The loop files themselves are just Lua tables, so you can also edit them in any 
 
 ### MIDI Learn
 
-Raptor has a lot of parameters which you might want to work with during live performances. Fortunately, it's possible to map most of these using the built-in MIDI learn facility. You can assign MIDI control changes to any of the controls in the panel, as well as some of the controls in the time subpatch, as follows:
+Raptor has a lot of parameters which you might want to work with during live performances. Fortunately, it's possible to map most of these using the built-in MIDI learn facility. You can assign MIDI control changes and note messages to any of the controls in the panel, as well as some of the controls in the time subpatch, as follows:
 
 - Click the `learn` message in the main patch. The background of the "MIDI Learn" label in the main patch will turn a light green to indicate that you're in MIDI mapping mode.
-- Click or move the control on the MIDI device. This can be any knob, fader, or button, but only controls generating MIDI CC messages are supported at this time.
-- Click or wiggle the control in the time patch or panel that you want to bind the CC message to.
+- Click or move the control on the MIDI device. This can be any knob, fader, or button, but only controls generating MIDI CC or note messages are supported at this time.
+- Click or wiggle the control in the time patch or panel that you want to bind the MIDI message to.
 
 You can also first operate the control in the patch and then the MIDI control, if you prefer. And you can abort the process at any time by clicking `learn` again. It's also possible to delete an existing binding by clicking `unlearn` after choosing the MIDI or Raptor control. Raptor will provide feedback and guide you through the process with some messages in the Pd console. In particular, it will tell you if there is an existing binding for the same MIDI control or parameter value, so that you can get rid of it if needed.
 
 The learned MIDI binding will be in effect immediately, in *all* running Raptor instances. It will also be stored in the midi_map.lua file in the data directory, from where all bindings will be reloaded next time you fire up Raptor. Note that while it's possible to map different MIDI controls to the same Raptor parameter, at present you can't have a MIDI control affect multiple parameters at once (no macro controls, sorry!).
 
-Also note that if you're running multiple Raptor instances, normally MIDI controls will affect them all, so their parameters will change in lockstep. If you want to operate a single Raptor instance instead, you can click the unlabeled button in the top left corner of the panel. The button will turn blue to indicate the instance that is receiving the control data. You can switch instances at any time, and clicking the blue button again will return the Raptor controls to omni mode.
+Also note that if you're running multiple Raptor instances, normally MIDI controls will affect them all, so their parameters will change in lockstep. If you want to operate a single Raptor instance instead, you can click the unlabeled button in the top left corner of the panel. The button will turn blue to indicate that only this instance is now receiving the control data. You can switch instances at any time, and clicking the blue button again will return the Raptor controls to omni mode, in which all instances receive the control data.
 
 #### Launch Control
 
@@ -144,8 +144,6 @@ The [Novation Launch Control XL][] is a popular mixer-style controller with lots
 The Launch Control XL support consists of two parts. First, there's a file launchcontrol_map.lua file in the data directory with ready-made MIDI bindings for the device. To use it, just copy that file to midi_map.lua and you should be set. Check the comments at the beginning of the file for information on the bindings.
 
 Second, Raptor includes some hard-wired MIDI bindings for the Launch Control which let you switch the target Raptor instance for MIDI control easily and quickly. To do this, press (and hold) the "Device Hold" button, while you push one of the "Device Select" (left/right) buttons to cycle through the Raptor instances, or the "Device Bank" buttons labeled 1-8 to directly change to the corresponding instance (or switch back to "omni" if the given instance was already selected).
-
-Moreover, the "Mute", "Solo", and "Record Arm" buttons are bound to the mute, latch, and bypass controls (the `M`, `L`, and `B` buttons in the top right corner) of the panel.
 
 Some additional looper controls are available as well. Press (and hold) the "Device Hold" button, while you click the up and down buttons to select a loop in the looper subpatch, or the "Mute", "Solo", and "Record Arm" buttons to load and save a loop, and toggle the loop control in the panel, respectively.
 
@@ -167,7 +165,7 @@ Overdubbing and more advanced loop editing capabilities would be nice to have; b
 
 ### MIDI Learn
 
-In a similar vein, Raptor's MIDI learn facility is also fairly basic. It's only possible to map MIDI CC messages at present; having support for note messages and aftertouch would certainly be useful. We can hopefully add this in a future update. Also, there's no support for macro controls. That's unlikely to change in the near future, as it would require a lot of additional machinery in order to adjust the value mapping.
+In a similar vein, Raptor's MIDI learn facility is also fairly basic. It's only possible to map MIDI CC and note messages at present; having support for other kinds of messages such as aftertouch could be useful; we might add this in a future update. Also, there's no support for macro controls. That's unlikely to change in the near future, as it would require a lot of additional machinery in order to adjust the value mapping.
 
 At present, special support is only available for the Launch Control XL. There are other popular (and more budget-friendly) controllers. Thus, if anyone can contribute MIDI maps or special support for other devices, please submit a [pull request][]!
 
