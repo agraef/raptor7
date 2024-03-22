@@ -4,17 +4,23 @@
 -- the LaunchControl XL. Enjoy. :) Albert Gräf <agggraef@gmail.com>, 2024
 
 -- This maps the encoders in each column to the controls of the corresponding
--- row in the panel (1st column A = minvel, B = maxvel, Pan = velmod; 2nd
--- column = pmin, pmax, pmod, etc.). This works quite well, since the pan pots
--- are mapped to the mod controls in the third column of the panel, which are
--- mostly bipolar. The Send A and B controls are mostly mapped to ranges, so
--- that A controls the lower, B the upper value. Some rows have only a single
--- value (besides the mod value), in which case I mapped both A and B to that
--- value.
+-- row in the panel. This works quite well, since the pan pots are mapped to
+-- the mod controls in the third column of the panel, which are mostly
+-- bipolar. The Send A and B controls are mostly mapped to ranges, so that A
+-- controls the lower, B the upper value. Some rows have only a single value
+-- (besides the mod value), in which case I mapped both A and B to that value.
 
--- The faders are mapped as follows: 1 = hi, 2 = lo, 3 = mode (random, up,
--- down, etc.), 4 = pos/anacrusis (the "scrubbing" control), 5 = loop size,
--- 6 = meter numerator, 7 = meter denominator, 8 = division.
+-- The faders are mapped as follows: 1 = pitch hi, 2 = pitch lo, 3 = pattern
+-- mode (random, up, down, etc.), 4 = pos/anacrusis (the "scrubbing" control),
+-- 5 = tempo, 6 = meter numerator, 7 = meter denominator, 8 = division.
+
+-- The resulting mapping of the knobs and faders is the following:
+
+-- [minvel] [pmin] [wmin] [gate]    [hmin]  [pref]    [smin]  [uniq]
+-- [maxvel] [pmax] [wmax] [gate]    [hmax]  [pref]    [smax]  [nmax]
+-- [velmod] [pmod] [gain] [gatemod] [hmod]  [prefmod] [smod]  [nmod]
+
+-- [hi]     [lo]   [mode] [pos]     [tempo] [num]     [denom] [divis]
 
 -- The send and track select buttons are mapped as follows:
 -- up = rewind, down = raptor toggle, left = loop, right = play.
@@ -22,9 +28,10 @@
 -- Finally, the mute, solo, and record arm buttons are mapped to the mute,
 -- latch, and bypass toggles in the panel.
 
--- I think that this covers the most important functions that you might want
--- to use during a live performance. Of course, YMMV, so feel free to change
--- these around to better suit your style.
+-- We might still revise this in the future to bring it more in line with our
+-- mapping for the AKAI MIDIMIX. But for the time being, I think that this
+-- works quite well and covers the most important functions that you might
+-- want to use during a live performance.
 
 {
   [13] = { [25] = "minvel" },
@@ -55,7 +62,7 @@
   [78] = { [25] = "pitchlo" },
   [79] = { [25] = "mode" },
   [80] = { [25] = "pos" },
-  [81] = { [25] = "loopsize" },
+  [81] = { [25] = "tempo" },
   [82] = { [25] = "meter-num" },
   [83] = { [25] = "meter-denom" },
   [84] = { [25] = "division" },

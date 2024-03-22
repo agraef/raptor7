@@ -6,8 +6,14 @@
 -- MIDI input, and you should be set.
 
 -- This is similar to the Launch Control XL map. The mapping of the knobs and
--- faders is virtually the same (although the CC numbers differ). Please check
--- the launchcontrol.map file for details on how these are mapped.
+-- faders is virtually the same, although the CC numbers differ (please check
+-- the launchcontrol.map file for a more detailed explanation of the layout):
+
+-- [minvel] [pmin] [wmin] [gate]    [hmin]  [pref]    [smin]  [uniq]
+-- [maxvel] [pmax] [wmax] [gate]    [hmax]  [pref]    [smax]  [nmax]
+-- [velmod] [pmod] [gain] [gatemod] [hmod]  [prefmod] [smod]  [nmod]
+
+-- [hi]     [lo]   [mode] [pos]     [tempo] [num]     [denom] [divis]
 
 -- The binding of the other functions is a bit quirky, though, due to the
 -- MIDIMIX's comparative dearth of buttons. Note that in the hardwired support
@@ -22,13 +28,9 @@
 --                [raptor]  [rewind]                        [play]
 
 -- So the play button sits right below the loop button, and the raptor and
--- rewind buttons sit right above the faders with the anacrusis/scrub and
--- pattern mode parameters to which they are related. I hope that this makes
+-- rewind buttons sit right above the faders with the pattern mode and
+-- anacrusis/pos parameters to which they are related. I hope that this makes
 -- at least some sense. :)
-
--- NB: We could have done a similar mapping with the two button rows of the
--- Launch Control XL, but that device has some extra arrow buttons, so we put
--- these to good use instead.
 
 {
   [16] = { [17] = "minvel" },
