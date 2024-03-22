@@ -88,6 +88,36 @@ end
 
 -- -------------------------------------------------------------------------
 
+-- Helper functions: ASA note names
+
+-- We use the most likely spellings here, but of course this will depend
+-- on the key you're in, so feel free to change this as wanted.
+
+local notename = {"C", "C#", "D", "Eb", "E", "F", "F#", "G", "G#", "A", "Bb", "C"}
+
+local function asa_pitch(n, ch)
+   n = math.floor(n)
+   local pc, oct = n % 12, n // 12
+   -- using ASA standard octave numbering
+   if ch then
+      return string.format("%s%d-%d", notename[pc+1], oct-1, ch)
+   else
+      return string.format("%s%d", notename[pc+1], oct-1)
+   end
+end
+
+-- CC descriptions
+
+local function cc_name(cc, ch)
+   if ch then
+      return string.format("CC%d-%d", cc, ch)
+   else
+      return string.format("CC%d", cc)
+   end
+end
+
+-- -------------------------------------------------------------------------
+
 -- Various helper functions to compute Barlow meters and harmonicities using
 -- the methods from Clarence Barlow's Ratio book (Feedback Papers, Cologne,
 -- 2001)
@@ -993,15 +1023,6 @@ function arpeggio:loop_file(file, cmd)
 	 if level == 1 and count%self.beats == 0 then
 	    return string.format("-- bar %d", count//self.beats+1)
 	 end
-      end
-      -- We use the most likely spellings here, but of course this will depend
-      -- on the key you're in, so feel free to change this as wanted.
-      local notename = {"C", "C#", "D", "Eb", "E", "F", "F#", "G", "G#", "A", "Bb", "C"}
-      local function asa_pitch(n)
-	 n = math.floor(n)
-	 local pc, oct = n % 12, n // 12
-	 -- using ASA standard octave numbering
-	 return string.format("%s%d", notename[pc+1], oct-1)
       end
       local function notes(level, count)
 	 if level == 1 then
@@ -2412,10 +2433,12 @@ end
 
 function raptor:launchcontrol_note(atoms)
    local num, val, ch = table.unpack(atoms)
-   if ch == 25 then
+   if ch == 25 then -- channel 9 on second input port
       if num == 105 then
 	 -- device hold status
 	 self.shift = val > 0
+      elseif not self.shift then
+	 return false
       elseif val == 0 then
 	 -- no-op
       elseif num > 72 and num <= 76 and self.shift then
@@ -2430,28 +2453,18 @@ function raptor:launchcontrol_note(atoms)
 	 -- corresponding controls in the panel and the looper, just like the
 	 -- previous launchcontrol Pd abstraction did.
 	 local id = self.id
-	 if self.shift then
-	    -- 106, 107, 108 = mute, solo, rec arm
-	    if num == 106 then
-	       pd.send(string.format("%s-%s", id, "looper-remote"), "load", {})
-	    elseif num == 107 then
-	       pd.send(string.format("%s-%s", id, "looper-remote"), "save", {})
-	    elseif num == 108 then
-	       pd.send(string.format("%s-%s", id, "loop"), "bang", {})
-	    end
-	 else
-	    -- 106, 107, 108 = mute, solo, rec arm
-	    if num == 106 then
-	       pd.send(string.format("%s-%s", id, "mute"), "bang", {})
-	    elseif num == 107 then
-	       pd.send(string.format("%s-%s", id, "latch"), "bang", {})
-	    elseif num == 108 then
-	       pd.send(string.format("%s-%s", id, "bypass"), "bang", {})
-	    end
+	 -- 106, 107, 108 = mute, solo, rec arm
+	 if num == 106 then
+	    pd.send(string.format("%s-%s", id, "looper-remote"), "load", {})
+	 elseif num == 107 then
+	    pd.send(string.format("%s-%s", id, "looper-remote"), "save", {})
+	 elseif num == 108 then
+	    pd.send(string.format("%s-%s", id, "loop"), "bang", {})
 	 end
       end
       return true
    end
+   return false
 end
 
 function raptor:launchcontrol_ctl(atoms)
@@ -2475,6 +2488,7 @@ function raptor:launchcontrol_ctl(atoms)
       end
       return true
    end
+   return false
 end
 
 -- note input (SMMF format)
@@ -2503,6 +2517,12 @@ end
 
 function raptor:in_1_note(atoms)
    if launchcontrol ~= 0 and self:launchcontrol_note(atoms) then
+      return
+   end
+   -- for the purposes of MIDI learn, notes are treated as if they were
+   -- additional CCs starting at 128
+   if self:check_midi_learn(atoms[2], atoms[1]+128, atoms[3]) or
+      self:check_midi_map(atoms[2], atoms[1]+128, atoms[3]) then
       return
    end
    if self.bypass ~= 0 then
@@ -2539,57 +2559,9 @@ function raptor:in_1_ctl(atoms)
    if launchcontrol ~= 0 and self:launchcontrol_ctl(atoms) then
       return
    end
-   if self.midi_learn == 1 then
-      -- midi learn for CC
-      if atoms[1] > 0 and
-	 (not self.midi_learn_cc or
-	  self.midi_learn_cc ~= atoms[2] or
-	  self.midi_learn_ch ~= atoms[3]) then
-	 self.midi_learn_cc = atoms[2]
-	 self.midi_learn_ch = atoms[3]
-	 if atoms[1] == 127 then
-	    -- switch to special toggle mode (in this case, rather than
-	    -- controlling the value directly, the controller's off value is
-	    -- ignored, and the on value toggles the existing value)
-	    self.midi_learn_tgl = true
-	 end
-	 self:learn()
-	 return
-      end
-   end
-   local var, tgl = self:map_get(atoms[2], atoms[3])
-   if var and self:check_ccmaster() then
-      -- apply existing mapping
-      local val = atoms[1]
-      local i = param_i[var]
-      if i then
-	 if params[i].toggled then
-	    if tgl then
-	       -- special toggle mode
-	       if val > 0 then
-		  self:param(var, self.param_val[i] == 0 and 1 or 0)
-	       end
-	    else
-	       -- continuous controller, interpreted as toggle
-	       self:param(var, val > 0 and 1 or 0)
-	    end
-	 else
-	    -- make sure that 64 gets mapped to the half-way value
-	    local min, max = params[i].min, params[i].max
-	    if var == "pos" then
-	       -- this one is special, it has a nominal range of -24..24, but
-	       -- we want to clamp it to the actual number of beats instead
-	       max = math.min(max, self.arp.beats)
-	       min = -max
-	    end
-	    val = val==127 and max or val/128*(max-min)+min
-	    if params[i].integer then
-	       val = math.floor(val+0.5)
-	    end
-	    self:param(var, val)
-	 end
-	 return
-      end
+   if self:check_midi_learn(atoms[1], atoms[2], atoms[3]) or
+      self:check_midi_map(atoms[1], atoms[2], atoms[3]) then
+      return
    end
    -- simple pass-through
    if self:check_chan(atoms[3]) then
@@ -2732,7 +2704,19 @@ function raptor:in_1_dump(atoms)
    end
 end
 
--- midi learn
+-- midi learn (originally for CC only, but we can also use the same facility
+-- for notes by mapping the note numbers to pseudo CCs 128-255)
+
+function raptor:cctostring(cc, ch)
+   if not cc then
+      cc, ch = self.midi_learn_cc, self.midi_learn_ch
+   end
+   if cc < 128 then
+      return cc_name(cc, ch)
+   else
+      return asa_pitch(cc-128, ch)
+   end
+end
 
 function raptor:load_map()
    local fname = self._canvaspath .. "data/" .. midimap_name
@@ -2840,12 +2824,71 @@ function raptor:learn()
    elseif self.midi_learn_var then
       local cc, ch = self:map_find(self.midi_learn_var)
       if cc then
-	 print(string.format("mapping param %s already mapped to %s, enter CC", self.midi_learn_var, self:cctostring(cc, ch)))
+	 print(string.format("mapping param %s already mapped to %s, send MIDI", self.midi_learn_var, self:cctostring(cc, ch)))
 	 print("press learn again to abort, or press unlearn to unmap")
       else
-	 print(string.format("mapping param %s, enter CC", self.midi_learn_var))
+	 print(string.format("mapping param %s, send MIDI", self.midi_learn_var))
       end
    end
+end
+
+function raptor:check_midi_learn(val, cc, ch)
+   if self.midi_learn == 1 then
+      -- midi learn for CC
+      if val > 0 and
+	 (not self.midi_learn_cc or
+	  self.midi_learn_cc ~= cc or
+	  self.midi_learn_ch ~= ch) then
+	 self.midi_learn_cc = cc
+	 self.midi_learn_ch = ch
+	 if val == 127 then
+	    -- switch to special toggle mode (in this case, rather than
+	    -- controlling the value directly, the controller's off value is
+	    -- ignored, and the on value toggles the existing value)
+	    self.midi_learn_tgl = true
+	 end
+	 self:learn()
+	 return true
+      end
+   end
+   return false
+end
+
+function raptor:check_midi_map(val, cc, ch)
+   local var, tgl = self:map_get(cc, ch)
+   if var and self:check_ccmaster() then
+      -- apply existing mapping
+      local i = param_i[var]
+      if i then
+	 if params[i].toggled then
+	    if tgl then
+	       -- special toggle mode
+	       if val > 0 then
+		  self:param(var, self.param_val[i] == 0 and 1 or 0)
+	       end
+	    else
+	       -- continuous controller, interpreted as toggle
+	       self:param(var, val > 0 and 1 or 0)
+	    end
+	 else
+	    -- make sure that 64 gets mapped to the half-way value
+	    local min, max = params[i].min, params[i].max
+	    if var == "pos" then
+	       -- this one is special, it has a nominal range of -24..24, but
+	       -- we want to clamp it to the actual number of beats instead
+	       max = math.min(max, self.arp.beats)
+	       min = -max
+	    end
+	    val = val==127 and max or val/128*(max-min)+min
+	    if params[i].integer then
+	       val = math.floor(val+0.5)
+	    end
+	    self:param(var, val)
+	 end
+	 return true
+      end
+   end
+   return false
 end
 
 function raptor:in_1_learn()
@@ -2858,16 +2901,9 @@ function raptor:in_1_learn()
       self.midi_learn_var = nil
       self.midi_learn_tgl = nil
       self:map_mode(1)
-      print("MIDI learn mode, enter CC or wiggle a control")
+      print("MIDI learn mode, send MIDI or wiggle a control")
       print("press learn again to abort")
    end
-end
-
-function raptor:cctostring(cc, ch)
-   if not cc then
-      cc, ch = self.midi_learn_cc, self.midi_learn_ch
-   end
-   return string.format("CC%d-%d", cc, ch)
 end
 
 function raptor:in_1_unlearn()
@@ -2900,7 +2936,7 @@ function raptor:in_1_unlearn()
       self.midi_learn_var = nil
       self.midi_learn_tgl = nil
       self:map_mode(1)
-      print("MIDI learn mode, enter CC or wiggle a control")
+      print("MIDI learn mode, send MIDI or wiggle a control")
       print("press learn again to abort")
    end
 end

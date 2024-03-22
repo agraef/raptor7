@@ -15,8 +15,11 @@
 -- down, etc.), 4 = pos/anacrusis (the "scrubbing" control), 5 = loop size,
 -- 6 = meter numerator, 7 = meter denominator, 8 = division.
 
--- The four remaining CC buttons (send and track select) are mapped as follows:
+-- The send and track select buttons are mapped as follows:
 -- up = rewind, down = raptor toggle, left = loop, right = play.
+
+-- Finally, the mute, solo, and record arm buttons are mapped to the mute,
+-- latch, and bypass toggles in the panel.
 
 -- I think that this covers the most important functions that you might want
 -- to use during a live performance. Of course, YMMV, so feel free to change
@@ -59,4 +62,7 @@
   [105] = { [25] = { "raptor", true } },
   [106] = { [25] = { "loop", true } },
   [107] = { [25] = { "play", true } },
+  [234] = { [25] = { "mute",true } },
+  [235] = { [25] = { "latch",true } },
+  [236] = { [25] = { "bypass",true } }
 }
