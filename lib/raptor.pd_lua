@@ -1920,6 +1920,16 @@ panel_skip["pulse"] = true
 panel_skip["pos"] = true
 panel_skip["rewind"] = true
 
+-- params that are directed at the time master
+local time_var = {}
+time_var["division"] = true
+time_var["meter-num"] = true
+time_var["meter-denom"] = true
+time_var["tempo"] = true
+time_var["play"] = true
+time_var["pos"] = true
+time_var["rewind"] = true
+
 -- param setters
 
 local function arp_set_loopsize(self, x)
@@ -2107,8 +2117,15 @@ function raptor:initialize(sel, atoms)
    return true
 end
 
-function raptor:check_ccmaster()
-   return not self.ccmaster or self.ccmaster == self.id
+function raptor:check_ccmaster(var)
+   if not self.ccmaster or self.ccmaster == self.id then
+      -- omni mode or we're the ccmaster
+      return true
+   else
+      -- also check for time parameters, we need to make sure that these reach
+      -- the time master
+      return var and time_var[var]
+   end
 end
 
 function raptor:finalize()
@@ -2856,7 +2873,7 @@ end
 
 function raptor:check_midi_map(val, cc, ch)
    local var, tgl = self:map_get(cc, ch)
-   if var and self:check_ccmaster() then
+   if var and self:check_ccmaster(var) then
       -- apply existing mapping
       local i = param_i[var]
       if i then
