@@ -33,15 +33,15 @@ local raptor = pd.Class:new():register("raptor")
 local debug_level = 1
 
 -- launchcontrol: This enables some hard-wired MIDI bindings for the Novation
--- LaunchControl XL which makes it easy to switch the global ccmaster (the
+-- Launch Control XL which makes it easy to switch the global ccmaster (the
 -- target instance which receives MIDI-mapped controls if you're running
 -- multiple raptor instances, see the MIDI learn and ccmaster ops below).
 
--- These bindings will only work if the LaunchControl is switched
--- to the first factory preset (which transmits on MIDI channel 9), and of
--- course the LaunchControl needs to be connected to Pd's first MIDI input. It
--- binds the Device Hold + Prev/Next Device Select and Device Hold + Device
--- Bank button combinations so that they will switch the ccmaster accordingly.
+-- These bindings will only work if the Launch Control is switched to the
+-- first factory preset (which transmits on MIDI channel 9), and is connected
+-- to Pd's second MIDI input. It binds the Device Hold + Prev/Next Device
+-- Select and Device Hold + Device Bank button combinations so that they will
+-- switch the ccmaster accordingly.
 
 -- For convenience, we have this enabled by default, which shouldn't normally
 -- cause any issues, but you can disable this here if you don't need this
