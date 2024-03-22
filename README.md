@@ -133,19 +133,25 @@ Raptor has a lot of parameters which you might want to work with during live per
 
 You can also first operate the control in the patch and then the MIDI control, if you prefer. And you can abort the process at any time by clicking `learn` again. It's also possible to delete an existing binding by clicking `unlearn` after choosing the MIDI or Raptor control. Raptor will provide feedback and guide you through the process with some messages in the Pd console. In particular, it will tell you if there is an existing binding for the same MIDI control or parameter value, so that you can get rid of it if needed.
 
-The learned MIDI binding will be in effect immediately, in *all* running Raptor instances. It will also be stored in the midi_map.lua file in the data directory, from where all bindings will be reloaded next time you fire up Raptor. Note that while it's possible to map different MIDI controls to the same Raptor parameter, at present you can't have a MIDI control affect multiple parameters at once (no macro controls, sorry!).
+The learned MIDI binding will be in effect immediately, in *all* running Raptor instances. It will also be stored in the midi.map file in the data directory, from where all bindings will be reloaded next time you fire up Raptor. Note that while it's possible to map different MIDI controls to the same Raptor parameter, at present you can't have a MIDI control affect multiple parameters at once (no macro controls, sorry!).
 
 Also note that if you're running multiple Raptor instances, normally MIDI controls will affect them all, so their parameters will change in lockstep. If you want to operate a single Raptor instance instead, you can click the unlabeled button in the top left corner of the panel. The button will turn blue to indicate that only this instance is now receiving the control data. You can switch instances at any time, and clicking the blue button again will return the Raptor controls to omni mode, in which all instances receive the control data.
 
-#### Launch Control
+#### Novation Launch Control XL Support
 
 The [Novation Launch Control XL][] is a popular mixer-style controller with lots of knobs and faders, which makes for a nice Raptor control surface, so Raptor has special support for it. To make this work, you need to connect the Launch Control XL to Pd's *second* MIDI input port. This ensures that messages from the controller don't interfere with MIDI data from the primary input device on Pd's first MIDI input port, where you'd typically connect your MIDI keyboard, pad controller, etc.
 
-The Launch Control XL support consists of two parts. First, there's a file launchcontrol_map.lua file in the data directory with ready-made MIDI bindings for the device. To use it, just copy that file to midi_map.lua and you should be set. Check the comments at the beginning of the file for information on the bindings.
+The Launch Control XL support consists of two parts. First, there's a launchcontrol.map file in the data directory with ready-made MIDI bindings for the device. To use it, just copy that file to midi.map and you should be set. Check the comments at the beginning of the file for information on the bindings.
 
 Second, Raptor includes some hard-wired MIDI bindings for the Launch Control which let you switch the target Raptor instance for MIDI control easily and quickly. To do this, press (and hold) the "Device Hold" button, while you push one of the "Device Select" (left/right) buttons to cycle through the Raptor instances, or the "Device Bank" buttons labeled 1-8 to directly change to the corresponding instance (or switch back to "omni" if the given instance was already selected).
 
 Some additional looper controls are available as well. Press (and hold) the "Device Hold" button, while you click the up and down buttons to select a loop in the looper subpatch, or the "Mute", "Solo", and "Record Arm" buttons to load and save a loop, and toggle the loop control in the panel, respectively.
+
+#### AKAI Professional MIDIMIX Support
+
+The [AKAI MIDIMIX][] is another popular (and more budget-friendly) controller which has a very similar layout to the Launch Control XL. Raptor includes support for this device as well, consisting of a MIDI mapping and some hard-wired bindings for the looper and for switching Raptor instances.
+
+Note that this mapping is a bit quirky because the MIDIMIX has less buttons. In particular, it lacks a dedicated device select button, so the SOLO button is used as a kind of shift button for selecting Raptor instances instead. A description of the mapping can be found in the midimix.map file in the data directory. To use this mapping, copy the file to midi.map and make sure that the MIDIMIX is connected to Pd's second MIDI input.
 
 ## Quirks and Limitations
 
