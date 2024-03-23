@@ -2004,6 +2004,8 @@ function raptor:set(param, x)
    if self.pos ~= last_pos then
       if self.master and self.id == self.master then
 	 pd.send(string.format("%s-%s", self.id, "pos"), "float", {self.pos})
+      elseif self.id then
+	 pd.send(string.format("%s-%s", self.id, "pos"), "set", {self.pos})
       end
    end
    if self.rewind ~= last_rewind and self.rewind >= 0 then
@@ -2011,7 +2013,7 @@ function raptor:set(param, x)
 	 pd.send(string.format("%s-%s", self.id, "rewind"), "bang", {})
       end
    end
-   if self.pulse ~= last_pulse and self.pulse >= 0 then
+   if self.pulse ~= last_pulse and self.pulse >= 0 and self.id then
       pd.send(string.format("%s-%s", self.id, "pulse"), "bang", {})
    end
 end
