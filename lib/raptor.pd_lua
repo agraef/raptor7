@@ -1966,6 +1966,7 @@ function raptor:set(param, x)
    local last_n = self.n
    local last_division = self.division
    local last_inchan = self.inchan
+   local last_chan = self.chan
    local last_pgm = self.pgm
    if param == "meter-num" then
       param = "n"
@@ -1996,7 +1997,8 @@ function raptor:set(param, x)
       self.arp:panic()
       self:notes_off()
    end
-   if self.pgm ~= last_pgm or self:get_chan(self.chan) ~= self.chan then
+   if self.pgm ~= last_pgm or self.chan ~= last_chan or
+      self:get_chan(self.chan) ~= self.chan then
       -- program or output channel has changed, send the program change
       self.chan = self:get_chan(self.chan)
       if self.pgm > 0 then
@@ -2103,6 +2105,7 @@ function raptor:initialize(sel, atoms)
    self.inchan = 0
    self.outchan = 0
    self.chan = 1
+   self.backup_chan = 1
    self.transp = 0
    self.shift = false
 
@@ -2332,6 +2335,10 @@ function raptor:recall_preset(preset)
       elseif var == "loopsize" and self.arp.loopstate == 1 then
 	 -- avoid thrashing the loop size if we're currently playing a loop
 	 return false
+      elseif var == "outchan" and val == 0 and self.outchan == 10 then
+	 -- as an exception to the following rule, avoid being stuck on the GM
+	 -- drum channel
+	 return true
       elseif (var == "inchan" or var == "outchan") and val == 0 then
 	 -- In order to not disrupt live performances, we don't recall these
 	 -- if zero (i.e., not an actual MIDI channel). However, in contrast
@@ -2343,7 +2350,7 @@ function raptor:recall_preset(preset)
 	 return true
       end
    end
-   for var, val in pairs(preset.params) do
+   local function set(var, val)
       if check(var, val) then
 	 --print(string.format("%s = %s", var, tostring(val)))
 	 self:param(var, val)
@@ -2351,6 +2358,18 @@ function raptor:recall_preset(preset)
 	    -- send the parameter so that it can be picked up by the panel
 	    pd.send(string.format("%s-%s", self.id, var), "set", {val})
 	 end
+      end
+   end
+   if not preset.params["outchan"] then
+      -- force to 0
+      set("outchan", 0)
+   else
+      -- make sure that the output channel gets set before any program change
+      set("outchan", preset.params.outchan)
+   end
+   for var, val in pairs(preset.params) do
+      if var ~= "outchan" then -- already set above
+	 set(var, val)
       end
    end
    self.presetno = i
@@ -2717,6 +2736,9 @@ function raptor:in_1_note(atoms)
 	    end
 	 end
 	 self.arp:note(num, val)
+	 if self.chan ~= 10 then
+	    self.backup_chan = self.chan
+	 end
 	 self.chan = self:get_chan(ch)
       end
    end
@@ -3229,6 +3251,11 @@ function raptor:param(var, val)
 	    else
 	       -- these all live in the arpeggiator
 	       self.param_set[i](self.arp, v)
+	    end
+	    if var == "outchan" and val == 0 then
+	       -- kludge: reset to the last non-drum channel we played on, in
+	       -- order to not be stuck on channel 10
+	       self.chan = self.backup_chan
 	    end
 	    if self.id and not panel_skip[var] then
 	       -- report changes to the panel
