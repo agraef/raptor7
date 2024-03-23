@@ -58,6 +58,13 @@ local launchcontrol = 1
 -- and SOLO + REC ARM 1-8 can then be used to switch the ccmaster.
 local midimix = 1
 
+-- djcontrol: Special support for the Hercules DJControl devices (experimental).
+
+-- At present this just maps the BROWSE encoder and the two jog wheels (the
+-- "turntables"). Tested with the DJControl Inpulse 200 MK2, other similar
+-- devices might need some work.
+local djcontrol = 1
+
 -- midimap_name: The name of the file in the data directory in which MIDI
 -- bindings are stored. You can change this if you frequently switch between
 -- different MIDI setups, but note that this file is modified any time you add
@@ -2346,6 +2353,7 @@ function raptor:recall_preset(preset)
 	 end
       end
    end
+   self.presetno = i
    if self.id then
       pd.send(string.format("%s-%s", self.id, "preset"), "symbol", {preset.name})
       pd.send(string.format("%s-%s", self.id, "presetno"), "set", {i-1})
@@ -2586,6 +2594,61 @@ function raptor:midimix_note(atoms)
    return false
 end
 
+-- Hercules DJControl support (experimental)
+
+function raptor:djcontrol_note(atoms)
+   local num, val, ch = table.unpack(atoms)
+   if (ch == 18 or ch == 19) and num == 8 then
+      -- jog wheel touches, we currently ignore these
+      if self:check_ccmaster() then
+	 local deck = ch-17
+      end
+      return true
+   end
+   return false
+end
+
+function raptor:djcontrol_ctl(atoms)
+   local val, num, ch = table.unpack(atoms)
+   if ch == 17 and num == 1 then
+      -- BROWSER
+      if self:check_ccmaster() then
+	 local presetno = self.presetno
+	 if presetno then
+	    presetno = val == 1 and presetno+1 or presetno-1
+	 else
+	    presetno = 1
+	 end
+	 local preset = self:get_preset(presetno)
+	 if preset then
+	    self:recall_preset(preset)
+	 end
+      end
+      return true
+   elseif (ch == 18 or ch == 19) and (num == 9 or num == 10) then
+      local i = param_i["pos"]
+      if i and self:check_ccmaster() then
+	 -- 1 indicates the left, 2 the right deck
+	 -- XXXFIXME: currently we don't distinguish between these
+	 local deck = ch-17
+	 -- 1 indicates scratch mode, 0 normal movement of the turntable;
+	 -- XXXFIXME: currently we don't distinguish between these either
+	 local scratch = num-9
+	 -- val=1 indicates forward, 127 backward motion
+	 local delta = val == 1 and 1 or -1
+	 local pos = self.pos + delta
+	 -- clamp to the prescribed range
+	 local param = params[i]
+	 pos = math.min(param.max, math.max(param.min, pos))
+	 if pos ~= self.pos then
+	    self:in_1_float(pos)
+	 end
+      end
+      return true
+   end
+   return false
+end
+
 -- note input (SMMF format)
 
 function raptor:get_chan(ch)
@@ -2615,6 +2678,9 @@ function raptor:in_1_note(atoms)
       return
    end
    if midimix ~= 0 and self:midimix_note(atoms) then
+      return
+   end
+   if djcontrol ~= 0 and self:djcontrol_note(atoms) then
       return
    end
    -- for the purposes of MIDI learn, notes are treated as if they were
@@ -2655,6 +2721,9 @@ end
 
 function raptor:in_1_ctl(atoms)
    if launchcontrol ~= 0 and self:launchcontrol_ctl(atoms) then
+      return
+   end
+   if djcontrol ~= 0 and self:djcontrol_ctl(atoms) then
       return
    end
    if self:check_midi_learn(atoms[1], atoms[2], atoms[3]) or
