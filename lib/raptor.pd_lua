@@ -2247,10 +2247,12 @@ function raptor:in_1_float(p)
    if type(p) == "number" then
       p = math.floor(p)
       self.arp:set_idx(p % self.arp.beats)
-      if self.midi_learn ~= 0 and self.midi_learn_var == "rewind" then
-	 -- kludge: there's already a MIDI learn for "rewind" going on, which
-	 -- in turn triggered this update -- bail out so that we don't
-	 -- interfere with the pending operation
+      if p == self.pos then
+	 -- kludge: transport may trigger a "pos" (SPP) update even before the
+	 -- "play" event arrives, and "play" or "rewind" may also trigger a
+	 -- "pos" event afterwards; we don't want that event to be recorded if
+	 -- the value hasn't changed at all, in order to not confuse MIDI
+	 -- learn about which event is to be mapped
 	 return
       end
       -- synthetic pos param, this can be MIDI-mapped
