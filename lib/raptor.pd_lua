@@ -2096,6 +2096,7 @@ function raptor:initialize(sel, atoms)
 
    -- initialize the user presets
    self:load_presets()
+   self.presetno = 1
 
    -- create a global receiver, so that we can tell all instances about global
    -- state changes
@@ -2292,11 +2293,32 @@ end
 -- since the contents of that file may change during operation, we reload
 -- instances to sync up their user presets when needed.
 
-function raptor:recall_preset(preset)
-   local i = preset_i[preset.name]
-   if self.user_preset_i[preset.name] then
-      i = self.user_preset_i[preset.name] + n_presets
+function raptor:get_preset(i)
+   if type(i) == "number" and math.floor(i) == i then
+      i = math.floor(i)
+      if raptor_presets[i] or self.user_presets[i-n_presets] then
+	 return i
+      end
+   elseif type(i) == "string" then
+      -- first scan the user presets so that these can overide factory presets
+      -- with the same name
+      local i = self.user_preset_i[i]
+      if i then
+	 return i+n_presets
+      end
+      i = preset_i[i]
+      if i then
+	 return raptor_presets[preset_i[i]]
+      end
    end
+   return nil
+end
+
+function raptor:recall_preset(i)
+   i = self:get_preset(i)
+   if not i then return end
+   local preset = i > n_presets and self.user_presets[i-n_presets] or raptor_presets[i]
+   if not preset then return end
    if debug_level >= 1 then
       print(string.format("preset #%d: %s", i, preset.name))
    end
@@ -2351,32 +2373,9 @@ function raptor:recall_preset(preset)
    end
 end
 
-function raptor:get_preset(i)
-   if type(i) == "number" and math.floor(i) == i then
-      if raptor_presets[i] then
-	 return raptor_presets[i]
-      elseif self.user_presets[i-n_presets] then
-	 return self.user_presets[i-n_presets]
-      end
-   elseif type(i) == "string" then
-      -- first scan the user presets so that these can overide factory presets
-      -- with the same name
-      if self.user_preset_i[i] then
-	 return self.user_presets[self.user_preset_i[i]]
-      elseif preset_i[i] then
-	 return raptor_presets[preset_i[i]]
-      else
-	 return nil
-      end
-   else
-      return nil
-   end
-end
-
 function raptor:in_1_preset(atoms)
-   local preset = self:get_preset(atoms[1])
-   if preset then
-      self:recall_preset(preset)
+   if type(atoms[1]) == "number" or type(atoms[1]) == "string" then
+      self:recall_preset(atoms[1])
    else
       -- print the names of the available presets in the console
       print("factory presets:")
@@ -2406,12 +2405,17 @@ function raptor:in_1_save(atoms)
       table.insert(self.user_presets, preset)
       local i = #self.user_presets
       self.user_preset_i[name] = i
-      print(string.format("saved preset #%d: %s", i+n_presets, name))
+      i = i+n_presets
+      print(string.format("saved preset #%d: %s", i, name))
       -- write the new preset to the preset file
       local fname = self._canvaspath .. "data/presets"
       local fp = io.open(fname, "a")
       fp:write(inspect(preset), "\n")
       fp:close()
+      self.presetno = i
+      if self.id then
+	 pd.send(string.format("%s-%s", self.id, "presetno"), "set", {i-1})
+      end
       -- broadcast a message to all raptor instances so that they can update
       -- themselves
       pd.send("__raptor", "presets", {})
@@ -2614,16 +2618,13 @@ function raptor:djcontrol_ctl(atoms)
    if ch == 17 and num == 1 then
       -- BROWSER
       if self:check_ccmaster() then
-	 local presetno = self.presetno
-	 if presetno then
-	    presetno = val == 1 and presetno+1 or presetno-1
+	 local i = self.presetno
+	 if i then
+	    i = val == 1 and i+1 or i-1
 	 else
-	    presetno = 1
+	    i = 1
 	 end
-	 local preset = self:get_preset(presetno)
-	 if preset then
-	    self:recall_preset(preset)
-	 end
+	 self:recall_preset(i)
       end
       return true
    elseif (ch == 18 or ch == 19) and (num == 9 or num == 10) then
