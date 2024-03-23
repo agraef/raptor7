@@ -2660,7 +2660,14 @@ function raptor:get_chan(ch)
    return ch
 end
 
+local controller_check = launchcontrol ~= 0 or midimix ~= 0 or djcontrol ~= 0
+
 function raptor:check_chan(ch)
+   if controller_check and ch > 16 then
+      -- we want to ignore note data that happens to come from a connected
+      -- control surface
+      return false
+   end
    return self.inchan == 0 or ch == self.inchan
 end
 
