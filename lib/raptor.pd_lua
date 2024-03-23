@@ -2615,12 +2615,23 @@ end
 
 -- Hercules DJControl support (experimental)
 
+function raptor:djcontrol_init()
+   -- initialize some status variables of the scratch control
+   if not self.scratch then
+      -- we maintain separate status variables for each deck
+      self.scratch = { last_delta = {0, 0}, last_count = {0, 0} }
+   end
+end
+
 function raptor:djcontrol_note(atoms)
    local num, val, ch = table.unpack(atoms)
+   self:djcontrol_init()
    if (ch == 18 or ch == 19) and num == 8 then
-      -- jog wheel touches, we currently ignore these
+      -- jog wheel touches
       if self:check_ccmaster() then
 	 local deck = ch-17
+	 -- reset status
+	 self.scratch.last_delta[deck] = 0
       end
       return true
    end
@@ -2629,6 +2640,7 @@ end
 
 function raptor:djcontrol_ctl(atoms)
    local val, num, ch = table.unpack(atoms)
+   self:djcontrol_init()
    if ch == 17 and num == 1 then
       -- BROWSER
       if self:check_ccmaster() then
@@ -2647,14 +2659,30 @@ function raptor:djcontrol_ctl(atoms)
    elseif (ch == 18 or ch == 19) and (num == 9 or num == 10) then
       local i = param_i["pos"]
       if i and self:check_ccmaster() then
-	 -- 1 indicates the left, 2 the right deck
-	 -- XXXFIXME: currently we don't distinguish between these
+	 -- scratch: true indicates scratch mode, false normal movement
+	 local scratch = num > 9
+	 -- deck: 1 indicates the left, 2 the right deck
+	 -- right now, we only use this to separate the status data of the
+	 -- scratch control for each deck (self.scratch)
 	 local deck = ch-17
-	 -- 1 indicates scratch mode, 0 normal movement of the turntable;
-	 -- XXXFIXME: currently we don't distinguish between these either
-	 local scratch = num-9
 	 -- val=1 indicates forward, 127 backward motion
 	 local delta = val == 1 and 1 or -1
+	 if scratch then
+	    -- scale down the scratching control a bit, it's way too fast for
+	    -- our purposes
+	    if delta == self.scratch.last_delta[deck] then
+	       self.scratch.last_count[deck] = self.scratch.last_count[deck] + 1
+	       if self.scratch.last_count[deck] >= 10 then
+		  self.scratch.last_count[deck] = 0
+	       else
+		  return true
+	       end
+	    else
+	       self.scratch.last_count[deck] = 1
+	       self.scratch.last_delta[deck] = delta
+	       return true
+	    end
+	 end
 	 local pos = self.pos + delta
 	 -- clamp to the prescribed range
 	 local param = params[i]
