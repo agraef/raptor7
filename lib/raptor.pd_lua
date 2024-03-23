@@ -1798,22 +1798,32 @@ end
 
 local pdx = require 'pdx'
 
--- Parameter and preset tables. These are the same as in the Ardour plugin.
--- Note that some of the fields aren't used in the Pd implementation.
+-- Parameter and preset tables. These are mostly the same as in the Ardour
+-- plugin. Note that some of the fields aren't used in the Pd implementation,
+-- which adds a few special flags of its own, see below.
 
 local hrm_scalepoints = { ["0.09 (minor 7th and 3rd)"] = 0.09, ["0.1 (major 2nd and 3rd)"] = 0.1, ["0.17 (4th)"] = 0.17, ["0.21 (5th)"] = 0.21, ["1 (unison, octave)"] = 1 }
 
+-- Special flags not in the Ardour plugin:
+
+-- noload: performance controls to be skipped when loading and saving presets
+
+-- time, transport: time- and transport-related controls (the former live in
+-- the panel, the latter in the time subpatch; also note that with the
+-- exception of division, these controls aren't in the Ardour version, because
+-- they are maintained in the DAW)
+
 local params = {
-   { type = "input", name = "bypass", min = 0, max = 1, default = 0, toggled = true, doc = "bypass the arpeggiator, pass through input notes" },
-   { type = "input", name = "division", min = 1, max = 7, default = 1, integer = true, doc = "number of subdivisions of the beat" },
+   { type = "input", name = "bypass", min = 0, max = 1, default = 0, toggled = true, noload = true, doc = "bypass the arpeggiator, pass through input notes" },
+   { type = "input", name = "division", min = 1, max = 7, default = 1, integer = true, noload = true, time = true, doc = "number of subdivisions of the beat" },
    -- These aren't in the Ardour plugin, as meter and tempo get set through
    -- the DAW's timeline, but it's useful to have these values as parameters
    -- in the stand-alone version, so that they can be mapped via MIDI learn.
-   { type = "input", name = "meter-num", min = 1, max = 16, default = 4, integer = true, doc = "number of beats per bar" },
-   { type = "input", name = "meter-denom", min = 1, max = 16, default = 4, integer = true, doc = "note value of the beat" },
-   { type = "input", name = "tempo", min = 0, max = 240, default = 120, integer = true, doc = "tempo (bpm)" },
+   { type = "input", name = "meter-num", min = 1, max = 16, default = 4, integer = true, noload = true, time = true, doc = "number of beats per bar" },
+   { type = "input", name = "meter-denom", min = 1, max = 16, default = 4, integer = true, noload = true, time = true, doc = "note value of the beat" },
+   { type = "input", name = "tempo", min = 0, max = 240, default = 120, integer = true, noload = true, time = true, doc = "tempo (bpm)" },
    { type = "input", name = "pgm", min = 0, max = 128, default = 0, integer = true, doc = "program change", scalepoints = { default = 0 } },
-   { type = "input", name = "latch", min = 0, max = 1, default = 0, toggled = true, doc = "toggle latch mode" },
+   { type = "input", name = "latch", min = 0, max = 1, default = 0, toggled = true, noload = true, doc = "toggle latch mode" },
    { type = "input", name = "up", min = -2, max = 2, default = 1, integer = true, doc = "octave range up" },
    { type = "input", name = "down", min = -2, max = 2, default = -1, integer = true, doc = "octave range down" },
    -- This isn't in the Ardour plugin, but it's occasionally useful to have
@@ -1858,12 +1868,12 @@ local params = {
    { type = "input", name = "inchan", min = 0, max = 128, default = 0, integer = true, doc = "input channel (0 = omni = all channels)", scalepoints = { omni = 0 } },
    { type = "input", name = "outchan", min = 0, max = 128, default = 0, integer = true, doc = "input channel (0 = omni = input channel)", scalepoints = { omni = 0 } },
    { type = "input", name = "loopsize", min = 0, max = 16, default = 4, integer = true, doc = "loop size (number of bars)" },
-   { type = "input", name = "loop", min = 0, max = 1, default = 0, toggled = true, doc = "toggle loop mode" },
-   { type = "input", name = "mute", min = 0, max = 1, default = 0, toggled = true, doc = "turn the arpeggiator off, suppress all note output" },
-   { type = "input", name = "play", min = 0, max = 1, default = 0, toggled = true, doc = "start or stop playback" },
-   { type = "input", name = "pulse", min = 0, max = 1, default = 0, toggled = true, doc = "trigger pulses manually" },
-   { type = "input", name = "pos", min = -24, max = 24, default = 0, integer = true, doc = "anacrusis control" },
-   { type = "input", name = "rewind", min = 0, max = 1, default = 0, toggled = true, doc = "rewind (relocate the playhead to the anacrusis)" },
+   { type = "input", name = "loop", min = 0, max = 1, default = 0, toggled = true, noload = true, doc = "toggle loop mode" },
+   { type = "input", name = "mute", min = 0, max = 1, default = 0, toggled = true, noload = true, doc = "turn the arpeggiator off, suppress all note output" },
+   { type = "input", name = "play", min = 0, max = 1, default = 0, toggled = true, noload = true, transport = true, doc = "start or stop playback" },
+   { type = "input", name = "pulse", min = 0, max = 1, default = 0, toggled = true, noload = true, transport = true, doc = "trigger pulses manually" },
+   { type = "input", name = "pos", min = -24, max = 24, default = 0, integer = true, noload = true, transport = true, doc = "anacrusis control" },
+   { type = "input", name = "rewind", min = 0, max = 1, default = 0, toggled = true, noload = true, transport = true, doc = "rewind (relocate the playhead to the anacrusis)" },
 }
 
 local n_params = #params
@@ -1904,48 +1914,6 @@ local preset_i = {}
 for i = 1, n_presets do
    preset_i[raptor_presets[i].name] = i
 end
-
--- table of params to be skipped when loading and saving presets
-
--- Basically, these are performance controls (various status toggles such as
--- bypass and mute) which are to be operated during live performance. Thus we
--- don't want to load these with the preset in order to not disrupt the live
--- performance. This is also the case for meter and subdivision -- if you need
--- to change these around quickly, you can do that by sending a meter message
--- to the raptor object instead.
-local param_skip = {}
--- status toggles
-param_skip["bypass"] = true
-param_skip["mute"] = true
-param_skip["latch"] = true
-param_skip["loop"] = true
--- transport
-param_skip["play"] = true
-param_skip["pulse"] = true
-param_skip["pos"] = true
-param_skip["rewind"] = true
--- division and meter
-param_skip["division"] = true
-param_skip["meter-num"] = true
-param_skip["meter-denom"] = true
-param_skip["tempo"] = true
-
--- these don't actually live in the panel, skip panel updates
-local panel_skip = {}
-panel_skip["play"] = true
-panel_skip["pulse"] = true
-panel_skip["pos"] = true
-panel_skip["rewind"] = true
-
--- params that are directed at the time master
-local time_var = {}
-time_var["division"] = true
-time_var["meter-num"] = true
-time_var["meter-denom"] = true
-time_var["tempo"] = true
-time_var["play"] = true
-time_var["pos"] = true
-time_var["rewind"] = true
 
 -- param setters
 
@@ -2143,10 +2111,13 @@ function raptor:check_ccmaster(var)
    if not self.ccmaster or self.ccmaster == self.id then
       -- omni mode or we're the ccmaster
       return true
+   elseif var then
+      local i = param_i[var]
+      -- also check for time and transport parameters, we need to make sure
+      -- that these reach the time master
+      return i and (params[i].time or params[i].transport)
    else
-      -- also check for time parameters, we need to make sure that these reach
-      -- the time master
-      return var and time_var[var]
+      return false
    end
 end
 
@@ -2330,7 +2301,8 @@ function raptor:recall_preset(preset)
       print(string.format("preset #%d: %s", i, preset.name))
    end
    local function check(var, val)
-      if param_skip[var] then
+      local i = param_i[var]
+      if not i or params[i].noload then
 	 return false
       elseif var == "loopsize" and self.arp.loopstate == 1 then
 	 -- avoid thrashing the loop size if we're currently playing a loop
@@ -2427,7 +2399,7 @@ function raptor:in_1_save(atoms)
    if type(name) == "string" and string.len(name) > 0 then
       local preset = { name = name, params = {} }
       for i, param in ipairs(params) do
-	 if not param_skip[param.name] then
+	 if not param.noload then
 	    preset.params[param.name] = self.param_val[i]
 	 end
       end
@@ -3283,7 +3255,7 @@ function raptor:param(var, val)
 	       -- order to not be stuck on channel 10
 	       self.chan = self.backup_chan
 	    end
-	    if self.id and not panel_skip[var] then
+	    if self.id and not params[i].transport then
 	       -- report changes to the panel
 	       local id = self.id
 	       pd.send(string.format("%s-%s", id, var), "set", {v})
