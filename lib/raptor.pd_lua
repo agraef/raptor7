@@ -2628,11 +2628,9 @@ function raptor:djcontrol_note(atoms)
    self:djcontrol_init()
    if (ch == 18 or ch == 19) and num == 8 then
       -- jog wheel touches
-      if self:check_ccmaster() then
-	 local deck = ch-17
-	 -- reset status
-	 self.scratch.last_delta[deck] = 0
-      end
+      local deck = ch-17
+      -- reset status
+      self.scratch.last_delta[deck] = 0
       return true
    end
    return false
@@ -2658,7 +2656,7 @@ function raptor:djcontrol_ctl(atoms)
       return true
    elseif (ch == 18 or ch == 19) and (num == 9 or num == 10) then
       local i = param_i["pos"]
-      if i and self:check_ccmaster() then
+      if i then
 	 -- scratch: true indicates scratch mode, false normal movement
 	 local scratch = num > 9
 	 -- deck: 1 indicates the left, 2 the right deck
