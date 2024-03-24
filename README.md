@@ -169,7 +169,7 @@ Overdubbing and more advanced loop editing capabilities would be nice to have; b
 
 ### MIDI Learn
 
-In a similar vein, Raptor's MIDI learn facility is also fairly basic. It's only possible to map MIDI CC and note messages at present; having support for other kinds of messages such as aftertouch could be useful; we might add this in a future update. Also, there's no support for macro controls. That's unlikely to change in the near future, as it would require a lot of additional machinery in order to adjust the value mapping.
+In a similar vein, Raptor's MIDI learn facility is also fairly basic. It's only possible to map MIDI CC and note messages at present. Having support for other kinds of messages such as aftertouch could be useful; we might add this in a future update. Also, there's no support for macro controls. That's unlikely to change in the near future, as it would require a lot of additional machinery in order to adjust the value mapping.
 
 Special support is only available for the Novation Launch Control XL and the AKAI MIDIMIX right now. (There's also experimental support for the Hercules DJControl devices, but this is unfinished at the time of this writing.) If anyone can contribute MIDI maps or special support for other devices (or alternative bindings for the existing ones), please submit a [pull request][]!
 
