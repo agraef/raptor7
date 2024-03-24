@@ -1874,6 +1874,11 @@ local params = {
    { type = "input", name = "pulse", min = 0, max = 1, default = 0, toggled = true, noload = true, transport = true, doc = "trigger pulses manually" },
    { type = "input", name = "pos", min = -24, max = 24, default = 0, integer = true, noload = true, transport = true, doc = "anacrusis control" },
    { type = "input", name = "rewind", min = 0, max = 1, default = 0, toggled = true, noload = true, transport = true, doc = "rewind (relocate the playhead to the anacrusis)" },
+   -- synthetic looper commands
+   { type = "input", name = "loop-load", min = 0, max = 1, default = 0, toggled = true, noload = true, doc = "load loop file" },
+   { type = "input", name = "loop-save", min = 0, max = 1, default = 0, toggled = true, noload = true, doc = "save loop file" },
+   { type = "input", name = "loop-prev", min = 0, max = 1, default = 0, toggled = true, noload = true, doc = "previous loop" },
+   { type = "input", name = "loop-next", min = 0, max = 1, default = 0, toggled = true, noload = true, doc = "next loop" },
 }
 
 local n_params = #params
@@ -1973,6 +1978,7 @@ function raptor:set(param, x)
 	 self:outlet(1, "pgm", { self.pgm, self.chan })
       end
    end
+   -- transport
    if self.play ~= last_play then
       if self.master and self.id == self.master then
 	 pd.send(string.format("%s-%s", self.id, "play"), "float", {self.play})
@@ -1998,7 +2004,7 @@ end
 function raptor:set_param_tables()
    -- this initializes the parameter setter callbacks; this needs to be redone
    -- after reloading the object (pdx.reload)
-   self.param_set = { self.set, self.set, self.set, self.set, self.set, self.set, self.arp.set_latch, self.arp.set_up, self.arp.set_down, self.set, self.arp.set_mode, self.arp.set_raptor, self.arp.set_minvel, self.arp.set_maxvel, self.arp.set_velmod, self.arp.set_gain, self.arp.set_gate, self.arp.set_gatemod, self.arp.set_wmin, self.arp.set_wmax, self.arp.set_pmin, self.arp.set_pmax, self.arp.set_pmod, self.arp.set_hmin, self.arp.set_hmax, self.arp.set_hmod, self.arp.set_pref, self.arp.set_prefmod, self.arp.set_smin, self.arp.set_smax, self.arp.set_smod, self.arp.set_nmax, self.arp.set_nmod, self.arp.set_uniq, self.arp.set_pitchhi, self.arp.set_pitchlo, self.arp.set_pitchtracker, self.set, self.set, arp_set_loopsize, self.arp.set_loop, self.set, self.set, self.set, self.set, self.set }
+   self.param_set = { self.set, self.set, self.set, self.set, self.set, self.set, self.arp.set_latch, self.arp.set_up, self.arp.set_down, self.set, self.arp.set_mode, self.arp.set_raptor, self.arp.set_minvel, self.arp.set_maxvel, self.arp.set_velmod, self.arp.set_gain, self.arp.set_gate, self.arp.set_gatemod, self.arp.set_wmin, self.arp.set_wmax, self.arp.set_pmin, self.arp.set_pmax, self.arp.set_pmod, self.arp.set_hmin, self.arp.set_hmax, self.arp.set_hmod, self.arp.set_pref, self.arp.set_prefmod, self.arp.set_smin, self.arp.set_smax, self.arp.set_smod, self.arp.set_nmax, self.arp.set_nmod, self.arp.set_uniq, self.arp.set_pitchhi, self.arp.set_pitchlo, self.arp.set_pitchtracker, self.set, self.set, arp_set_loopsize, self.arp.set_loop, self.set, self.set, self.set, self.set, self.set, self.set, self.set, self.set, self.set }
 end
 
 -- table of the ids of all running raptor instances
@@ -2451,19 +2457,22 @@ function raptor:load_presets()
    end
 end
 
--- Launch Control XL support
+-- Special controller support. We only bind the shift button (depending on the
+-- device) and the ccmaster_next, ccmaster_prev, and ccmaster_set functions
+-- here. Everything else should go into the corresponding MIDI map.
+
+-- NOTE: We always assume controllers to be connected to Pd's MIDI input port
+-- #2, so that the note and CC messages from the device don't interfere with
+-- messages from the primary MIDI input devices on port #1 (typically a MIDI
+-- keyboard, pad controller, or other note input device). Therefore the Pd
+-- MIDI channel that we're listening to is something like 16+n where n is the
+-- actual MIDI channel number(s) of the device.
+
+-- Launch Control XL
 
 -- This assumes factory preset #1 on MIDI channel 9. It uses the device hold
 -- button as a shift button, and binds the device select and bank buttons to
--- ccmaster_next, ccmaster_prev, and ccmaster_set. The (unshifted) mute, solo,
--- rec arm buttons are bound to mute, latch, and bypass, while the shifted
--- mute, solo, rec arm buttons are bound to looper save/load and the loop
--- toggle.
-
--- NOTE: We assume the Launch Control XL to be connected to Pd's MIDI input
--- port #2, so that the note and CC messages from the device don't interfere
--- with messages from the primary MIDI input devices on port #1. Therefore the
--- actual MIDI channel that we're listening on is 25 = 16+9.
+-- ccmaster_next, ccmaster_prev, and ccmaster_set.
 
 function raptor:launchcontrol_note(atoms)
    local num, val, ch = table.unpack(atoms)
@@ -2481,20 +2490,6 @@ function raptor:launchcontrol_note(atoms)
       elseif num > 88 and num <= 92 and self.shift then
 	 -- 89-92 = buttons 5-8
 	 self:in_1_ccmaster_set({num-84})
-      elseif self.id and self:check_ccmaster() then
-	 -- This could all be implemented with direct calls to raptor methods,
-	 -- but atm we're lazy and just do a synthetic click of the
-	 -- corresponding controls in the panel and the looper, just like the
-	 -- previous launchcontrol Pd abstraction did.
-	 local id = self.id
-	 -- 106, 107, 108 = mute, solo, rec arm
-	 if num == 106 then
-	    pd.send(string.format("%s-%s", id, "looper-remote"), "load", {})
-	 elseif num == 107 then
-	    pd.send(string.format("%s-%s", id, "looper-remote"), "save", {})
-	 elseif num == 108 then
-	    pd.send(string.format("%s-%s", id, "loop"), "bang", {})
-	 end
       end
       return true
    end
@@ -2511,13 +2506,6 @@ function raptor:launchcontrol_ctl(atoms)
 	    self:in_1_ccmaster_prev()
 	 elseif num == 107 then
 	    self:in_1_ccmaster_next()
-	 elseif id and self:check_ccmaster() then
-	    -- 104, 105 = up, down (loop select)
-	    if id and num == 104 then
-	       pd.send(string.format("%s-%s", id, "looper-remote"), "next", {})
-	    elseif id and num == 105 then
-	       pd.send(string.format("%s-%s", id, "looper-remote"), "prev", {})
-	    end
 	 end
       end
       return true
@@ -2525,7 +2513,7 @@ function raptor:launchcontrol_ctl(atoms)
    return false
 end
 
--- AKAI Professional MIDIMIX support
+-- AKAI Professional MIDIMIX
 
 function raptor:midimix_note(atoms)
    local num, val, ch = table.unpack(atoms)
@@ -2534,38 +2522,7 @@ function raptor:midimix_note(atoms)
 	 -- SOLO status (used as a shift key)
 	 self.shift = val > 0
       elseif not self.shift then
-	 -- The looper bindings are a bit quirky because of the dearth of
-	 -- buttons on the MIDIMIX. So we use unshifted buttons here. At
-	 -- present, we have the loop selection on BANK LEFT/RIGHT, and the
-	 -- other loop controls (load, save, and the loop toggle) on the
-	 -- rightmost three MUTE buttons.
-	 local id = self.id
-	 local ok = val>0 and id and self:check_ccmaster()
-	 if num == 25 then
-	    if ok then
-	       pd.send(string.format("%s-%s", id, "looper-remote"), "prev", {})
-	    end
-	 elseif num == 26 then
-	    if ok then
-	       pd.send(string.format("%s-%s", id, "looper-remote"), "next", {})
-	    end
-	 elseif num == 16 then
-	    if ok then
-	       pd.send(string.format("%s-%s", id, "looper-remote"), "load", {})
-	    end
-	 elseif num == 19 then
-	    if ok then
-	       pd.send(string.format("%s-%s", id, "looper-remote"), "save", {})
-	    end
-	 elseif num == 22 then
-	    if ok then
-	       pd.send(string.format("%s-%s", id, "loop"), "bang", {})
-	    end
-	 else
-	    -- Make sure to leave all other unshifted buttons unbound so that
-	    -- they can be used with MIDI learn.
-	    return false
-	 end
+	 return false
       elseif num == 25 or num == 26 or num <= 24 and num % 3 == 0 then
 	 -- All the other bindings use shifted buttons,
 	 -- 25 = BANK LEFT, 26 = BANK RIGHT, the other numbers denote the
@@ -2589,7 +2546,7 @@ function raptor:midimix_note(atoms)
    return false
 end
 
--- Hercules DJControl support (experimental)
+-- Hercules DJControl (experimental)
 
 function raptor:djcontrol_init()
    -- initialize some status variables of the scratch control
@@ -2618,12 +2575,8 @@ function raptor:djcontrol_ctl(atoms)
    if ch == 17 and num == 1 then
       -- BROWSER
       if self:check_ccmaster() then
-	 local i = self.presetno
-	 if i then
-	    i = val == 1 and i+1 or i-1
-	 else
-	    i = 1
-	 end
+	 local i = self.presetno and self.presetno or 1
+	 i = val == 1 and i+1 or i-1
 	 self:recall_preset(i)
       end
       return true
@@ -3337,6 +3290,13 @@ function raptor:in_1(sel, atoms)
       local name, cmd = table.unpack(atoms)
       -- default for cmd is 1 (save) if loop is playing, 0 (load) otherwise
       cmd = cmd or self.arp.loopstate
+      -- synthetic parameters for MIDI learn
+      sel = cmd==0 and "loop-load" or cmd==1 and "loop-save" or nil
+      if self.midi_learn == 1 and sel and
+	 self.midi_learn_var ~= sel and param_i[sel] then
+	 self.midi_learn_var = sel
+	 self:learn()
+      end
       local res, val = self:looper(name, cmd)
       if res then
 	 self:outlet(1, res, {val})
