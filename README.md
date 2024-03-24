@@ -125,7 +125,7 @@ The loop files themselves are just Lua tables, so you can also edit them in any 
 
 ### MIDI Learn
 
-Raptor has a lot of parameters which you might want to work with during live performances. Fortunately, it's possible to map most of these using the built-in MIDI learn facility. You can assign MIDI control changes and note messages to any of the controls in the panel, as well as some of the controls in the time subpatch, as follows:
+Raptor has a lot of parameters which you might want to work with during live performances. Fortunately, it's possible to map most of these using the built-in MIDI learn facility. You can assign MIDI control changes and note messages to any of the controls in the panel, as well as some of the controls in the time and looper subpatches, as follows:
 
 - Click the `learn` message in the main patch. The background of the "MIDI Learn" label in the main patch will turn a light green to indicate that you're in MIDI mapping mode.
 - Click or move the control on the MIDI device. This can be any knob, fader, or button, but only controls generating MIDI CC or note messages are supported at this time.
@@ -145,11 +145,9 @@ The Launch Control XL support consists of two parts. First, there's a launchcont
 
 Second, Raptor includes some hard-wired MIDI bindings for the Launch Control which let you switch the target Raptor instance for MIDI control easily and quickly. To do this, press (and hold) the "Device Hold" button, while you push one of the "Device Select" (left/right) buttons to cycle through the Raptor instances, or the "Device Bank" buttons labeled 1-8 to directly change to the corresponding instance (or switch back to "omni" if the given instance was already selected).
 
-Some additional looper controls are available as well. Press (and hold) the "Device Hold" button, while you click the up and down buttons to select a loop in the looper subpatch, or the "Mute", "Solo", and "Record Arm" buttons to load and save a loop, and toggle the loop control in the panel, respectively.
-
 #### AKAI Professional MIDIMIX Support
 
-The [AKAI MIDIMIX][] is another popular (and more budget-friendly) controller which has a very similar layout to the Launch Control XL. Raptor includes support for this device as well, consisting of a MIDI mapping and some hard-wired bindings for the looper and for switching Raptor instances. These assume that the device uses the factory configuration.
+The [AKAI MIDIMIX][] is another popular (and more budget-friendly) controller which has a very similar layout to the Launch Control XL. Raptor includes support for this device as well, consisting of a MIDI mapping and some hard-wired bindings for switching Raptor instances. These assume that the device uses the factory configuration.
 
 Note that this mapping is a bit quirky because the MIDIMIX has less buttons. In particular, it lacks a dedicated device select button, so the SOLO button is used as a kind of shift button for selecting Raptor instances instead. A description of the mapping can be found in the midimix.map file in the data directory. To use this mapping, copy the file to midi.map and make sure that the MIDIMIX is connected to Pd's second MIDI input.
 
@@ -173,7 +171,7 @@ Overdubbing and more advanced loop editing capabilities would be nice to have; b
 
 In a similar vein, Raptor's MIDI learn facility is also fairly basic. It's only possible to map MIDI CC and note messages at present; having support for other kinds of messages such as aftertouch could be useful; we might add this in a future update. Also, there's no support for macro controls. That's unlikely to change in the near future, as it would require a lot of additional machinery in order to adjust the value mapping.
 
-At present, special support is only available for the Launch Control XL. There are other popular (and more budget-friendly) controllers. Thus, if anyone can contribute MIDI maps or special support for other devices, please submit a [pull request][]!
+Special support is only available for the Novation Launch Control XL and the AKAI MIDIMIX right now. (There's also experimental support for the Hercules DJControl devices, but this is unfinished at the time of this writing.) If anyone can contribute MIDI maps or special support for other devices (or alternative bindings for the existing ones), please submit a [pull request][]!
 
 
 [ICMC 2006 paper]: https://github.com/agraef/raptor7/blob/main/scale.pdf
