@@ -2293,22 +2293,22 @@ end
 -- since the contents of that file may change during operation, we reload
 -- instances to sync up their user presets when needed.
 
-function raptor:get_preset(i)
-   if type(i) == "number" and math.floor(i) == i then
-      i = math.floor(i)
+function raptor:get_preset(preset)
+   if type(preset) == "number" and math.floor(preset) == preset then
+      local i = math.floor(preset)
       if raptor_presets[i] or self.user_presets[i-n_presets] then
 	 return i
       end
-   elseif type(i) == "string" then
+   elseif type(preset) == "string" then
       -- first scan the user presets so that these can overide factory presets
       -- with the same name
-      local i = self.user_preset_i[i]
+      local i = self.user_preset_i[preset]
       if i then
 	 return i+n_presets
       end
-      i = preset_i[i]
+      i = preset_i[preset]
       if i then
-	 return raptor_presets[preset_i[i]]
+	 return i
       end
    end
    return nil
