@@ -60,9 +60,9 @@ local midimix = 1
 
 -- djcontrol: Special support for the Hercules DJControl devices (experimental).
 
--- At present this just maps the BROWSE encoder and the two jog wheels (the
--- "turntables"). Tested with the DJControl Inpulse 200 MK2, other similar
--- devices might need some work.
+-- This maps the BROWSE encoder and the two jog wheels (the "turntables"), and
+-- filters out messages based on the assigned deck number. Tested with the
+-- DJControl Inpulse 200 MK2, other similar devices might need some work.
 local djcontrol = 1
 
 -- midimap_name: The name of the file in the data directory in which MIDI
@@ -1979,22 +1979,18 @@ function raptor:set(param, x)
       end
    end
    -- transport
-   if self.play ~= last_play then
-      if self.master and self.id == self.master then
-	 pd.send(string.format("%s-%s", self.id, "play"), "float", {self.play})
-      end
+   local master_check = self.assert_master or self.master and self.id == self.master
+   if self.play ~= last_play and master_check then
+      pd.send(string.format("%s-%s", self.id, "play"), "float", {self.play})
    end
-   if self.pos ~= last_pos then
-      if self.master and self.id == self.master then
-	 pd.send(string.format("%s-%s", self.id, "pos"), "float", {self.pos})
-      elseif self.id then
-	 pd.send(string.format("%s-%s", self.id, "pos"), "set", {self.pos})
-      end
+   if self.pos ~= last_pos and master_check then
+      pd.send(string.format("%s-%s", self.id, "pos"), "float", {self.pos})
+   elseif self.pos ~= last_pos and not master_check then
+      pd.send(string.format("%s-%s", self.id, "pos"), "set", {self.pos})
+      pd.send(string.format("%s-%s", self.id, "posvar"), "float", {self.pos})
    end
-   if self.rewind ~= last_rewind and self.rewind >= 0 then
-      if self.master and self.id == self.master then
-	 pd.send(string.format("%s-%s", self.id, "rewind"), "bang", {})
-      end
+   if self.rewind ~= last_rewind and self.rewind >= 0 and master_check then
+      pd.send(string.format("%s-%s", self.id, "rewind"), "bang", {})
    end
    if self.pulse ~= last_pulse and self.pulse >= 0 and self.id then
       pd.send(string.format("%s-%s", self.id, "pulse"), "bang", {})
@@ -2096,6 +2092,16 @@ function raptor:initialize(sel, atoms)
    -- MIDI CC. This is nil (indicating omni mode) by default, but can be
    -- changed to a single raptor instance with the mastercc message.
    self.ccmaster = nil
+
+   -- deck is the assigned deck number. This is meant for DJ controllers,
+   -- which usually have two or more identical sets of controls. It is 0
+   -- ("omni") by default, but can be changed with the 'deck' message, or the
+   -- corresponding control in the init subpatch of the main patch.
+
+   -- NOTE: Normally, this doesn't have any effect, unless a special
+   -- controller tie-in uses this number to filter out messages based on the
+   -- deck number (see djcontrol for an example).
+   self.deck = 0
 
    -- instance id; this gets initialized later by the dump method, see below
    self.id = nil
@@ -2250,6 +2256,30 @@ end
 
 function raptor:in_1_reset()
    self.arp:set_idx(0)
+end
+
+-- Set the pulse index directly, without synchronizing different instances.
+-- This is most useful when performing with a DJ controller (see djcontrol
+-- below for an example).
+
+function raptor:set_pos(p)
+   p = math.floor(p)
+   self.arp:set_idx(p % self.arp.beats)
+   if p ~= self.pos then
+      self.pos = p
+      if self.id then
+	 pd.send(string.format("%s-%s", self.id, "pos"), "set", {p})
+	 pd.send(string.format("%s-%s", self.id, "posvar"), "float", {p})
+      end
+   end
+end
+
+function raptor:do_rewind(p)
+   p = math.floor(p)
+   self.arp:set_idx(p % self.arp.beats)
+   if self.id then
+      pd.send(string.format("%s-%s", self.id, "do-rewind"), "bang", {})
+   end
 end
 
 -- panic -- this resets the arpeggiator and stops all sounding notes
@@ -2549,75 +2579,140 @@ end
 -- Hercules DJControl (experimental)
 
 function raptor:djcontrol_init()
-   -- initialize some status variables of the scratch control
+   -- initialize the status variables of the scratch control
    if not self.scratch then
       -- we maintain separate status variables for each deck
       self.scratch = { last_delta = {0, 0}, last_count = {0, 0} }
    end
 end
 
+-- NOTE: I don't know about other DJ controllers, but the Hercules DJControl
+-- uses different MIDI channels for global controls and the two decks, also
+-- depending on the status of the shift keys: 1(4) = global (shifted), 2(5) =
+-- left deck (shifted), 3(6) = right deck (shifted). Also, the pads are on
+-- separate channels, 7 for the left and 8 for the right deck (no dependence
+-- on shift status there, instead the shift key changes the note numbers of
+-- the pads).
+
+local function djcontrol_deck(ch)
+   ch = ch-16 -- all on 2nd port
+   if not ch or ch <= 0 or ch > 8 then
+      -- nothing to see here, move along
+      return nil
+   elseif ch <= 6 then
+      -- 0, 1, 2 indicates global, left, right; followed by the shift status
+      return (ch-1) % 3, ch >= 4
+   else
+      -- pads (no shift status)
+      return ch-7
+   end
+end
+
 function raptor:djcontrol_note(atoms)
    local num, val, ch = table.unpack(atoms)
    self:djcontrol_init()
-   if (ch == 18 or ch == 19) and num == 8 then
-      -- jog wheel touches
-      local deck = ch-17
-      -- reset status
+   local deck, shift = djcontrol_deck(ch)
+   if not deck or deck == 0 then
+      -- tie-in with the MIDI mapper to skip the ccmaster check if we already
+      -- filtered by deck number (here we also check for the shift status,
+      -- since we still want to do the check for global controls if shift is
+      -- pressed -- same as with the BROWSE encoder)
+      self.assert_master = deck and not shift
+      -- pass through
+      return false
+   elseif num == 8 then
+      -- jog wheel touches, reset status
       self.scratch.last_delta[deck] = 0
       return true
+   elseif num == 5 then
+      -- SYNC button: rewind to the pattern start (pos 0)
+      if val > 0 and (self.deck == 0 or deck == self.deck) then
+	 self:set_pos(0)
+      end
+      return true
+   elseif num == 6 then
+      -- CUE button: rewind to the anacrusis (pos)
+      if val > 0 and (self.deck == 0 or deck == self.deck) then
+	 self:do_rewind(self.pos)
+      end
+      return true
+   else
+      -- skip ccmaster check if already filtered by deck
+      self.assert_master = deck == self.deck
+      -- filter out anything that's for the other deck, or everything if
+      -- self.deck < 0 (off), or nothing if self.deck == 0 (on/omni)
+      -- NOTE: confusingly, the conditions are reversed here because true
+      -- means filter out, false means pass through
+      return self.deck ~= 0 and deck ~= self.deck
    end
-   return false
 end
 
 function raptor:djcontrol_ctl(atoms)
    local val, num, ch = table.unpack(atoms)
    self:djcontrol_init()
-   if ch == 17 and num == 1 then
-      -- BROWSER
-      if self:check_ccmaster() then
-	 local i = self.presetno and self.presetno or 1
-	 i = val == 1 and i+1 or i-1
-	 self:recall_preset(i)
+   local deck, shift = djcontrol_deck(ch)
+   if not deck then
+      -- pass through
+      return false
+   elseif deck == 0 then
+      -- global control
+      if num == 1 then
+	 -- BROWSER (check the shift status here, to also check the ccmaster)
+	 if not shift or self:check_ccmaster() then
+	    local i = self.presetno and self.presetno or 1
+	    i = val == 1 and i+1 or i-1
+	    self:recall_preset(i)
+	 end
+	 return true
+      else
+	 -- pass through
+	 self.assert_master = not shift
+	 return false
       end
-      return true
-   elseif (ch == 18 or ch == 19) and (num == 9 or num == 10) then
-      local i = param_i["pos"]
-      if i then
-	 -- scratch: true indicates scratch mode, false normal movement
-	 local scratch = num > 9
-	 -- deck: 1 indicates the left, 2 the right deck
-	 -- right now, we only use this to separate the status data of the
-	 -- scratch control for each deck (self.scratch)
-	 local deck = ch-17
-	 -- val=1 indicates forward, 127 backward motion
-	 local delta = val == 1 and 1 or -1
-	 if scratch then
-	    -- scale down the scratching control a bit, it's way too fast for
-	    -- our purposes
-	    if delta == self.scratch.last_delta[deck] then
-	       self.scratch.last_count[deck] = self.scratch.last_count[deck] + 1
-	       if self.scratch.last_count[deck] >= 10 then
-		  self.scratch.last_count[deck] = 0
+   elseif self.deck == 0 or deck == self.deck then
+      -- deck control, deck matches
+      if num == 9 or num == 10 then
+	 local i = param_i["pos"]
+	 if i then
+	    -- scratch: true indicates scratch mode, false normal movement
+	    local scratch = num > 9
+	    -- val=1 indicates forward, 127 backward motion
+	    local delta = val == 1 and 1 or -1
+	    if scratch then
+	       -- scale down the scratching control a bit, it's way too fast
+	       -- for our purposes
+	       if delta == self.scratch.last_delta[deck] then
+		  self.scratch.last_count[deck] = self.scratch.last_count[deck] + 1
+		  if self.scratch.last_count[deck] >= 10 then
+		     self.scratch.last_count[deck] = 0
+		  else
+		     return true
+		  end
 	       else
+		  self.scratch.last_count[deck] = 1
+		  self.scratch.last_delta[deck] = delta
 		  return true
 	       end
-	    else
-	       self.scratch.last_count[deck] = 1
-	       self.scratch.last_delta[deck] = delta
-	       return true
+	    end
+	    local pos = self.pos + delta
+	    -- clamp to the prescribed range
+	    local param = params[i]
+	    pos = math.min(param.max, math.max(param.min, pos))
+	    if pos ~= self.pos then
+	       self:set_pos(pos)
 	    end
 	 end
-	 local pos = self.pos + delta
-	 -- clamp to the prescribed range
-	 local param = params[i]
-	 pos = math.min(param.max, math.max(param.min, pos))
-	 if pos ~= self.pos then
-	    self:in_1_float(pos)
-	 end
+	 return true
+      else
+	 -- skip ccmaster check if already filtered by deck
+	 self.assert_master = deck == self.deck
+	 -- pass through
+	 return false
       end
+   else
+      -- filtered out (other deck, or disabled)
       return true
    end
-   return false
 end
 
 -- note input (SMMF format)
@@ -2658,6 +2753,8 @@ function raptor:in_1_note(atoms)
    if midimix ~= 0 and self:midimix_note(atoms) then
       return
    end
+   -- always put djcontrol last since it also filters out messages, which
+   -- might interfere with the other controllers
    if djcontrol ~= 0 and self:djcontrol_note(atoms) then
       return
    end
@@ -2665,8 +2762,10 @@ function raptor:in_1_note(atoms)
    -- additional CCs starting at 128
    if self:check_midi_learn(atoms[2], atoms[1]+128, atoms[3]) or
       self:check_midi_map(atoms[2], atoms[1]+128, atoms[3]) then
+      self.assert_master = false
       return
    end
+   self.assert_master = false
    if self.bypass ~= 0 then
       -- pass through incoming notes (with transposition applied)
       if self:check_chan(atoms[3]) then
@@ -2709,8 +2808,10 @@ function raptor:in_1_ctl(atoms)
    end
    if self:check_midi_learn(atoms[1], atoms[2], atoms[3]) or
       self:check_midi_map(atoms[1], atoms[2], atoms[3]) then
+      self.assert_master = false
       return
    end
+   self.assert_master = false
    -- simple pass-through
    if self:check_chan(atoms[3]) then
       self:outlet(1, "ctl", self:rechan(atoms))
@@ -3004,7 +3105,7 @@ end
 
 function raptor:check_midi_map(val, cc, ch)
    local var, tgl = self:map_get(cc, ch)
-   if var and self:check_ccmaster(var) then
+   if var and (self.assert_master or self:check_ccmaster(var)) then
       -- apply existing mapping
       local i = param_i[var]
       if i then
@@ -3089,6 +3190,8 @@ function raptor:in_1_unlearn()
    end
 end
 
+-- switch between ccmasters
+
 function raptor:in_1_ccmaster(atoms)
    local flag, id = table.unpack(atoms)
    if type(id) == "number" then
@@ -3112,8 +3215,6 @@ function raptor:in_1_ccmaster(atoms)
       self.ccmaster = nil
    end
 end
-
--- switch between ccmasters
 
 function raptor:in_1_ccmaster_set(atoms)
    -- this message gets broadcast to all raptor instance, but only a single
@@ -3158,6 +3259,20 @@ function raptor:in_1_ccmaster_prev()
 	 i = (i-2) % (#raptor.instances) + 1
       end
       self:in_1_ccmaster_set({i})
+   end
+end
+
+-- switch between decks (djcontrol)
+
+function raptor:in_1_deck(atoms)
+   local deck = atoms[1]
+   if type(deck) == "number" then
+      -- must be integer, <0 means off, 0 means omni, >0 indicates deck number
+      deck = math.floor(deck)
+      -- we somewhat arbitrarily limit this to 16 decks here, most devices
+      -- only have two, 1 = left, 2 = right
+      deck = math.min(16, deck)
+      self.deck = deck
    end
 end
 

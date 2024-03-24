@@ -301,7 +301,7 @@ to detect synthetic pulse triggers vs actual clicks on the pulse control
 #X text 20 70 SPP - set pulse number;
 #X obj 21 103 t b b;
 #X obj 21 149 s all-arp;
-#N canvas 760 385 450 300 rewind 0;
+#N canvas 612 439 450 300 rewind 0;
 #X obj 20 70 t b b b;
 #X msg 20 95 1;
 #X msg 59 95 0;
@@ -312,6 +312,11 @@ to detect synthetic pulse triggers vs actual clicks on the pulse control
 #X obj 80 70 inlet;
 #X obj 20 20 r \$0-rewind;
 #X msg 20 173 rewind -1;
+#X obj 130 70 t b b b;
+#X msg 130 95 1;
+#X msg 169 95 0;
+#X obj 130 20 r \$0-do-rewind;
+#X obj 126 250 outlet;
 #X connect 0 0 1 0;
 #X connect 0 1 6 0;
 #X connect 0 2 2 0;
@@ -322,6 +327,12 @@ to detect synthetic pulse triggers vs actual clicks on the pulse control
 #X connect 7 0 3 0;
 #X connect 8 0 0 0;
 #X connect 9 0 5 0;
+#X connect 10 0 11 0;
+#X connect 10 1 6 0;
+#X connect 10 2 12 0;
+#X connect 11 0 14 0;
+#X connect 12 0 14 0;
+#X connect 13 0 10 0;
 #X restore 98 125 pd rewind;
 #X obj 21 125 v \$0-posvar;
 #X obj 61 103 t f f;
@@ -367,6 +378,10 @@ which case we just restart the metro. Not sure whether that's the best
 #X connect 15 0 14 1;
 #X restore 460 120 pd metro;
 #X obj 390 120 t f f f;
+#X obj 21 50 spigot 1;
+#X obj 273 369 r \$0-deck;
+#X obj 273 394 <= 0;
+#X text 310 394 if > 0 then most likely we want the SPP OFF;
 #X connect 0 0 60 0;
 #X connect 1 0 57 0;
 #X connect 2 0 84 1;
@@ -448,11 +463,12 @@ which case we just restart the metro. Not sure whether that's the best
 #X connect 75 1 76 0;
 #X connect 76 0 20 0;
 #X connect 76 1 15 0;
-#X connect 77 0 79 0;
+#X connect 77 0 86 0;
 #X connect 79 0 82 0;
 #X connect 79 1 81 0;
 #X connect 81 0 80 0;
 #X connect 81 1 77 0;
+#X connect 81 2 86 1;
 #X connect 82 0 80 0;
 #X connect 83 0 80 0;
 #X connect 83 1 82 0;
@@ -461,6 +477,9 @@ which case we just restart the metro. Not sure whether that's the best
 #X connect 85 0 62 0;
 #X connect 85 1 58 0;
 #X connect 85 2 84 2;
+#X connect 86 0 79 0;
+#X connect 87 0 88 0;
+#X connect 88 0 50 0;
 #X coords 0 -1 1 1 187 21 1 113 17;
 #X restore 30 30 pd time;
 #N canvas 349 256 423 381 input 0;
@@ -569,9 +588,9 @@ which case we just restart the metro. Not sure whether that's the best
 #X msg 30 80 learn;
 #X msg 30 100 unlearn;
 #X text 93 90 MIDI learn;
-#N canvas 255 485 450 300 init 0;
-#X obj 200 56 pd-remote;
-#X msg 200 30 pdluax reload;
+#N canvas 312 484 494 281 init 0;
+#X obj 310 46 pd-remote;
+#X msg 310 20 pdluax reload;
 #N canvas 857 77 450 300 preset 0;
 #X floatatom 180 100 5 1 12 0 - - -, f 5;
 #X msg 180 125 preset \$1;
@@ -589,27 +608,41 @@ which case we just restart the metro. Not sure whether that's the best
 #X connect 6 0 3 0;
 #X connect 6 1 7 0;
 #X connect 7 0 1 0;
-#X restore 20 92 pd preset;
-#X floatatom 20 70 5 0 99 0 - - -, f 5;
-#X obj 200 100 declare -path lib;
-#X obj 71 30 r \$0-presetno-set;
-#X msg 20 153 pgmset \$1;
-#X obj 20 178 s \$0-arp;
-#X text 100 130 pgmset mode \, if enabled \, interprets program changes
+#X restore 329 102 pd preset;
+#X floatatom 329 80 5 0 99 0 - - -, f 5;
+#X obj 110 100 declare -path lib;
+#X obj 380 46 r \$0-presetno-set;
+#X msg 40 153 pgmset \$1;
+#X obj 40 178 s \$0-arp;
+#X text 110 130 pgmset mode \, if enabled \, interprets program changes
 as preset selection (this is disabled by default \, meaning that program
 changes will be passed through to MIDI output instead), f 51;
-#X obj 350 200 loadbang;
-#X obj 20 130 tgl 15 0 empty empty empty 17 7 0 10 #fcfcfc #000000
+#X obj 370 200 loadbang;
+#X obj 40 130 tgl 15 0 empty empty empty 17 7 0 10 #fcfcfc #000000
 #000000 0 1;
-#X text 20 200 You can enable pgmset mode by default by connecting
+#X text 40 200 You can enable pgmset mode by default by connecting
 the loadbang with the toggle above. This may be useful for automation
 purposes (e.g. when running Raptor as a plugin) \, but note that this
 prevents program changes to be passed through., f 51;
+#X obj 40 20 hradio 15 0 0 3 empty empty empty 0 -8 0 10 #fcfcfc #000000
+#000000 0;
+#X msg 40 66 deck \$1;
+#X text 110 20 deck number (-1 = off \, 0 = on/omni \, 1 = left \,
+2 = right) \, for DJ controllers with two identical sets of controls
+, f 30;
+#X msg 10 20 -1;
+#X obj 40 89 s \$0-deck;
+#X obj 40 43 t f;
 #X connect 1 0 0 0;
 #X connect 3 0 2 0;
 #X connect 5 0 2 1;
 #X connect 6 0 7 0;
 #X connect 10 0 6 0;
+#X connect 12 0 17 0;
+#X connect 13 0 7 0;
+#X connect 15 0 17 0;
+#X connect 17 0 13 0;
+#X connect 17 0 16 0;
 #X restore 100 370 pd init;
 #X obj 182 77 cnv 15 70 38 empty empty Raptor7 9 17 0 14 #ffffff #404040
 0;
