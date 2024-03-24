@@ -1,20 +1,24 @@
 -- -*- mode: lua -*-
 
--- This is my first attempt at an intuitive or at least a logical layout for
--- the LaunchControl XL. Enjoy. :) Albert Gräf <agggraef@gmail.com>, 2024
+-- This is my attempt at an intuitive or at least a logical layout for the
+-- Launch Control XL. Enjoy. :) Albert Gräf <agggraef@gmail.com>, 2024
+
+-- NOTE: This is a revised version of the mapping, to bring it more in line
+-- with the AKAI MIDIMIX mapping. The two mappings are now almost identical,
+-- which makes it easy to switch between the two controllers.
 
 -- This maps the encoders in each column to the controls of the corresponding
 -- row in the panel. This works quite well, since the pan pots are mapped to
 -- the mod controls in the third column of the panel, which are mostly
 -- bipolar. The Send A and B controls are mostly mapped to ranges, so that A
--- controls the lower, B the upper value. Some rows have only a single value
+-- controls the lower, B the upper value. Some rows only have a single value
 -- (besides the mod value), in which case I mapped both A and B to that value.
 
 -- The faders are mapped as follows: 1 = pitch hi, 2 = pitch lo, 3 = pattern
 -- mode (random, up, down, etc.), 4 = pos/anacrusis (the "scrubbing" control),
 -- 5 = tempo, 6 = meter numerator, 7 = meter denominator, 8 = division.
 
--- The resulting mapping of the knobs and faders is the following:
+-- The resulting mapping of the knobs and faders is as follows:
 
 -- [minvel] [pmin] [wmin] [gate]    [hmin]  [pref]    [smin]  [uniq]
 -- [maxvel] [pmax] [wmax] [gate]    [hmax]  [pref]    [smax]  [nmax]
@@ -22,16 +26,15 @@
 
 -- [hi]     [lo]   [mode] [pos]     [tempo] [num]     [denom] [divis]
 
--- The send and track select buttons are mapped as follows:
--- up = rewind, down = raptor toggle, left = loop, right = play.
+-- The remaining functions are laid out exactly as in the MIDIMAX mapping in
+-- the two button rows at the bottom:
 
--- Finally, the mute, solo, and record arm buttons are mapped to the mute,
--- latch, and bypass toggles in the panel.
+--   - voice controls -                       - looper controls -
+-- [mute] [latch] [bypass]  [      ] [      ] [load] [save] [loop]
+--                [raptor]  [rewind]                        [play]
 
--- We might still revise this in the future to bring it more in line with our
--- mapping for the AKAI MIDIMIX. But for the time being, I think that this
--- works quite well and covers the most important functions that you might
--- want to use during a live performance.
+-- As previously, the mute, solo, and record arm buttons on the right-hand
+-- side are mapped to the mute, latch, and bypass toggles as well.
 
 {
   [13] = { [25] = "minvel" },
@@ -66,10 +69,19 @@
   [82] = { [25] = "meter-num" },
   [83] = { [25] = "meter-denom" },
   [84] = { [25] = "division" },
-  [104] = { [25] = { "rewind", true } },
-  [105] = { [25] = { "raptor", true } },
-  [106] = { [25] = { "loop", true } },
-  [107] = { [25] = { "play", true } },
+  [104] = { [25] = { "loop-next", true } },
+  [105] = { [25] = { "loop-prev", true } },
+  [169] = { [25] = { "mute", true } },
+  [170] = { [25] = { "latch", true } },
+  [171] = { [25] = { "bypass", true } },
+  [186] = { [25] = { "loop-load", true } },
+  [187] = { [25] = { "loop-save", true } },
+  [188] = { [25] = { "loop", true } },
+  [203] = { [25] = { "raptor", true } },
+  [204] = { [25] = { "rewind", true } },
+  [220] = { [25] = { "play", true } },
+  -- alternative bindings for the mute/latch/bypass controls, uses the mute,
+  -- solo, and record arm buttons on the right
   [234] = { [25] = { "mute",true } },
   [235] = { [25] = { "latch",true } },
   [236] = { [25] = { "bypass",true } }
