@@ -3220,6 +3220,71 @@ function raptor:in_1_master(atoms)
    self.master = id
 end
 
+-- looper
+
+function raptor:looper(name, cmd)
+   if self.arp.loopstate == 1 then
+      -- loop is playing, update meter and tempo information
+      if self.division > 1 then
+	 self.arp.loop.meter = {self.n, self.m, self.division}
+      else
+	 self.arp.loop.meter = {self.n, self.m}
+      end
+      self.arp.loop.tempo = self.tempo
+   end
+   local res, val = self.arp:loop_file(name, cmd)
+   if res then
+      if res == "loopsize" then
+	 -- new loop was loaded, internal state is already updated, but we
+	 -- still need to update panel and looper applet
+	 if self.arp.loop.meter or self.arp.loop.tempo then
+	    -- loop has meter and/or tempo data attached to it
+	    if self.arp.loop.meter and type(self.arp.loop.meter) == "table" then
+	       local n, m, division = table.unpack(self.arp.loop.meter)
+	       if not division then
+		  division = 1
+	       end
+	       if type(n) == "number" and type(m) == "number" and
+		  type(division) == "number" then
+		  n = math.max(1, math.floor(n))
+		  m = math.max(1, math.floor(m))
+		  division = math.max(1, math.floor(division))
+	       end
+	       local check = n*division ~= self.n*self.division
+	       self.n = n
+	       self.m = m
+	       self.division = division
+	       if check then
+		  -- update the meter
+		  self.arp:set_meter(self.n*self.division)
+	       end
+	       if self.id then
+		  local id = self.id
+		  pd.send(string.format("%s-%s", id, "meter-num"), "set", {self.n})
+		  pd.send(string.format("%s-%s", id, "meter-denom"), "set", {self.m})
+		  pd.send(string.format("%s-%s", id, "division"), "set", {self.division})
+	       end
+	    end
+	    if self.arp.loop.tempo and type(self.arp.loop.tempo) == "number" then
+	       local tempo = math.max(1, self.arp.loop.tempo)
+	       if tempo ~= self.tempo then
+		  self.tempo = tempo
+		  if self.id then
+		     pd.send(string.format("%s-%s", self.id, "tempo"), "set", {self.tempo})
+		  end
+	       end
+	    end
+	 end
+	 -- loopsize result
+	 val = math.floor(val/self.arp.beats)
+	 return res, val
+      else
+	 -- result of loop filename query
+	 return res, val
+      end
+   end
+end
+
 -- generic param setter/getter
 
 function raptor:param(var, val)
@@ -3269,70 +3334,19 @@ end
 function raptor:in_1(sel, atoms)
    if sel == "loop" and type(atoms[1]) == "string" then
       -- loop file command, this needs special treatment
-      if self.arp.loopstate == 1 then
-	 -- loop is playing, update meter and tempo information
-	 if self.division > 1 then
-	    self.arp.loop.meter = {self.n, self.m, self.division}
-	 else
-	    self.arp.loop.meter = {self.n, self.m}
-	 end
-	 self.arp.loop.tempo = self.tempo
-      end
-      local res, val = self.arp:loop_file(table.unpack(atoms))
+      local name, cmd = table.unpack(atoms)
+      -- default for cmd is 1 (save) if loop is playing, 0 (load) otherwise
+      cmd = cmd or self.arp.loopstate
+      local res, val = self:looper(name, cmd)
       if res then
-	 if res == "loopsize" then
-	    -- new loop was loaded, internal state is already updated, but we
-	    -- still need to update panel and looper applet
-	    if self.arp.loop.meter or self.arp.loop.tempo then
-	       -- loop has meter and/or tempo data attached to it
-	       if self.arp.loop.meter and type(self.arp.loop.meter) == "table" then
-		  local n, m, division = table.unpack(self.arp.loop.meter)
-		  if not division then
-		     division = 1
-		  end
-		  if type(n) == "number" and type(m) == "number" and
-		     type(division) == "number" then
-		     n = math.max(1, math.floor(n))
-		     m = math.max(1, math.floor(m))
-		     division = math.max(1, math.floor(division))
-		  end
-		  local check = n*division ~= self.n*self.division
-		  self.n = n
-		  self.m = m
-		  self.division = division
-		  if check then
-		     -- update the meter
-		     self.arp:set_meter(self.n*self.division)
-		  end
-		  if self.id then
-		     local id = self.id
-		     pd.send(string.format("%s-%s", id, "meter-num"), "set", {self.n})
-		     pd.send(string.format("%s-%s", id, "meter-denom"), "set", {self.m})
-		     pd.send(string.format("%s-%s", id, "division"), "set", {self.division})
-		  end
-	       end
-	       if self.arp.loop.tempo and type(self.arp.loop.tempo) == "number" then
-		  local tempo = math.max(1, self.arp.loop.tempo)
-		  if tempo ~= self.tempo then
-		     self.tempo = tempo
-		     if self.id then
-			pd.send(string.format("%s-%s", self.id, "tempo"), "set", {self.tempo})
-		     end
-		  end
-	       end
-	    end
-	    val = math.floor(val/self.arp.beats)
-	    self:outlet(1, res, {val})
-	 else
-	    -- result of loop filename query
-	    self:outlet(1, res, {val})
-	 end
+	 self:outlet(1, res, {val})
       end
-      return
+   else
+      if self.midi_learn == 1 and
+	 self.midi_learn_var ~= sel and param_i[sel] then
+	 self.midi_learn_var = sel
+	 self:learn()
+      end
+      self:param(sel, atoms[1])
    end
-   if self.midi_learn == 1 and self.midi_learn_var ~= sel and param_i[sel] then
-      self.midi_learn_var = sel
-      self:learn()
-   end
-   self:param(sel, atoms[1])
 end
