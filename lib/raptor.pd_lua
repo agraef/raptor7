@@ -2654,14 +2654,14 @@ function raptor:djcontrol_note(atoms)
       -- jog wheel touches, reset status
       self.scratch.last_delta[deck] = 0
       return true
-   elseif num == 5 then
-      -- SYNC button: rewind to the pattern start (pos 0)
+   elseif num == 5 and not shift then
+      -- unshifted SYNC button: rewind to the pattern start (pos 0)
       if val > 0 and (self.deck == 0 or deck == self.deck) then
 	 self:set_pos(0)
       end
       return true
-   elseif num == 6 then
-      -- CUE button: rewind to the anacrusis (pos)
+   elseif num == 6 and not shift then
+      -- unshifted CUE button: rewind to the anacrusis (pos)
       if val > 0 and (self.deck == 0 or deck == self.deck) then
 	 self:do_rewind(self.pos)
       end
