@@ -2023,6 +2023,8 @@ end
 
 -- table of the ids of all running raptor instances
 raptor.instances = {}
+-- assigned deck information
+raptor.decks = {}
 
 function raptor:get_instance(id1)
    if not id1 then
@@ -2166,6 +2168,8 @@ function raptor:finalize()
    if i > 0 then
       -- remove ourself from the instances table
       table.remove(raptor.instances, i)
+      -- also remove the assigned deck information
+      raptor.decks[self.id] = nil
    end
 end
 
@@ -2630,7 +2634,7 @@ local function djcontrol_deck(ch)
       return (ch-1) % 3, ch >= 4
    else
       -- pads (no shift status)
-      return ch-7
+      return ch-6
    end
 end
 
@@ -2660,6 +2664,26 @@ function raptor:djcontrol_note(atoms)
       -- CUE button: rewind to the anacrusis (pos)
       if val > 0 and (self.deck == 0 or deck == self.deck) then
 	 self:do_rewind(self.pos)
+      end
+      return true
+   elseif num >= 16 and num < 24 then
+      -- unshifted pads in mode 2 (labeled "STEMS" on the MK2), we use these
+      -- to do ccmaster switches
+      if val > 0 then
+	 -- This is a bit tricky, since this request is going to be processed
+	 -- in a single random instance which might not even have a deck
+	 -- assigned to it. Thus checking self.deck isn't going to do us any
+	 -- good here. Instead, we check if the global decks table is empty,
+	 -- in which case we do a regular instance switch, otherwise we try to
+	 -- locate an instance for the deck indicated by the message. This
+	 -- should do the right thing in most cases. But note that if you're
+	 -- running an ensemble where some raptors have a deck assigned to
+	 -- them, while others have not, then djcontrol won't give you access
+	 -- to all those instances. (As a remedy, you can still use a
+	 -- secondary controller like the MIDIMIX for that purpose.)
+	 local i = next(raptor.decks) == nil and num-15 or
+	    self:locate_deck_i(num-15, deck)
+	 self:in_1_ccmaster_set({i})
       end
       return true
    else
@@ -3285,7 +3309,7 @@ function raptor:in_1_ccmaster(atoms)
 end
 
 function raptor:in_1_ccmaster_set(atoms)
-   -- this message gets broadcast to all raptor instance, but only a single
+   -- this message gets broadcast to all raptor instances, but only a single
    -- instance should respond to it
    if self.id and self.id == raptor.instances[1] then
       local i = atoms[1]
@@ -3341,6 +3365,33 @@ function raptor:in_1_deck(atoms)
       -- only have two, 1 = left, 2 = right
       deck = math.min(16, deck)
       self.deck = deck
+      if self.id then
+	 -- also keep track of assigned decks globally
+	 raptor.decks[self.id] = deck>0 and deck or nil
+      end
+   end
+end
+
+-- locate an instance for a given deck by its index
+
+function raptor:locate_deck_i(i, deck)
+   if i and deck and deck > 0 then
+      -- locate the ith instance with the given deck
+      local function locate(k, deck)
+	 for i, id in ipairs(raptor.instances) do
+	    local d = raptor.decks[id]
+	    if d and d == deck then
+	       k = k-1
+	       if k <= 0 then
+		  return i
+	       end
+	    end
+	 end
+	 return nil
+      end
+      return locate(i, deck)
+   else
+      return i
    end
 end
 
