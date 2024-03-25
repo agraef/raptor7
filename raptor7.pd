@@ -618,14 +618,14 @@ which case we just restart the metro. Not sure whether that's the best
 as preset selection (this is disabled by default \, meaning that program
 changes will be passed through to MIDI output instead), f 51;
 #X obj 370 200 loadbang;
-#X obj 40 130 tgl 15 0 empty empty empty 17 7 0 10 #fcfcfc #000000
-#000000 0 1;
+#X obj 40 130 tgl 15 0 empty \$0-pgmset-set empty 17 7 0 10 #fcfcfc
+#000000 #000000 0 1;
 #X text 40 200 You can enable pgmset mode by default by connecting
 the loadbang with the toggle above. This may be useful for automation
 purposes (e.g. when running Raptor as a plugin) \, but note that this
 prevents program changes to be passed through., f 51;
-#X obj 40 20 hradio 15 0 0 3 empty empty empty 0 -8 0 10 #fcfcfc #000000
-#000000 0;
+#X obj 40 20 hradio 15 0 0 3 empty \$0-deck-set empty 0 -8 0 10 #fcfcfc
+#000000 #000000 0;
 #X msg 40 66 deck \$1;
 #X text 110 20 deck number (-1 = off \, 0 = on/omni \, 1 = left \,
 2 = right) \, for DJ controllers with two identical sets of controls
@@ -633,6 +633,25 @@ prevents program changes to be passed through., f 51;
 #X msg 10 20 -1;
 #X obj 40 89 s \$0-deck;
 #X obj 40 43 t f;
+#N canvas 507 363 450 300 arg 0;
+#X obj 20 20 route pgmset deck;
+#X obj 20 170 s \$0-pgmset-set;
+#X obj 120 170 s \$0-deck-set;
+#X obj 220 155 spigot;
+#X obj 220 50 list append \$1;
+#X obj 220 75 sel 0;
+#X msg 247 100 1;
+#X obj 220 20 loadbang;
+#X obj 220 130 r \$1-init;
+#X connect 0 0 1 0;
+#X connect 0 1 2 0;
+#X connect 3 0 0 0;
+#X connect 4 0 5 0;
+#X connect 5 1 6 0;
+#X connect 6 0 3 1;
+#X connect 7 0 4 0;
+#X connect 8 0 3 0;
+#X restore 240 100 pd arg;
 #X connect 1 0 0 0;
 #X connect 3 0 2 0;
 #X connect 5 0 2 1;
