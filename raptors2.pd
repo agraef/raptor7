@@ -1,0 +1,17 @@
+#N canvas 348 380 450 373 12;
+#X declare -path lib;
+#X obj 20 90 loadbang;
+#X obj 20 20 raptor7 weird-organ 1;
+#X obj 20 50 raptor7 arp2 2;
+#X msg 20 280 ctl 50 8 1 \, ctl 80 8 2;
+#X obj 20 310 midi-output;
+#X text 20 250 set pan on MIDI channels 1 and 2;
+#X obj 20 340 declare -path lib;
+#X text 20 120 set decks \, meter and tempo \, enable latch;
+#X msg 20 150 \; pd-raptor7.pd vis 1 \; weird-organ-init deck 1 \;
+arp2-init deck 2 \; all-arp meter 7 8 2 \, tempo 105 \, latch 1;
+#X text 240 30 Raptor DJControl example 2 raptors \, 2 decks, f 25
+;
+#X connect 0 0 8 0;
+#X connect 0 0 3 0;
+#X connect 3 0 4 0;
