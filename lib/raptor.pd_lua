@@ -2633,15 +2633,15 @@ local function djcontrol_deck(ch)
       -- 0, 1, 2 indicates global, left, right; followed by the shift status
       return (ch-1) % 3, ch >= 4
    else
-      -- pads (no shift status)
-      return ch-6
+      -- pads (no shift status, report pad status instead)
+      return ch-6, false, true
    end
 end
 
 function raptor:djcontrol_note(atoms)
    local num, val, ch = table.unpack(atoms)
    self:djcontrol_init()
-   local deck, shift = djcontrol_deck(ch)
+   local deck, shift, pads = djcontrol_deck(ch)
    if not deck or deck == 0 then
       -- tie-in with the MIDI mapper to skip the ccmaster check if we already
       -- filtered by deck number (here we also check for the shift status,
@@ -2650,6 +2650,30 @@ function raptor:djcontrol_note(atoms)
       self.assert_master = deck and not shift
       -- pass through
       return false
+   elseif pads then
+      -- the pads are on a separate plane, must be checked first since note
+      -- numbers partially overlap with the non-pad buttons
+      if num >= 16 and num < 24 then
+	 -- unshifted pads in mode 2 (labeled "STEMS" on the MK2), we use these
+	 -- to do ccmaster switches
+	 if val > 0 then
+	    -- This is a bit tricky, since this request is going to be processed
+	    -- in a single random instance which might not even have a deck
+	    -- assigned to it. Thus checking self.deck isn't going to do us any
+	    -- good here. Instead, we check if the global decks table is empty,
+	    -- in which case we do a regular instance switch, otherwise we try to
+	    -- locate an instance for the deck indicated by the message. This
+	    -- should do the right thing in most cases. But note that if you're
+	    -- running an ensemble where some raptors have a deck assigned to
+	    -- them, while others have not, then djcontrol won't give you access
+	    -- to all those instances. (As a remedy, you can still use a
+	    -- secondary controller like the MIDIMIX for that purpose.)
+	    local i = next(raptor.decks) == nil and num-15 or
+	       self:locate_deck_i(num-15, deck)
+	    self:in_1_ccmaster_set({i})
+	 end
+	 return true
+      end
    elseif num == 8 then
       -- jog wheel touches, reset status
       self.scratch.last_delta[deck] = 0
@@ -2666,35 +2690,14 @@ function raptor:djcontrol_note(atoms)
 	 self:do_rewind(self.pos)
       end
       return true
-   elseif num >= 16 and num < 24 then
-      -- unshifted pads in mode 2 (labeled "STEMS" on the MK2), we use these
-      -- to do ccmaster switches
-      if val > 0 then
-	 -- This is a bit tricky, since this request is going to be processed
-	 -- in a single random instance which might not even have a deck
-	 -- assigned to it. Thus checking self.deck isn't going to do us any
-	 -- good here. Instead, we check if the global decks table is empty,
-	 -- in which case we do a regular instance switch, otherwise we try to
-	 -- locate an instance for the deck indicated by the message. This
-	 -- should do the right thing in most cases. But note that if you're
-	 -- running an ensemble where some raptors have a deck assigned to
-	 -- them, while others have not, then djcontrol won't give you access
-	 -- to all those instances. (As a remedy, you can still use a
-	 -- secondary controller like the MIDIMIX for that purpose.)
-	 local i = next(raptor.decks) == nil and num-15 or
-	    self:locate_deck_i(num-15, deck)
-	 self:in_1_ccmaster_set({i})
-      end
-      return true
-   else
-      -- skip ccmaster check if already filtered by deck
-      self.assert_master = deck == self.deck
-      -- filter out anything that's for the other deck, or everything if
-      -- self.deck < 0 (off), or nothing if self.deck == 0 (on/omni)
-      -- NOTE: confusingly, the conditions are reversed here because true
-      -- means filter out, false means pass through
-      return self.deck ~= 0 and deck ~= self.deck
    end
+   -- skip ccmaster check if already filtered by deck
+   self.assert_master = deck == self.deck
+   -- filter out anything that's for the other deck, or everything if
+   -- self.deck < 0 (off), or nothing if self.deck == 0 (on/omni)
+   -- NOTE: confusingly, the conditions are reversed here because true
+   -- means filter out, false means pass through
+   return self.deck ~= 0 and deck ~= self.deck
 end
 
 function raptor:djcontrol_ctl(atoms)
