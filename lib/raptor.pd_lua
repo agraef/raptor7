@@ -2753,6 +2753,14 @@ function raptor:djcontrol_ctl(atoms)
 	    end
 	 end
 	 return true
+      elseif num == 0 and not shift then
+	 -- volume slider (unshifted), coarse, mapped to CC7 (volume)
+	 self.assert_master = deck == self.deck
+	 return {val, 7, ch}
+      elseif num == 1 and not shift then
+	 -- filter knob (unshifted), coarse, mapped to CC8 (balance)
+	 self.assert_master = deck == self.deck
+	 return {val, 8, ch}
       else
 	 -- skip ccmaster check if already filtered by deck
 	 self.assert_master = deck == self.deck
@@ -2884,7 +2892,15 @@ end
 -- other incoming MIDI messages (CC, pitch bend, etc.)
 
 function raptor:in_1_ctl(atoms)
-   if self:process_ctl(atoms) then
+   local res = self:process_ctl(atoms)
+   if type(res) == "table" and #res==3 then
+      -- mapped CC, passed through as if it was on input
+      if self.assert_master or self:check_ccmaster() then
+	 self:outlet(1, "ctl", self:rechan(res))
+      end
+      self.assert_master = false
+      return
+   elseif res then
       return
    end
    if self:check_midi_learn(atoms[1], atoms[2], atoms[3]) or
