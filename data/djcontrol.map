@@ -1,0 +1,55 @@
+-- -*- mode: lua -*-
+
+-- MIDI map for the Hercules DJControl. Albert Gräf <agggraef@gmail.com>, 2024
+
+-- This is preliminary, to complement the hard-wired controls with some
+-- essential functions. It also serves as a brief rundown of all these
+-- bindings, while documentation on the DJControl support in Raptor still
+-- needs to be written.
+
+-- Hardwired controls: BROWSER encoder for preset selection (use SHIFT to
+-- restrict to the currently selected instance), jog wheels for pos/anacrusis,
+-- SYNC (set pos to 0) and CUE (reset the current playback pos to anacrusis),
+-- Mode 2 (2nd mode button, typically "STEMS" or "LOOP" on the latest versions
+-- of the controller) with the pads (pad 1-4, or 1-8 depending on the device)
+-- for selecting Raptor instances (ccmaster).
+
+-- Mapped controls: Currently supported are the tempo faders and the most
+-- important transport and loop functions: PLAY/PAUSE (playback toggles),
+-- headphone buttons (mute), LOOP (loop toggles), 1/2, X2 (previous, next
+-- loop), LOAD (load loop file), SHIFT+LOAD (save loop file). These are all
+-- available for the left and the right deck, and can be edited below or
+-- modified using MIDI learn.
+
+{
+  [8] = {
+    [18] = "tempo",
+    [19] = "tempo"
+  },
+  [131] = {
+    [18] = { "loop", true },
+    [19] = { "loop", true }
+  },
+  [135] = {
+    [18] = { "play", true },
+    [19] = { "play", true }
+  },
+  [137] = {
+    [18] = { "loop-prev", true },
+    [19] = { "loop-prev", true }
+  },
+  [138] = {
+    [18] = { "loop-next", true },
+    [19] = { "loop-next", true }
+  },
+  [140] = {
+    [18] = { "mute", true },
+    [19] = { "mute", true }
+  },
+  [141] = {
+    [18] = { "loop-load", true },
+    [19] = { "loop-load", true },
+    [21] = { "loop-save", true },
+    [22] = { "loop-save", true }
+  },
+}
