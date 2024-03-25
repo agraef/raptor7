@@ -8,18 +8,19 @@
 -- needs to be written.
 
 -- Hardwired controls: BROWSER encoder for preset selection (use SHIFT to
--- restrict to the currently selected instance), jog wheels for pos/anacrusis,
--- SYNC (set pos to 0) and CUE (reset the current playback pos to anacrusis),
--- Mode 2 (2nd mode button, typically "STEMS" or "LOOP" on the latest versions
--- of the controller) with the pads (pad 1-4, or 1-8 depending on the device)
--- for selecting Raptor instances (ccmaster).
+-- restrict to the currently selected instance); volume fader (mapped to MIDI
+-- CC7 = volume) and filter knob (mapped to CC8 = balance); jog wheels for
+-- scrubbing (pos/anacrusis); SYNC (set pos to 0) and CUE (reset the current
+-- playback pos to anacrusis); Mode 2 pads (2nd mode button, typically "STEMS"
+-- or "LOOP" on the latest versions of the controller, with pad 1-4, or 1-8
+-- depending on the device) for selecting Raptor instances (ccmaster).
 
 -- Mapped controls: Currently supported are the tempo faders and the most
--- important transport and loop functions: PLAY/PAUSE (playback toggles),
--- headphone buttons (mute), LOOP (loop toggles), 1/2, X2 (previous, next
--- loop), LOAD (load loop file), SHIFT+LOAD (save loop file). These are all
--- available for the left and the right deck, and can be edited below or
--- modified using MIDI learn.
+-- important transport and looper functions: PLAY/PAUSE (playback toggles),
+-- headphone buttons (mute), LOOP (loop toggles), IN, OUT (previous, next
+-- loop), LOAD (load loop file), and SHIFT+LOAD (save loop file). These are
+-- all available for both decks, and can be edited below or modified using
+-- MIDI learn.
 
 {
   [8] = {
