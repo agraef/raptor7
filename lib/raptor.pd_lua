@@ -2597,6 +2597,11 @@ function raptor:midimix_note(atoms)
    return false
 end
 
+function raptor:midimix_ctl(atoms)
+   -- pass
+   return false
+end
+
 -- Hercules DJControl (experimental)
 
 function raptor:djcontrol_init()
@@ -2736,6 +2741,42 @@ function raptor:djcontrol_ctl(atoms)
    end
 end
 
+-- preprocessing of note and control data using the enabled control surfaces
+
+function raptor:process_note(atoms)
+   local res = launchcontrol ~= 0 and self:launchcontrol_note(atoms)
+   if res then
+      return res
+   end
+   res = midimix ~= 0 and self:midimix_note(atoms)
+   if res then
+      return res
+   end
+   -- always put djcontrol last since it also filters out messages, which
+   -- might interfere with the other controllers
+   res = djcontrol ~= 0 and self:djcontrol_note(atoms)
+   if res then
+      return res
+   end
+   return false
+end
+
+function raptor:process_ctl(atoms)
+   local res = launchcontrol ~= 0 and self:launchcontrol_ctl(atoms)
+   if res then
+      return res
+   end
+   res = midimix ~= 0 and self:midimix_ctl(atoms)
+   if res then
+      return res
+   end
+   res = djcontrol ~= 0 and self:djcontrol_ctl(atoms)
+   if res then
+      return res
+   end
+   return false
+end
+
 -- note input (SMMF format)
 
 function raptor:get_chan(ch)
@@ -2776,15 +2817,7 @@ function raptor:in_1_thru(atoms)
 end
 
 function raptor:in_1_note(atoms)
-   if launchcontrol ~= 0 and self:launchcontrol_note(atoms) then
-      return
-   end
-   if midimix ~= 0 and self:midimix_note(atoms) then
-      return
-   end
-   -- always put djcontrol last since it also filters out messages, which
-   -- might interfere with the other controllers
-   if djcontrol ~= 0 and self:djcontrol_note(atoms) then
+   if self:process_note(atoms) then
       return
    end
    -- for the purposes of MIDI learn, notes are treated as if they were
@@ -2827,10 +2860,7 @@ end
 -- other incoming MIDI messages (CC, pitch bend, etc.)
 
 function raptor:in_1_ctl(atoms)
-   if launchcontrol ~= 0 and self:launchcontrol_ctl(atoms) then
-      return
-   end
-   if djcontrol ~= 0 and self:djcontrol_ctl(atoms) then
+   if self:process_ctl(atoms) then
       return
    end
    if self:check_midi_learn(atoms[1], atoms[2], atoms[3]) or
