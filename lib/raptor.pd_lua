@@ -2814,7 +2814,10 @@ function raptor:in_1_ctl(atoms)
    self.assert_master = false
    -- simple pass-through
    if self:check_chan(atoms[3]) then
-      self:outlet(1, "ctl", self:rechan(atoms))
+      -- check for ccmaster to direct messages to the right instance
+      if self:check_ccmaster() then
+	 self:outlet(1, "ctl", self:rechan(atoms))
+      end
    end
 end
 
@@ -2836,7 +2839,9 @@ function raptor:in_1_pgm(atoms)
 	    self:in_1_preset({atoms[1]})
 	 end
       elseif self:check_chan(atoms[2]) then
-	 self:outlet(1, "pgm", self:rechan(atoms))
+	 if self:check_ccmaster() then
+	    self:outlet(1, "pgm", self:rechan(atoms))
+	 end
       end
    else
       self:in_1("pgm", atoms)
@@ -2845,22 +2850,28 @@ end
 
 function raptor:in_1_bend(atoms)
    if self:check_chan(atoms[2]) then
-      -- vanilla-bug-compatible range adjustment needed here
-      atoms[1] = atoms[1] - 8192
-      self:outlet(1, "bend", self:rechan(atoms))
+      if self:check_ccmaster() then
+	 -- vanilla-bug-compatible range adjustment needed here
+	 atoms[1] = atoms[1] - 8192
+	 self:outlet(1, "bend", self:rechan(atoms))
+      end
    end
 end
 
 function raptor:in_1_touch(atoms)
    if self:check_chan(atoms[2]) then
-      self:outlet(1, "touch", self:rechan(atoms))
+      if self:check_ccmaster() then
+	 self:outlet(1, "touch", self:rechan(atoms))
+      end
    end
 end
 
 function raptor:in_1_polytouch(atoms)
    if self:check_chan(atoms[3]) then
-      atoms[2] = atoms[2]+self.transp
-      self:outlet(1, "polytouch", self:rechan(atoms))
+      if self:check_ccmaster() then
+	 atoms[2] = atoms[2]+self.transp
+	 self:outlet(1, "polytouch", self:rechan(atoms))
+      end
    end
 end
 
