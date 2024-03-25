@@ -65,6 +65,24 @@ local midimix = 1
 -- DJControl Inpulse 200 MK2, other similar devices might need some work.
 local djcontrol = 1
 
+-- make sure that this is set if any of the above is enabled
+local have_control = launchcontrol ~= 0 or midimix ~= 0 or djcontrol ~= 0
+
+-- For MIDI pass-through, we filter out MIDI data from port #2 by default, if
+-- any of the control surfaces is enabled. This prevents control surface data
+-- from slipping through and triggering spurious notes and control changes in
+-- the arpeggiator or connected synthesizers. (You know the drill if you ever
+-- hooked up a DAW controller to a synthesizer.)
+
+-- The following value is a MIDI input port number and can be changed here if
+-- needed, or you can set it at runtime by sending raptor a 'thru' message.
+-- Note that port #1 is never filtered out, since it's the primary input. Any
+-- value n > 1 means that data coming from port 2 to n will be filtered out,
+-- while data coming from ports n+1 and above will be passed through. Thus,
+-- n = 0 or 1 effectively disables the filter, while n >= N (where N is the
+-- total number of MIDI input ports) filters out data from all ports > 1.
+local midi_thru = have_control and 2 or 1
+
 -- midimap_name: The name of the file in the data directory in which MIDI
 -- bindings are stored. You can change this if you frequently switch between
 -- different MIDI setups, but note that this file is modified any time you add
@@ -2077,7 +2095,10 @@ function raptor:initialize(sel, atoms)
    self.chan = 1
    self.backup_chan = 1
    self.transp = 0
+
+   -- state of auxiliary control surfaces (input port #2)
    self.shift = false
+   self.thru = midi_thru
 
    -- midi learn
    self.midi_map = {}
@@ -2726,15 +2747,14 @@ function raptor:get_chan(ch)
    return ch
 end
 
-local controller_check = launchcontrol ~= 0 or midimix ~= 0 or djcontrol ~= 0
-
 function raptor:check_chan(ch)
-   if controller_check and ch > 16 then
-      -- we want to ignore note data that happens to come from a connected
-      -- control surface
+   local thru = ch <= 16 or ch > 16*self.thru
+   if thru then
+      return self.inchan == 0 or ch == self.inchan
+   else
+      -- skip MIDI data on secondary inputs (control surfaces and the like)
       return false
    end
-   return self.inchan == 0 or ch == self.inchan
 end
 
 function raptor:rechan(atoms)
@@ -2744,6 +2764,15 @@ function raptor:rechan(atoms)
       atoms[#atoms] = self.chan
    end
    return atoms
+end
+
+function raptor:in_1_thru(atoms)
+   local thru = atoms[1]
+   if type(thru) == "number" then
+      -- this must be a nonnegative integer
+      thru = math.max(0, math.floor(thru))
+      self.thru = thru
+   end
 end
 
 function raptor:in_1_note(atoms)
@@ -2795,9 +2824,7 @@ function raptor:in_1_note(atoms)
    end
 end
 
--- other incoming MIDI messages (CC, pitch bend, etc.), including:
--- pass-through, remap the MIDI channel to wherever our note output goes to
--- MIDI learn and mapping functionality
+-- other incoming MIDI messages (CC, pitch bend, etc.)
 
 function raptor:in_1_ctl(atoms)
    if launchcontrol ~= 0 and self:launchcontrol_ctl(atoms) then
