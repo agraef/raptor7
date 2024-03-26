@@ -1282,6 +1282,15 @@ function arpeggio:set_idx(x)
    end
 end
 
+-- change the current loop index
+function arpeggio:set_loopidx(x)
+   x = self:intarg(x)
+   if type(x) == "number" and self.loopstate == 1 and self.loopidx ~= x then
+      self.loopidx = math.max(0, x) % math.max(1, math.min(#self.loop, self.loopsize))
+      self.idx = self.loopidx % self.beats
+   end
+end
+
 -- pattern computation
 
 local function transp(chord, i)
@@ -2653,7 +2662,43 @@ function raptor:djcontrol_note(atoms)
    elseif pads then
       -- the pads are on a separate plane, must be checked first since note
       -- numbers partially overlap with the non-pad buttons
-      if num >= 16 and num < 24 then
+      if num >= 0 and num < 8 then
+	 -- unshifted pads in mode 1 (labeled "HOT CUE")
+	 -- cue to bar in a loop, smooth transition
+	 if self.arp.loopstate == 0 then
+	    -- we only bind this control if a loop is currently playing
+	    goto skip
+	 elseif val > 0 then
+	    -- effective loop size
+	    local l = math.min(#self.arp.loop, self.arp.loopsize)
+	    if l > 0 then
+	       -- beginning of the bar
+	       local x = (num * self.arp.beats) % l
+	       -- current position in the bar
+	       local i = self.arp.idx
+	       -- set the loop index
+	       self.arp:set_loopidx(x + i)
+	    end
+	 end
+	 return true
+      elseif num >= 8 and num < 16 then
+	 -- shifted pads in mode 1 (labeled "HOT CUE")
+	 -- cue to bar in a loop, immediate
+	 if self.arp.loopstate == 0 then
+	    -- we only bind this control if a loop is currently playing
+	    goto skip
+	 elseif val > 0 then
+	    -- effective loop size
+	    local l = math.min(#self.arp.loop, self.arp.loopsize)
+	    if l > 0 then
+	       -- beginning of the bar
+	       local x = (num * self.arp.beats) % l
+	       -- set the loop index to the beginning of the bar
+	       self.arp:set_loopidx(x)
+	    end
+	 end
+	 return true
+      elseif num >= 16 and num < 24 then
 	 -- unshifted pads in mode 2 (labeled "STEMS" on the MK2), we use these
 	 -- to do ccmaster switches
 	 if val > 0 then
@@ -2691,6 +2736,7 @@ function raptor:djcontrol_note(atoms)
       end
       return true
    end
+   ::skip::
    -- skip ccmaster check if already filtered by deck
    self.assert_master = deck == self.deck
    -- filter out anything that's for the other deck, or everything if
