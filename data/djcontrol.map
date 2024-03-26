@@ -1,26 +1,61 @@
 -- -*- mode: lua -*-
 
--- MIDI map for the Hercules DJControl. Albert Gräf <agggraef@gmail.com>, 2024
+-- MIDI map for the Hercules DJ Control. Albert Gräf <agggraef@gmail.com>, 2024
 
--- This is preliminary, to complement the hard-wired controls with some
--- essential functions. It also serves as a brief rundown of all these
--- bindings, while documentation on the DJControl support in Raptor still
--- needs to be written.
+--[[
 
--- Hardwired controls: BROWSER encoder for preset selection (use SHIFT to
--- restrict to the currently selected instance); volume fader (mapped to MIDI
--- CC7 = volume) and filter knob (mapped to CC8 = balance); jog wheels for
--- scrubbing (pos/anacrusis); SYNC (set pos to 0) and CUE (reset the current
--- playback pos to anacrusis); Mode 2 pads (2nd mode button, typically "STEMS"
--- or "LOOP" on the latest versions of the controller, with pad 1-4, or 1-8
--- depending on the device) for selecting Raptor instances (ccmaster).
+   This is preliminary, to complement the hard-wired controls with some
+   essential functions. It also serves as a brief rundown of all these
+   bindings, while proper documentation of the DJ Control support in Raptor
+   still needs to be written.
 
--- Mapped controls: Currently supported are the tempo faders and the most
--- important transport and looper functions: PLAY/PAUSE (playback toggles),
--- headphone buttons (mute), LOOP (loop toggles), IN, OUT (previous, next
--- loop), LOAD (load loop file), and SHIFT+LOAD (save loop file). These are
--- all available for both decks, and can be edited below or modified using
--- MIDI learn.
+   Hardwired controls: These are implemented in Raptor and thus can't be
+   changed using MIDI learn. True to the nature of these controllers, the DJ
+   Control implementation in Raptor has a lot of fancy performance controls
+   that are not readily available on other control surfaces. Here is what's
+   currently on offer:
+
+   - BROWSER encoder for preset selection (use SHIFT to restrict to the
+     currently selected instance)
+   - volume fader and filter knob (mapped to CC7 = volume and CC8 = balance)
+   - jog wheels for scrubbing (pos/anacrusis)
+   - SYNC (set pos to 0) and CUE (reset the current playback pos to anacrusis)
+   - mode 1 (HOT CUE) pads (cue a given bar of the loop during loop playback)
+   - mode 2 (STEMS/LOOP) pads (select Raptor instances a.k.a. ccmaster)
+
+   Note that Raptor is MIDI-only, so the volume and balance controls are 7 bit
+   and rely on what your synthesizer offers, so don't expect any miracles.
+   Also, there's no easy way to implement the cross-fade control. For the time
+   being, you can just employ the usual flipping of the volume faders to
+   achieve that effect.
+
+   The HOT CUE pads have two different functions depending on whether they are
+   used while holding the shift key. When shifted, the pads relocate to the
+   beginning of the bar immediately, otherwise they do a smooth transition
+   without changing the position in the bar. These controls only work during
+   loop playback, and can be remapped using MIDI learn in non-loop mode.
+
+   Also note that the available modes and number of pads vary with the
+   particular device version. Recent Hercules DJ Control devices should give
+   you at least two mode buttons and four pads, which is what the Raptor
+   implementation is designed to work with. (This has only been tested on the
+   DJ Control Inpulse 200 MK2 so far, which is the only device that I have. If
+   you can contribute adjustments for other types of DJ controllers, please
+   get in touch!)
+
+   Mapped controls: These *can* be edited below or modified using MIDI learn.
+   The DJ Control doesn't have nearly enough knobs and faders for mapping all
+   the panel parameters, so here we focus on the most essential performance
+   controls like tempo faders, transport and looper functions. These are bound
+   for both decks:
+
+   - PLAY/PAUSE (playback toggles)
+   - headphone buttons (mute toggles)
+   - LOOP/VINYL (loop toggles)
+   - IN, OUT (previous, next loop)
+   - LOAD (load loop file) and SHIFT+LOAD (save loop file)
+
+]]
 
 {
   [8] = {
