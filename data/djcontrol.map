@@ -5,55 +5,81 @@
 --[[
 
    This is preliminary, to complement the hard-wired controls with some
-   essential functions. It also serves as a brief rundown of all these
-   bindings, while proper documentation of the DJ Control support in Raptor
+   essential functions. It also serves as a brief rundown of the available
+   features, while proper documentation of the DJ Control support in Raptor
    still needs to be written.
 
-   Hardwired controls: These are implemented in Raptor and thus can't be
-   changed using MIDI learn. True to the nature of these controllers, the DJ
-   Control implementation in Raptor has a lot of fancy performance controls
-   that are not readily available on other control surfaces. Here is what's
-   currently on offer:
+   As with the other controller mappings, you can use this by copying the
+   djcontrol.map file to midi.map and making sure that your DJ Control device
+   is hooked up to Pd's second MIDI input port.
+
+   NOTES:
+
+   The present implementation only supports (up to) two decks. This should
+   hopefully suffice for the present DJ controller series by Hercules, as even
+   their flagship controllers have no more than 2 decks, AFAICT.
+
+   IMPORTANT: To enable the deck-specific features, you need to assign a deck
+   number to each raptor instance, which can be done in the init subpatch, or
+   by sending the init subpatch a corresponding 'deck' message in an ensemble
+   patch (see raptors2.pd for an example). The possible 'deck' values are -1
+   (decks are disabled, only the global controls are available), 0 ("omni"
+   mode, all decks send to all raptor instances, as with a regular control
+   surface), 1 and 2 (assigns the raptor instance to the left or right deck,
+   respectively).
+
+   Also note that the available modes and number of pads vary with the
+   particular device version. Recent Hercules DJ Control devices should give
+   you at least two mode buttons and four pads, which is what the Raptor
+   implementation was designed to work with. (This has only been tested on the
+   DJ Control Inpulse 200 MK2 so far, which is the only device that I have. If
+   you can contribute adjustments for other types of DJ controllers, please
+   get in touch!)
+
+   HARDWIRED CONTROLS:
+
+   These are implemented in Raptor and thus can't be changed using MIDI
+   learn. True to the nature of these controllers, the DJ Control
+   implementation in Raptor has a lot of fancy performance controls that are
+   not readily available on other control surfaces. Here is what's currently
+   on offer:
 
    - BROWSER encoder for preset selection (use SHIFT to restrict to the
      currently selected instance)
    - volume fader and filter knob (mapped to CC7 = volume and CC8 = balance)
+   - cross fade control, implemented by tying into the volume control
    - jog wheels for scrubbing (pos/anacrusis)
    - SYNC (set pos to 0) and CUE (reset the current playback pos to anacrusis)
    - mode 1 (HOT CUE) pads (cue a given bar of the loop during loop playback)
    - mode 2 (STEMS/LOOP) pads (select Raptor instances a.k.a. ccmaster)
 
-   Note that Raptor is MIDI-only, so the volume and balance controls are 7 bit
-   and rely on what your synthesizer offers, so don't expect any miracles.
-   Also, there's no easy way to implement the cross-fade control. For the time
-   being, you can just employ the usual flipping of the volume faders to
-   achieve that effect.
+   Note that Raptor is MIDI-only, so the cross fader, volume, and balance
+   controls are effectively 7 bit and rely on what your synthesizer offers;
+   don't expect any miracles. Also note that the cross fader will only be
+   active in raptor instances with a deck number (1 or 2), otherwise it can be
+   remapped using MIDI learn.
 
    The HOT CUE pads have two different functions depending on whether they are
    used while holding the shift key. When shifted, the pads relocate to the
    beginning of the bar immediately, otherwise they do a smooth transition
-   without changing the position in the bar. These controls only work during
-   loop playback, and can be remapped using MIDI learn in non-loop mode.
+   without changing the position in the bar. These controls are only active
+   during loop playback, and can be remapped using MIDI learn in non-loop
+   mode.
 
-   Also note that the available modes and number of pads vary with the
-   particular device version. Recent Hercules DJ Control devices should give
-   you at least two mode buttons and four pads, which is what the Raptor
-   implementation is designed to work with. (This has only been tested on the
-   DJ Control Inpulse 200 MK2 so far, which is the only device that I have. If
-   you can contribute adjustments for other types of DJ controllers, please
-   get in touch!)
+   MAPPED CONTROLS:
 
-   Mapped controls: These *can* be edited below or modified using MIDI learn.
-   The DJ Control doesn't have nearly enough knobs and faders for mapping all
-   the panel parameters, so here we focus on the most essential performance
-   controls like tempo faders, transport and looper functions. These are bound
-   for both decks:
+   These *can* be edited below or modified using MIDI learn. The DJ Control
+   doesn't have nearly enough knobs and faders for mapping all Raptor panel
+   parameters, so we don't even try and focus on the most essential
+   performance controls instead. Note that there are actually *two* bindings
+   for each of these, one for each deck:
 
-   - PLAY/PAUSE (playback toggles)
-   - headphone buttons (mute toggles)
-   - LOOP/VINYL (loop toggles)
-   - IN, OUT (previous, next loop)
-   - LOAD (load loop file) and SHIFT+LOAD (save loop file)
+   - PLAY/PAUSE (playback toggles, time subpatch)
+   - headphone buttons (mute toggles, panel)
+   - LOOP/VINYL (loop toggles, panel)
+   - IN and OUT (previous/next loop, looper subpatch)
+   - LOAD and SHIFT+LOAD (load/save loop file, looper subpatch)
+   - TEMPO faders (tempo controls, panel)
 
 ]]
 
