@@ -151,6 +151,10 @@ The [AKAI MIDIMIX][] is another popular (and more budget-friendly) controller wh
 
 Note that this mapping is a bit quirky because the MIDIMIX has less buttons. In particular, it lacks a dedicated device select button, so the SOLO button is used as a kind of shift button for selecting Raptor instances instead. A description of the mapping can be found in the midimix.map file in the data directory. To use this mapping, copy the file to midi.map and make sure that the MIDIMIX is connected to Pd's second MIDI input.
 
+#### Hercules DJ Control Support
+
+[Hercules](https://www.hercules.com) offers an entire series of DJ controllers which can be used with Raptor. True to the nature of this very interesting class of devices, the Raptor implementation supports multiple decks and offers some fancy performance controls that are not readily available on other control surfaces. However, I only have the DJ Control Inpulse 200 MK2 available for testing at the time of this writing, thus support for these devices is still experimental. Please check the comments at the beginning of the MIDI mapping in data/djcontrol.map for details.
+
 ## Quirks and Limitations
 
 Here are some known issues and how to work around them. Anything else that seems to be missing or not working properly? File a [bug report][], or (better yet) submit a [pull request][]!
@@ -171,7 +175,7 @@ Overdubbing and more advanced loop editing capabilities would be nice to have; b
 
 In a similar vein, Raptor's MIDI learn facility is also fairly basic. It's only possible to map MIDI CC and note messages at present. Having support for other kinds of messages such as aftertouch could be useful; we might add this in a future update. Also, there's no support for macro controls. That's unlikely to change in the near future, as it would require a lot of additional machinery in order to adjust the value mapping.
 
-Special support is only available for the Novation Launch Control XL and the AKAI MIDIMIX right now. (There's also experimental support for the Hercules DJControl devices, but this is unfinished at the time of this writing.) If anyone can contribute MIDI maps or special support for other devices (or alternative bindings for the existing ones), please submit a [pull request][]!
+Special support is already available for some devices, but it's always good to have more, and there are plenty of awesome MIDI controllers on the market these days. Thus, if anyone can contribute MIDI maps or special support for other devices (or alternative bindings for the existing ones), please submit a [pull request][]!
 
 
 [ICMC 2006 paper]: https://github.com/agraef/raptor7/blob/main/scale.pdf
