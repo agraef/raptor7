@@ -139,11 +139,11 @@ Also note that if you're running multiple Raptor instances, normally MIDI contro
 
 #### Special Device Support
 
-Beyond MIDI learn, Raptor also offers special support for some controllers, as detailed below. This typically includes some hardwired bindings to select Raptor instances for receiving control data, as well as a custom MIDI map file. It is generally assumed that these devices are in their factory state and are connected to Pd's *second* MIDI input port, so that they don't interfere with MIDI data from your primary input device on the first MIDI input. (Note that, in contrast, the MIDI learn facility can map MIDI controls no matter what the input port and MIDI channel is, thus it will work with your primary input device as well as all devices on secondary inputs.)
+Beyond MIDI learn, Raptor also offers special support for some controllers, as detailed below. This typically includes some hardwired bindings to select Raptor instances for receiving control data, as well as a custom MIDI map file. It is generally assumed that these devices are in their factory state and are connected to Pd's *second* MIDI input port, so that they don't interfere with MIDI data from your primary input device on the first MIDI input, where you'd typically connect your MIDI keyboard, pad controller, etc. (Note that, in contrast, the MIDI learn facility can map MIDI controls no matter what the input port and MIDI channel is, thus it will work with your primary input device as well as all devices on secondary inputs.)
 
 #### Novation Launch Control XL
 
-The [Novation Launch Control XL][] is a popular mixer-style controller with lots of knobs and faders, which makes for a nice Raptor control surface, so Raptor has special support for it. To make this work, the Launch Control XL must be set to the first factory preset, and you need to connect it to Pd's *second* MIDI input port. This ensures that messages from the controller don't interfere with MIDI data from the primary input device on Pd's first MIDI input port, where you'd typically connect your MIDI keyboard, pad controller, etc.
+The [Novation Launch Control XL][] is a popular mixer-style controller with lots of knobs and faders, which makes for a nice Raptor control surface, so Raptor has special support for it. To make this work, the Launch Control XL must be set to the first factory preset, and you need to connect it to Pd's second MIDI input port.
 
 The Launch Control XL support consists of two parts. First, there's a launchcontrol.map file in the data directory with ready-made MIDI bindings for the device. To use it, just copy that file to midi.map and you should be set. Check the comments at the beginning of the file for information on the bindings.
 
