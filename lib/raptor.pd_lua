@@ -2009,6 +2009,8 @@ function raptor:set(param, x)
    local master_check = self.assert_master or self.master and self.id == self.master
    if self.play ~= last_play and master_check then
       pd.send(string.format("%s-%s", self.id, "play"), "float", {self.play})
+      -- djcontrol tie-in, updates the PLAY buttons
+      self:djcontrol_play(self.play)
    end
    if self.pos ~= last_pos and master_check then
       pd.send(string.format("%s-%s", self.id, "pos"), "float", {self.pos})
@@ -2212,6 +2214,8 @@ function raptor:in_1_bang()
    self:outlet(3, "float", { delay })
    -- output the current pulse number and number of beats on outlet #2
    self:outlet(2, "list", { p, n })
+   -- djcontrol tie-in, flashes the "energy" led on the encoder
+   self:djcontrol_pulse(w, vel)
    -- check if we're bypassed or muted
    if self.bypass ~= 0 or self.mute ~= 0 then
       return
@@ -2649,6 +2653,25 @@ local function djcontrol_deck(ch)
    else
       -- pads (no shift status, report pad status instead)
       return ch-6, false, true
+   end
+end
+
+-- feedback: PLAY buttons and encoder led
+
+function raptor:djcontrol_play(play)
+   if djcontrol ~= 0 and self.id then
+      pd.send(string.format("%s-%s", self.id, "djcontrol-play"), "list", {self.deck, play ~= 0 and 127 or 0})
+   end
+end
+
+function raptor:djcontrol_pulse(w, val)
+   -- w is the weight, val the velocity. The led can get rather hectic if we
+   -- simply flash all pulses, so we only do the n most salient pulses
+   -- instead, as indicated by the weight and the total number of beats. You
+   -- can adjust that value according to your taste below.
+   local n, b = 7, self.arp.beats
+   if djcontrol ~= 0 and self.master and self.id == self.master and w >= b-n then
+      pd.send(string.format("%s-%s", self.id, "djcontrol-pulse"), "float", {val})
    end
 end
 
