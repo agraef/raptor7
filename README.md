@@ -157,7 +157,7 @@ Note that this mapping is a bit quirky because the MIDIMIX has less buttons. In 
 
 #### Hercules DJ Control
 
-[Hercules](https://www.hercules.com) offers an entire series of DJ controllers which can be used with Raptor. True to the nature of this very interesting class of devices, the Raptor implementation supports multiple decks and offers some fancy performance controls that are not readily available on the other control surfaces. However, I only have the DJ Control Inpulse 200 MK2 available for testing at the time of this writing, thus support for these devices is still experimental. Please check the comments at the beginning of the MIDI mapping in data/djcontrol.map for details.
+[Hercules](https://www.hercules.com) offers an entire series of DJ controllers which can be used with Raptor. True to the nature of this very interesting class of devices, the Raptor implementation supports multiple decks and offers some fancy performance controls that are not readily available on the other control surfaces. However, I only have the DJ Control Inpulse 200 MK2 available for testing at the time of this writing, thus support for these devices is still considered experimental. Please check the comments at the beginning of the MIDI mapping in data/djcontrol.map for details.
 
 ## Quirks and Limitations
 

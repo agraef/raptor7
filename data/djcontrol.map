@@ -66,6 +66,21 @@
    during loop playback, and can be remapped using MIDI learn in non-loop
    mode.
 
+   FEEDBACK:
+
+   This is also hardwired, and will only work if you also connect the DJ
+   Control device to Pd's second MIDI *output*. It gives some feedback about
+   playback (lighting up the PLAY button on the deck which is the time master,
+   indicating the right button to press in order to stop transport). Also, the
+   "energy" led on the big encoder flashes in the rhythm, as determined by the
+   actual pulse weights and velocities produced by the arpeggiator.
+
+   NOTE: The led could get rather busy with complex meters if we'd simply
+   flash all pulses, so we only do the n most salient pulses, where the value
+   n is currently hard-coded (8 at present). You might want to experiment with
+   different values there, check the raptor:djcontrol_pulse() method in the
+   Lua source for details.
+
    MAPPED CONTROLS:
 
    These *can* be edited below or modified using MIDI learn. The DJ Control
