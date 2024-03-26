@@ -60,8 +60,8 @@ local midimix = 1
 
 -- djcontrol: Special support for the Hercules DJControl devices (experimental).
 
--- This maps the BROWSE encoder and the two jog wheels (the "turntables"), and
--- filters out messages based on the assigned deck number. Tested with the
+-- This maps the BROWSER encoder and the two jog wheels (the "turntables"),
+-- and filters out messages based on the assigned deck number. Tested with the
 -- DJControl Inpulse 200 MK2, other similar devices might need some work.
 local djcontrol = 1
 
@@ -2678,12 +2678,23 @@ end
 function raptor:djcontrol_note(atoms)
    local num, val, ch = table.unpack(atoms)
    local deck, shift, pads = djcontrol_deck(ch)
-   if not deck or deck == 0 then
+   if not deck then
+      -- pass through
+      return false
+   elseif deck == 0 then
       -- tie-in with the MIDI mapper to skip the ccmaster check if we already
       -- filtered by deck number (here we also check for the shift status,
       -- since we still want to do the check for global controls if shift is
-      -- pressed -- same as with the BROWSE encoder)
-      self.assert_master = deck and not shift
+      -- pressed -- same as with the BROWSER encoder)
+      self.assert_master = not shift
+      -- Kludge: This is a global control, so the actual channel must be 1 or
+      -- 4 (+16), where the latter just determines the shift status. Make sure
+      -- that we reset the channel to 1 (+16) so that any MIDI mapping to the
+      -- button will work as intended. (In case you're wondering, the global
+      -- CC controls don't work that way, they just stick to their original
+      -- channel even with shift pressed. Which is exactly the behavior that
+      -- we want for note messages as well. Oh, the joys of MIDI.)
+      atoms[#atoms] = 17
       -- pass through
       return false
    elseif pads then
@@ -2850,6 +2861,7 @@ function raptor:djcontrol_ctl(atoms)
       elseif num == 0 and not shift then
 	 -- volume slider (unshifted), coarse, mapped to CC7 (volume)
 	 if self.deck > 0 then
+	    self.djdata.vol[self.deck] = val
 	    -- apply cross fade
 	    val = val * xfade(self.djdata.xfade)[self.deck]
 	    -- round to integer
