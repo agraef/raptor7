@@ -2110,6 +2110,8 @@ function raptor:initialize(sel, atoms)
    -- state of auxiliary control surfaces (input port #2)
    self.shift = false
    self.thru = midi_thru
+   -- djcontrol state
+   self:djcontrol_init()
 
    -- midi learn
    self.midi_map = {}
@@ -2618,10 +2620,13 @@ end
 -- Hercules DJControl (experimental)
 
 function raptor:djcontrol_init()
-   -- initialize the status variables of the scratch control
-   if not self.scratch then
+   -- initialize the status variables for the DJ Control
+   if djcontrol ~= 0 and not self.djdata then
       -- we maintain separate status variables for each deck
-      self.scratch = { last_delta = {0, 0}, last_count = {0, 0} }
+      -- XXXFIXME: only two decks supported at this time, but this should
+      -- hopefully do for the Hercules controllers at least
+      self.djdata = { last_delta = {0, 0}, last_count = {0, 0},
+		      vol = {127, 127}, xfade = 0.5 }
    end
 end
 
@@ -2649,7 +2654,6 @@ end
 
 function raptor:djcontrol_note(atoms)
    local num, val, ch = table.unpack(atoms)
-   self:djcontrol_init()
    local deck, shift, pads = djcontrol_deck(ch)
    if not deck or deck == 0 then
       -- tie-in with the MIDI mapper to skip the ccmaster check if we already
@@ -2721,7 +2725,7 @@ function raptor:djcontrol_note(atoms)
       end
    elseif num == 8 then
       -- jog wheel touches, reset status
-      self.scratch.last_delta[deck] = 0
+      self.djdata.last_delta[deck] = 0
       return true
    elseif num == 5 and not shift then
       -- unshifted SYNC button: rewind to the pattern start (pos 0)
@@ -2748,8 +2752,12 @@ end
 
 function raptor:djcontrol_ctl(atoms)
    local val, num, ch = table.unpack(atoms)
-   self:djcontrol_init()
    local deck, shift = djcontrol_deck(ch)
+   local function xfade(x)
+      -- simplistic linear crossfade, maybe we should do something more
+      -- sophisticated in the future
+      return {x<=0.5 and 1 or 2*(1-x), x>=0.5 and 1 or 2*x}
+   end
    if not deck then
       -- pass through
       return false
@@ -2761,6 +2769,20 @@ function raptor:djcontrol_ctl(atoms)
 	    local i = self.presetno and self.presetno or 1
 	    i = val == 1 and i+1 or i-1
 	    self:recall_preset(i)
+	 end
+	 return true
+      elseif num == 0 and self.deck > 0 then
+	 -- cross fade control
+	 -- make sure that 64 gets mapped to the half-way value
+	 local x = val==127 and 1.0 or val/128
+	 if x ~= self.djdata.xfade then
+	    self.djdata.xfade = x
+	    -- adjust the volume
+	    local val = self.djdata.vol[self.deck] * xfade(x)[self.deck]
+	    -- round to integer
+	    val = math.floor(val+0.5)
+	    self.assert_master = true
+	    return {val, 7, ch}
 	 end
 	 return true
       else
@@ -2780,16 +2802,16 @@ function raptor:djcontrol_ctl(atoms)
 	    if scratch then
 	       -- scale down the scratching control a bit, it's way too fast
 	       -- for our purposes
-	       if delta == self.scratch.last_delta[deck] then
-		  self.scratch.last_count[deck] = self.scratch.last_count[deck] + 1
-		  if self.scratch.last_count[deck] >= 10 then
-		     self.scratch.last_count[deck] = 0
+	       if delta == self.djdata.last_delta[deck] then
+		  self.djdata.last_count[deck] = self.djdata.last_count[deck] + 1
+		  if self.djdata.last_count[deck] >= 10 then
+		     self.djdata.last_count[deck] = 0
 		  else
 		     return true
 		  end
 	       else
-		  self.scratch.last_count[deck] = 1
-		  self.scratch.last_delta[deck] = delta
+		  self.djdata.last_count[deck] = 1
+		  self.djdata.last_delta[deck] = delta
 		  return true
 	       end
 	    end
@@ -2804,6 +2826,12 @@ function raptor:djcontrol_ctl(atoms)
 	 return true
       elseif num == 0 and not shift then
 	 -- volume slider (unshifted), coarse, mapped to CC7 (volume)
+	 if self.deck > 0 then
+	    -- apply cross fade
+	    val = val * xfade(self.djdata.xfade)[self.deck]
+	    -- round to integer
+	    val = math.floor(val+0.5)
+	 end
 	 self.assert_master = deck == self.deck
 	 return {val, 7, ch}
       elseif num == 1 and not shift then
@@ -2962,6 +2990,10 @@ function raptor:in_1_ctl(atoms)
    if self:check_chan(atoms[3]) then
       -- check for ccmaster to direct messages to the right instance
       if self:check_ccmaster() then
+	 if atoms[2] == 7 and self.deck > 0 then
+	    -- volume CC, tie-in with cross fade control (djcontrol)
+	    self.djdata.vol[self.deck] = atoms[1]
+	 end
 	 self:outlet(1, "ctl", self:rechan(atoms))
       end
    end
