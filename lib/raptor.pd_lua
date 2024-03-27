@@ -2655,7 +2655,7 @@ function raptor:djcontrol_init()
       -- XXXFIXME: only two decks supported at this time, but this should
       -- hopefully do for the Hercules controllers at least
       self.djdata = { last_delta = {0, 0}, last_count = {0, 0},
-		      vinyl = {0, 0}, pos = 0,
+		      vinyl = {0, 0}, pos = {0, 0},
 		      vol = {127, 127}, xfade = 0.5 }
    end
 end
@@ -2801,8 +2801,8 @@ function raptor:djcontrol_note(atoms)
    elseif num == 8 then
       -- jog wheel touches, reset status
       self.djdata.last_delta[deck] = 0
-      self.djdata.pos = self.arp.loopidx
-      if self.play == 0 or self.djdata.vinyl[deck] ~= 0 or self.stopped and val == 0 then
+      self.djdata.pos[deck] = self.arp.loopidx
+      if (self.deck == 0 or deck == self.deck) and (self.play == 0 or self.djdata.vinyl[deck] ~= 0 or self.stopped and val == 0) then
 	 self.stopped = val > 0
       end
       return true
@@ -2931,15 +2931,13 @@ function raptor:djcontrol_ctl(atoms)
 	       end
 	    else
 	       -- in loop mode, change the loop playback position instead
-	       local pos = self.djdata.pos + delta
-	       if pos ~= self.djdata.pos then
-		  -- no need to clamp to any range here, since this value
-		  -- never shows up on the GUI; we just take it modulo the
-		  -- current loop size when setting the loop index
-		  local n = math.min(#self.arp.loop, self.arp.loopsize)
-		  self.djdata.pos = pos
-		  self.arp:set_loopidx(pos % math.max(1, n))
-	       end
+	       local pos = self.djdata.pos[deck] + delta
+	       -- no need to clamp to any range here, since this value
+	       -- never shows up on the GUI; we just take it modulo the
+	       -- current loop size when setting the loop index
+	       local n = math.min(#self.arp.loop, self.arp.loopsize)
+	       self.djdata.pos[deck] = pos
+	       self.arp:set_loopidx(pos % math.max(1, n))
 	    end
 	 end
 	 return true
