@@ -71,18 +71,22 @@
    This is also hard-wired, and will only work if you also connect the DJ
    Control device to Pd's second MIDI *output*. It gives some feedback about
    playback (lighting up the PLAY button on the deck which is the time master,
-   indicating the right button to press in order to stop transport). Also, the
-   backlight of the big encoder flashes in the rhythm, as determined by the
-   actual pulse weights and velocities produced by the arpeggiator.
+   indicating the right button to press in order to stop transport), mute
+   status (on the PFL a.k.a. headphone buttons in the mixer section), and loop
+   playback status (on the LOOP/VINYL buttons). Also, the backlight of the big
+   encoder pulses following the rhythm, as determined by the actual pulse
+   weights and velocities produced by the arpeggiator. (There's no feedback on
+   the pads currently, but we might still add that in the future.)
 
    NOTE: The led could get rather busy with complex meters if we'd simply
-   flash all pulses, so we only do the n most salient pulses, as determined by
-   the pulse weights, where the value n is currently hard-coded. I found that
-   a value of 7 seems to work best with most common meters. YMMV, so you can
-   change that value with the djcontrol_n_pulses variable near the beginning
-   of raptor.pd_lua. Setting djcontrol_n_pulses to a very large value like
-   1000 will flash each and every pulse. Decreasing the value gradually thins
-   out the rhythm display. Setting it to 0 disables the rhythm display.
+   trigger all pulses, so we only do the n most salient pulses, as determined
+   by the pulse weights, where the value n is currently hard-coded. I found
+   that a value of 7 seems to work best with most common meters. YMMV, so you
+   can change that value with the djcontrol_n_pulses variable near the
+   beginning of raptor.pd_lua. Setting djcontrol_n_pulses to a very large
+   value like 1000 will trigger each and every pulse. Decreasing the value
+   gradually thins out the rhythm display while keeping the rhythm intact.
+   Setting it to 0 disables the rhythm display.
 
    MAPPED CONTROLS:
 
@@ -90,14 +94,31 @@
    doesn't have nearly enough knobs and faders for mapping all Raptor panel
    parameters, so we don't even try and focus on the most essential
    performance controls instead. Note that there are actually *two* bindings
-   for each of these, one for each deck:
+   for most of these, one for each deck. The only singleton bindings are for
+   the global controls in the center section of the device. Here is a brief
+   rundown of the current bindings:
 
    - PLAY/PAUSE (playback toggles, time subpatch)
-   - headphone buttons (mute toggles, panel)
+   - PFL buttons (mute toggles, panel)
+   - MASTER button (global mute toggle, sends to all Raptor instances)
+   - BROWSER button (global latch toggle, sends to all Raptor instances)
    - LOOP/VINYL (loop toggles, panel)
    - IN and OUT (previous/next loop, looper subpatch)
    - LOAD and SHIFT+LOAD (load/save loop file, looper subpatch)
    - TEMPO faders (tempo controls, panel)
+   - mode 4 (SAMPLER) pads (mute/latch/bypass toggles, panel)
+
+   Note that the global controls (MASTER and BROWSER buttons) send to all
+   Raptor instances by default. As with the BROWSER encoder, you can use SHIFT
+   to restrict them to the currently selected instance.
+
+   In addition to the global MASTER mute button, the PFL buttons (those with
+   the headphone symbols on them) can be used to mute the Raptor instances for
+   each deck. Moreover, I also mapped the first 3 pads in mode 4 for each deck
+   to the mute, latch, and bypass toggles in the panel. By these means, all
+   the voice controls are available on each deck using the pads, while the
+   most important of these (latch, mute) also have shortcuts in the mixer
+   section of the device, where they can be accessed more easily.
 
 ]]
 
@@ -106,6 +127,8 @@
     [18] = "tempo",
     [19] = "tempo"
   },
+  [128] = { [17] = { "latch", true } },
+  [130] = { [17] = { "mute", true } },
   [131] = {
     [18] = { "loop", true },
     [19] = { "loop", true }
@@ -131,5 +154,17 @@
     [19] = { "loop-load", true },
     [21] = { "loop-save", true },
     [22] = { "loop-save", true }
+  },
+  [176] = {
+    [23] = { "mute", true },
+    [24] = { "mute", true }
+  },
+  [177] = {
+    [23] = { "latch", true },
+    [24] = { "latch", true }
+  },
+  [178] = {
+    [23] = { "bypass", true },
+    [24] = { "bypass", true }
   },
 }

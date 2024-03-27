@@ -69,10 +69,10 @@ local midimix = 1
 local djcontrol = 1
 
 -- The rhythm backlight could get rather busy with complex meters, so we only
--- flash the n most salient pulses instead, as indicated by the weight of the
--- pulse (using Barlow indispensabilities) and the total number of beats. The
--- default which I found to work best with most meters is 7, but you can
--- adjust that value according to your preferences below.
+-- trigger the n most salient pulses instead, as determined by the weight of
+-- the pulse (using Barlow indispensabilities) and the total number of
+-- beats. The default which I found to work best with most meters is 7, but
+-- you can adjust that value according to your preferences below.
 local djcontrol_n_pulses = 7
 
 -- make sure that this is set if any of the above is enabled
@@ -1990,6 +1990,10 @@ function raptor:set(param, x)
       -- turn off any sounding notes from the arpeggiator
       self:notes_off()
    end
+   if self.mute ~= last_mute then
+      -- djcontrol tie-in, updates the MUTE (PFL) buttons
+      self:djcontrol_mute(self.mute)
+   end
    if self.n*self.division ~= last_n*last_division then
       -- update the meter
       self:update_meter()
@@ -2666,16 +2670,29 @@ local function djcontrol_deck(ch)
    end
 end
 
--- feedback: PLAY buttons and encoder led
+-- feedback: play, loop, and mute buttons, and encoder backlight
 
-function raptor:djcontrol_play(play)
+function raptor:djcontrol_state(button, state)
    if djcontrol ~= 0 and self.id then
-      pd.send(string.format("%s-%s", self.id, "djcontrol-play"), "list", {self.deck, play ~= 0 and 127 or 0})
+      pd.send(string.format("%s-djcontrol-%s", self.id, button), "list", {self.deck, state ~= 0 and 127 or 0})
    end
 end
 
+function raptor:djcontrol_play(state)
+   self:djcontrol_state("play", state)
+end
+
+function raptor:djcontrol_loop(state)
+   self:djcontrol_state("loop", state)
+end
+
+function raptor:djcontrol_mute(state)
+   self:djcontrol_state("mute", state)
+end
+
 function raptor:djcontrol_pulse(w, val)
-   -- w is the weight, val the velocity, n the number of beats per bar to flash.
+   -- w is the weight, val the velocity, n the number of beats per bar to
+   -- trigger, b the total number of beats.
    local n, b = djcontrol_n_pulses, self.arp.beats
    if djcontrol ~= 0 and self.master and self.id == self.master and w >= b-n then
       pd.send(string.format("%s-%s", self.id, "djcontrol-pulse"), "float", {val})
@@ -3633,6 +3650,7 @@ function raptor:param(var, val)
 	    v = params[i].min
 	 end
 	 if self.param_set[i] and v ~= self.param_val[i] then
+	    local last_loopstate = self.arp.loopstate
 	    -- update the current value
 	    self.param_val[i] = v
 	    if self.param_set[i] == self.set then
@@ -3652,6 +3670,10 @@ function raptor:param(var, val)
 	       local id = self.id
 	       pd.send(string.format("%s-%s", id, var), "set", {v})
 	    end
+	    if last_loopstate ~= self.arp.loopstate then
+	       -- djcontrol tie-in, updates the LOOP buttons
+	       self:djcontrol_loop(self.arp.loopstate)
+	    end
 	 end
       end
    end
@@ -3660,6 +3682,7 @@ end
 function raptor:in_1(sel, atoms)
    if sel == "loop" and type(atoms[1]) == "string" then
       -- loop file command, this needs special treatment
+      local last_loopstate = self.arp.loopstate
       local name, cmd = table.unpack(atoms)
       -- default for cmd is 1 (save) if loop is playing, 0 (load) otherwise
       cmd = cmd or self.arp.loopstate
@@ -3673,6 +3696,10 @@ function raptor:in_1(sel, atoms)
       local res, val = self:looper(name, cmd)
       if res then
 	 self:outlet(1, res, {val})
+      end
+      if last_loopstate ~= self.arp.loopstate then
+	 -- djcontrol tie-in, updates the LOOP buttons
+	 self:djcontrol_loop(self.arp.loopstate)
       end
    else
       if self.midi_learn == 1 and

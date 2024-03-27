@@ -565,7 +565,7 @@ which case we just restart the metro. Not sure whether that's the best
 #X msg 200 155 set \$1;
 #X obj 130 180 s \$0-loop;
 #X msg 130 155 1;
-#N canvas 811 481 450 300 djcontrol 0;
+#N canvas 549 511 718 300 djcontrol 0;
 #X obj 20 20 r \$0-djcontrol-play;
 #X obj 20 45 unpack f f;
 #X obj 20 70 sel 0 1 2;
@@ -574,22 +574,38 @@ which case we just restart the metro. Not sure whether that's the best
 #X obj 20 135 + 17;
 #X obj 20 160 pack f f;
 #X msg 20 185 note 7 \$2 \$1;
-#X obj 160 20 r \$0-djcontrol-pulse;
-#X obj 160 45 t f b;
-#X msg 160 185 note 5 \$1 17;
-#X msg 187 155 0;
-#X obj 187 130 delay 150;
+#X obj 460 20 r \$0-djcontrol-pulse;
+#X obj 460 45 t f b;
+#X msg 460 185 note 5 \$1 17;
+#X msg 487 155 0;
+#X obj 487 130 delay 150;
 #X obj 20 260 outlet;
-#X text 100 230 DJ Control feedback -- if this is enabled \, sets the
-LEDs on the PLAY buttons and flashes the "energy" LED on the encoder
-following the rhythm (or rather the Barlow indispensabilities), f
-49;
-#X text 290 80 delay time for the energy LED in ms \, longer values
-mean longer flashes, f 23;
+#X text 590 80 delay time for the energy LED in ms \, longer values
+mean longer flashes, f 19;
 #X text 90 100 do only deck 1 or 2 \, or both in omni mode, f 12;
-#X obj 238 45 r \$0-tick;
-#X obj 238 70 * 0.8;
-#X obj 238 95 max 50;
+#X obj 538 45 r \$0-tick;
+#X obj 538 70 * 0.8;
+#X obj 538 95 max 50;
+#X obj 180 45 unpack f f;
+#X obj 180 70 sel 0 1 2;
+#X msg 180 100 1;
+#X msg 214 100 2;
+#X obj 180 135 + 17;
+#X obj 180 160 pack f f;
+#X obj 180 20 r \$0-djcontrol-loop;
+#X msg 180 185 note 3 \$2 \$1;
+#X obj 320 45 unpack f f;
+#X obj 320 70 sel 0 1 2;
+#X msg 320 100 1;
+#X msg 354 100 2;
+#X obj 320 135 + 17;
+#X obj 320 160 pack f f;
+#X obj 320 20 r \$0-djcontrol-mute;
+#X msg 320 185 note 12 \$2 \$1;
+#X text 200 240 DJ Control feedback -- if this is enabled \, sets the
+LEDs on the PLAY \, LOOP and PFL buttons and triggers the backlight
+of the encoder with the rhythm (or rather the Barlow indispensabilities)
+, f 69;
 #X connect 0 0 1 0;
 #X connect 1 0 2 0;
 #X connect 1 1 6 1;
@@ -608,9 +624,33 @@ mean longer flashes, f 23;
 #X connect 10 0 13 0;
 #X connect 11 0 10 0;
 #X connect 12 0 11 0;
+#X connect 16 0 17 0;
 #X connect 17 0 18 0;
-#X connect 18 0 19 0;
-#X connect 19 0 12 1;
+#X connect 18 0 12 1;
+#X connect 19 0 20 0;
+#X connect 19 1 24 1;
+#X connect 20 0 21 0;
+#X connect 20 0 22 0;
+#X connect 20 1 21 0;
+#X connect 20 2 22 0;
+#X connect 21 0 23 0;
+#X connect 22 0 23 0;
+#X connect 23 0 24 0;
+#X connect 24 0 26 0;
+#X connect 25 0 19 0;
+#X connect 26 0 13 0;
+#X connect 27 0 28 0;
+#X connect 27 1 32 1;
+#X connect 28 0 29 0;
+#X connect 28 0 30 0;
+#X connect 28 1 29 0;
+#X connect 28 2 30 0;
+#X connect 29 0 31 0;
+#X connect 30 0 31 0;
+#X connect 31 0 32 0;
+#X connect 32 0 34 0;
+#X connect 33 0 27 0;
+#X connect 34 0 13 0;
 #X restore 100 100 pd djcontrol;
 #X connect 1 0 2 0;
 #X connect 3 0 12 0;
