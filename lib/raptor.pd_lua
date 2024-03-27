@@ -60,10 +60,20 @@ local midimix = 1
 
 -- djcontrol: Special support for the Hercules DJControl devices (experimental).
 
--- This maps the BROWSER encoder and the two jog wheels (the "turntables"),
--- and filters out messages based on the assigned deck number. Tested with the
--- DJControl Inpulse 200 MK2, other similar devices might need some work.
+-- In particular, this maps the big BROWSER encoder and the two jog wheels
+-- (the "turntables"), and filters out messages based on the assigned deck
+-- number. It also provides some feedback on the PLAY keys to indicate which
+-- deck is the time measter, and flashes the backlight of the encoder with the
+-- rhythm. Tested with the DJControl Inpulse 200 MK2, other similar devices
+-- might need some work.
 local djcontrol = 1
+
+-- The rhythm backlight could get rather busy with complex meters, so we only
+-- flash the n most salient pulses instead, as indicated by the weight of the
+-- pulse (using Barlow indispensabilities) and the total number of beats. The
+-- default which I found to work best with most meters is 7, but you can
+-- adjust that value according to your preferences below.
+local djcontrol_n_pulses = 7
 
 -- make sure that this is set if any of the above is enabled
 local have_control = launchcontrol ~= 0 or midimix ~= 0 or djcontrol ~= 0
@@ -2665,11 +2675,8 @@ function raptor:djcontrol_play(play)
 end
 
 function raptor:djcontrol_pulse(w, val)
-   -- w is the weight, val the velocity. The led can get rather hectic if we
-   -- simply flash all pulses, so we only do the n most salient pulses
-   -- instead, as indicated by the weight and the total number of beats. You
-   -- can adjust that value according to your taste below.
-   local n, b = 7, self.arp.beats
+   -- w is the weight, val the velocity, n the number of beats per bar to flash.
+   local n, b = djcontrol_n_pulses, self.arp.beats
    if djcontrol ~= 0 and self.master and self.id == self.master and w >= b-n then
       pd.send(string.format("%s-%s", self.id, "djcontrol-pulse"), "float", {val})
    end
