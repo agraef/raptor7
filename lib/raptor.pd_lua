@@ -75,6 +75,11 @@ local djcontrol = 1
 -- you can adjust that value according to your preferences below.
 local djcontrol_n_pulses = 7
 
+-- This value determines how fast the playback position moves in response to
+-- jog wheel movements. Larger values slow it down, smaller values speed it
+-- up. The default value of 10 seems to be about right for me, but YMMV.
+local djcontrol_scrub_factor = 10
+
 -- make sure that this is set if any of the above is enabled
 local have_control = launchcontrol ~= 0 or midimix ~= 0 or djcontrol ~= 0
 
@@ -2127,6 +2132,7 @@ function raptor:initialize(sel, atoms)
    self.shift = false
    self.thru = midi_thru
    -- djcontrol state
+   self.stopped = false
    self:djcontrol_init()
 
    -- midi learn
@@ -2218,6 +2224,11 @@ function raptor:notes_off()
 end
 
 function raptor:in_1_bang()
+   -- check if we're stopped then we bail out immediately (djcontrol)
+   if self.stopped then
+      self:notes_off()
+      return
+   end
    -- grab some notes from the arpeggiator
    local p = self.arp.idx
    local notes, vel, gate, w, n = self.arp:pulse()
@@ -2644,7 +2655,7 @@ function raptor:djcontrol_init()
       -- XXXFIXME: only two decks supported at this time, but this should
       -- hopefully do for the Hercules controllers at least
       self.djdata = { last_delta = {0, 0}, last_count = {0, 0},
-		      vinyl = {0, 0},
+		      vinyl = {0, 0}, pos = 0,
 		      vol = {127, 127}, xfade = 0.5 }
    end
 end
@@ -2790,6 +2801,10 @@ function raptor:djcontrol_note(atoms)
    elseif num == 8 then
       -- jog wheel touches, reset status
       self.djdata.last_delta[deck] = 0
+      self.djdata.pos = self.arp.loopidx
+      if self.play == 0 or self.djdata.vinyl[deck] ~= 0 or self.stopped and val == 0 then
+	 self.stopped = val > 0
+      end
       return true
    elseif num == 3 and shift then
       -- shifted LOOP (VINYL) button: toggle scratch mode
@@ -2866,33 +2881,65 @@ function raptor:djcontrol_ctl(atoms)
       -- deck control, deck matches
       if num == 9 or num == 10 then
 	 local i = param_i["pos"]
-	 if i and self.djdata.vinyl[deck] ~= 0 then
-	    -- scratch: true indicates scratch mode, false normal movement
+	 -- Raptor doesn't actually have a "CDJ" mode, if you want to speed
+	 -- things up or slow them down, you'll have to use the tempo control
+	 -- instead. Thus "vinyl" mode just indicates whether the jog wheel
+	 -- is active (and scratching enabled) during playback (it's always
+	 -- on when transport is stopped).
+	 if i and (self.play == 0 or self.djdata.vinyl[deck] ~= 0) then
+	    -- scratch: true indicates scratch (top) mode, false normal (ring)
+	    -- movement. These behave slightly differently on the DJ Control.
+	    -- Specifically, ring movements run at two different speeds
+	    -- depending on whether SHIFT is pressed (fast) or not (slow),
+	    -- whereas top movements always seem to run at the same (fast)
+	    -- speed. At least that's the case on my Inpulse 200 MK2, YMMV.
 	    local scratch = num > 9
 	    -- val=1 indicates forward, 127 backward motion
 	    local delta = val == 1 and 1 or -1
-	    if scratch then
-	       -- scale down the scratching control a bit, it's way too fast
-	       -- for our purposes
-	       if delta == self.djdata.last_delta[deck] then
-		  self.djdata.last_count[deck] = self.djdata.last_count[deck] + 1
-		  if self.djdata.last_count[deck] >= 10 then
-		     self.djdata.last_count[deck] = 0
-		  else
-		     return true
-		  end
+	    -- Scale down the jog wheel a bit (10x by default). It's way too
+	    -- fast for our purposes, since we're scrubbing beats, not
+	    -- samples, so even tiny movements would otherwise make the
+	    -- playback position jump around a lot. The default value of 10
+	    -- seems to be about right for me, but you can adjust that value
+	    -- using the djcontrol_scrub_factor variable above.
+	    if delta == self.djdata.last_delta[deck] then
+	       self.djdata.last_count[deck] = self.djdata.last_count[deck] + 1
+	       if self.djdata.last_count[deck] >= djcontrol_scrub_factor then
+		  self.djdata.last_count[deck] = 0
 	       else
-		  self.djdata.last_count[deck] = 1
-		  self.djdata.last_delta[deck] = delta
 		  return true
 	       end
+	    else
+	       self.djdata.last_count[deck] = 1
+	       self.djdata.last_delta[deck] = delta
+	       return true
 	    end
-	    local pos = self.pos + delta
-	    -- clamp to the prescribed range
-	    local param = params[i]
-	    pos = math.min(param.max, math.max(param.min, pos))
-	    if pos ~= self.pos then
-	       self:set_pos(pos)
+	    -- we're moving, reset the stopped status
+	    self.stopped = false
+	    if self.arp.loopstate == 0 or self.play == 0 then
+	       -- set the playback position and/or anacrusis
+	       local pos = self.pos + delta
+	       -- clamp to the prescribed range
+	       local min, max = params[i].min, params[i].max
+	       -- pos has a nominal range of -24..24, but we also want to
+	       -- clamp it to the actual number of beats
+	       max = math.min(max, self.arp.beats)
+	       min = -max
+	       pos = math.min(max, math.max(min, pos))
+	       if pos ~= self.pos then
+		  self:set_pos(pos)
+	       end
+	    else
+	       -- in loop mode, change the loop playback position instead
+	       local pos = self.djdata.pos + delta
+	       if pos ~= self.djdata.pos then
+		  -- no need to clamp to any range here, since this value
+		  -- never shows up on the GUI; we just take it modulo the
+		  -- current loop size when setting the loop index
+		  local n = math.min(#self.arp.loop, self.arp.loopsize)
+		  self.djdata.pos = pos
+		  self.arp:set_loopidx(pos % math.max(1, n))
+	       end
 	    end
 	 end
 	 return true
@@ -3386,7 +3433,7 @@ function raptor:check_midi_map(val, cc, ch)
 	    local min, max = params[i].min, params[i].max
 	    if var == "pos" then
 	       -- this one is special, it has a nominal range of -24..24, but
-	       -- we want to clamp it to the actual number of beats instead
+	       -- we also want to clamp it to the actual number of beats
 	       max = math.min(max, self.arp.beats)
 	       min = -max
 	    end

@@ -32,9 +32,9 @@
    particular device version. Recent Hercules DJ Control devices should give
    you at least two mode buttons and four pads, which is what the Raptor
    implementation was designed to work with. (This has only been tested on the
-   DJ Control Inpulse 200 MK2 so far, which is the only device that I have. If
-   you can contribute adjustments for other types of DJ controllers, please
-   get in touch!)
+   DJ Control Inpulse 200 MK2 so far, which is the only device that I have
+   right now. If you can contribute adjustments for other types of DJ
+   controllers, please get in touch!)
 
    HARD-WIRED CONTROLS:
 
@@ -54,11 +54,6 @@
    - mode 1 (HOT CUE) pads (cue a given bar of the loop during loop playback)
    - mode 2 (STEMS/LOOP) pads (select Raptor instances a.k.a. ccmaster)
 
-   Scrubbing will only be active if "vinyl" mode is enabled, so that you don't
-   inadvertently move the playback position or anacrusis by accidentally
-   hitting the jog wheels. This mode is disabled by default, and can be
-   toggled with the VINYL button (SHIFT+LOOP on some devices).
-
    Note that Raptor is MIDI-only, so the cross fader, volume, and balance
    controls are effectively 7 bit and rely on what your synthesizer offers;
    don't expect any miracles. Also note that the cross fader will only be
@@ -72,6 +67,36 @@
    during loop playback, and can be remapped using MIDI learn in non-loop
    mode.
 
+   JOG WHEELS:
+
+   If needed, you can change the responsiveness of the jog wheels with the
+   djcontrol_scrub_factor variable in raptor.pd_lua.
+
+   Due to the fact that Raptor deals with bars and beats rather than samples,
+   there are some notable differences to standard DJ software. First,
+   scrubbing is *always* quantized to beats. Second, Raptor doesn't actually
+   have a "CDJ" mode; if you want to speed things up or slow them down, you'll
+   have to use the tempo control instead.
+
+   Therefore the VINYL control (SHIFT+LOOP on some devices) merely determines
+   whether the jog wheels are active (and scrubbing enabled) during playback.
+   (They are always on when transport is stopped.) By default, the jog wheels
+   are off during playback, which ensures that you don't inadvertently move
+   the playback position by accidentally hitting a jog wheel. Use the VINYL
+   buttons to toggle this option separately for each deck.
+
+   Other than that, the jog wheels work pretty much like you'd expect them to
+   on a DJ controller. That is, touching the top of the jog wheel temporarily
+   suspends playback, and moving the jog wheel from ring or top starts
+   scrubbing, which changes the playback position. In normal playback, or when
+   transport is stopped, this sets the playback position and the anacrusis,
+   thus movements are confined to a single bar. If a loop is currently
+   playing, it adjusts the playback position within the loop instead, so that
+   you can relocate to any bar and beat in the loop. In any case, the jog
+   wheel acts as a bipolar control; if it goes negative, that means that the
+   position is relative to the *end* of the bar or loop (-1 denotes the last
+   beat, -2 the second-last, etc.) .
+
    FEEDBACK:
 
    This is also hard-wired, and will only work if you also connect the DJ
@@ -79,7 +104,7 @@
    playback (lighting up the PLAY button on the deck which is the time master,
    indicating the right button to press in order to stop transport), mute
    status (on the PFL a.k.a. headphone buttons in the mixer section), loop
-   playback status (on the LOOP buttons), and vinyl a.k.a. jog wheel status
+   playback status (on the LOOP buttons), and vinyl a.k.a. scrubbing status
    (on the VINYL or shifted LOOP buttons; in the latter case you can press
    SHIFT to reveal the current status). Also, the backlight of the big encoder
    pulses following the rhythm, as determined by the actual pulse weights and
@@ -127,6 +152,10 @@
    the voice controls are available on each deck using the pads, while the
    most important of these (latch, mute) also have shortcuts in the mixer
    section of the device, where they can be accessed more easily.
+
+   While you can change all of these bindings, I'd suggest that you keep at
+   least the mapping of the PLAY/PAUSE and PFL buttons as is, since they match
+   up with the hard-wired feedback for these buttons.
 
 ]]
 
