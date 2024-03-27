@@ -139,7 +139,7 @@ Also note that if you're running multiple Raptor instances, normally MIDI contro
 
 #### Special Device Support
 
-Beyond MIDI learn, Raptor also offers special support for some controllers, as detailed below. This typically includes some hardwired bindings to select Raptor instances for receiving control data, as well as a custom MIDI map file. It is generally assumed that these devices are in their factory state and are connected to Pd's *second* MIDI input port, so that they don't interfere with MIDI data from your primary input device on the first MIDI input, where you'd typically connect your MIDI keyboard, pad controller, etc. (Note that, in contrast, the MIDI learn facility can map MIDI controls no matter what the input port and MIDI channel is, thus it will work with your primary input device as well as all devices on secondary inputs.)
+Beyond MIDI learn, Raptor also offers special support for some controllers, as detailed below. This typically includes some hard-wired bindings to select Raptor instances for receiving control data, as well as a custom MIDI map file. It is generally assumed that these devices are in their factory state and are connected to Pd's *second* MIDI input port, so that they don't interfere with MIDI data from your primary input device on the first MIDI input, where you'd typically connect your MIDI keyboard, pad controller, etc. (Note that, in contrast, the MIDI learn facility can map MIDI controls no matter what the input port and MIDI channel is, thus it will work with your primary input device as well as all devices on secondary inputs.)
 
 #### Novation Launch Control XL
 

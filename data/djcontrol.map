@@ -36,7 +36,7 @@
    you can contribute adjustments for other types of DJ controllers, please
    get in touch!)
 
-   HARDWIRED CONTROLS:
+   HARD-WIRED CONTROLS:
 
    These are implemented in Raptor and thus can't be changed using MIDI
    learn. True to the nature of these controllers, the DJ Control
@@ -68,7 +68,7 @@
 
    FEEDBACK:
 
-   This is also hardwired, and will only work if you also connect the DJ
+   This is also hard-wired, and will only work if you also connect the DJ
    Control device to Pd's second MIDI *output*. It gives some feedback about
    playback (lighting up the PLAY button on the deck which is the time master,
    indicating the right button to press in order to stop transport). Also, the
