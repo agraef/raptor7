@@ -602,10 +602,13 @@ mean longer flashes, f 19;
 #X obj 320 160 pack f f;
 #X obj 320 20 r \$0-djcontrol-mute;
 #X msg 320 185 note 12 \$2 \$1;
-#X text 200 240 DJ Control feedback -- if this is enabled \, sets the
+#X text 280 240 DJ Control feedback -- if this is enabled \, sets the
 LEDs on the PLAY \, LOOP and PFL buttons and triggers the backlight
 of the encoder with the rhythm (or rather the Barlow indispensabilities)
 , f 69;
+#X obj 180 220 loadbang;
+#X msg 180 270 4 0 \, 5 0;
+#X obj 180 245 del 500;
 #X connect 0 0 1 0;
 #X connect 1 0 2 0;
 #X connect 1 1 6 1;
@@ -633,6 +636,7 @@ of the encoder with the rhythm (or rather the Barlow indispensabilities)
 #X connect 20 0 22 0;
 #X connect 20 1 21 0;
 #X connect 20 2 22 0;
+#X connect 20 3 23 0;
 #X connect 21 0 23 0;
 #X connect 22 0 23 0;
 #X connect 23 0 24 0;
@@ -651,6 +655,9 @@ of the encoder with the rhythm (or rather the Barlow indispensabilities)
 #X connect 32 0 34 0;
 #X connect 33 0 27 0;
 #X connect 34 0 13 0;
+#X connect 36 0 38 0;
+#X connect 37 0 19 0;
+#X connect 38 0 37 0;
 #X restore 100 100 pd djcontrol;
 #X connect 1 0 2 0;
 #X connect 3 0 12 0;

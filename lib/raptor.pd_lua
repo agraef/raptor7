@@ -2644,6 +2644,7 @@ function raptor:djcontrol_init()
       -- XXXFIXME: only two decks supported at this time, but this should
       -- hopefully do for the Hercules controllers at least
       self.djdata = { last_delta = {0, 0}, last_count = {0, 0},
+		      vinyl = {0, 0},
 		      vol = {127, 127}, xfade = 0.5 }
    end
 end
@@ -2672,9 +2673,10 @@ end
 
 -- feedback: play, loop, and mute buttons, and encoder backlight
 
-function raptor:djcontrol_state(button, state)
+function raptor:djcontrol_state(button, state, deck)
+   deck = deck and deck or self.deck
    if djcontrol ~= 0 and self.id then
-      pd.send(string.format("%s-djcontrol-%s", self.id, button), "list", {self.deck, state ~= 0 and 127 or 0})
+      pd.send(string.format("%s-djcontrol-%s", self.id, button), "list", {deck, state ~= 0 and 127 or 0})
    end
 end
 
@@ -2684,6 +2686,10 @@ end
 
 function raptor:djcontrol_loop(state)
    self:djcontrol_state("loop", state)
+end
+
+function raptor:djcontrol_vinyl(state, deck)
+   self:djcontrol_state("loop", state, deck+3)
 end
 
 function raptor:djcontrol_mute(state)
@@ -2785,6 +2791,14 @@ function raptor:djcontrol_note(atoms)
       -- jog wheel touches, reset status
       self.djdata.last_delta[deck] = 0
       return true
+   elseif num == 3 and shift then
+      -- shifted LOOP (VINYL) button: toggle scratch mode
+      if val > 0 and (self.deck == 0 or deck == self.deck) then
+	 self.djdata.vinyl[deck] = self.djdata.vinyl[deck] == 0 and 1 or 0
+	 -- feedback
+	 self:djcontrol_vinyl(self.djdata.vinyl[deck], deck)
+      end
+      return true
    elseif num == 5 and not shift then
       -- unshifted SYNC button: rewind to the pattern start (pos 0)
       if val > 0 and (self.deck == 0 or deck == self.deck) then
@@ -2852,7 +2866,7 @@ function raptor:djcontrol_ctl(atoms)
       -- deck control, deck matches
       if num == 9 or num == 10 then
 	 local i = param_i["pos"]
-	 if i then
+	 if i and self.djdata.vinyl[deck] ~= 0 then
 	    -- scratch: true indicates scratch mode, false normal movement
 	    local scratch = num > 9
 	    -- val=1 indicates forward, 127 backward motion
