@@ -69,33 +69,44 @@
 
    TRANSPORT (PLAY/PAUSE, CUE, SYNC):
 
-   Due to the fact that Raptor deals with bars and beats rather than samples,
-   there are some notable differences to standard DJ software in how the
-   transport controls and the jog wheels work. First and foremost, in Raptor
-   playback is *always* synchronized to the time master, which can either be a
-   single Raptor instance or an external time source (MIDI clock), and
-   playback is *always* quantized to beats. Also, there's no way to set any
-   cues, because there is no track to begin with; just the arpeggiator output
-   which is generated on the fly or played back from the current loop.
+   Raptor is really an unusual piece of DJ software. Because it deals with
+   MIDI, bars, and beats rather than audio tracks, there are some notable
+   differences in how the transport controls and the jog wheels work.
 
-   The only implicit cue there is is the anacrusis (the position in the bar
-   where playback starts), and this is the position the CUE button moves to
-   when pressed. You can also press SHIFT+CUE to set the anacrusis to the
-   current playback position.
+   - First and foremost, in Raptor playback is *always* quantized to beats and
+     synchronized to the time master, which can either be a single Raptor
+     instance or an external time source (MIDI clock).
 
-   Since all playback is always synchronized to the time master, the usual
-   SYNC control isn't needed in Raptor. You can just switch the time master on
-   the fly with PLAY/PAUSE at any time, without disrupting playback if
-   transport is already rolling. Instead, SYNC is basically like CUE but moves
-   to the first beat instead, no matter what the current anacrusis is. If
-   transport is stopped, it will also reset the anacrusis to 0. (You can also
-   force that behavior during playback by pressing SHIFT+SYNC.)
+   - Second, there's no way to set any real "cues", because there is no track
+     to begin with; just the arpeggiator doing its thing or playing back a
+     (usually short) loop. The only implicit cue in Raptor is the anacrusis
+     (the position in the bar where playback starts).
 
-   Like the jog wheels, CUE and SYNC affect the playback position in the bar
-   only, if no loop is playing or transport is stopped. If transport is
-   rolling and a loop is currently playing, however, they set the playback
-   position in the loop instead (this will also affect the playback position
-   in the bar, but doesn't change the anacrusis unless SHIFT+SYNC is used).
+   - Last but not least, since all playback is always quantized to beats and
+     synchronized to the time master, the usual tempo sync isn't needed in
+     Raptor. When using the jog wheels, though, the different decks will of
+     course go out of phase, and this is where sync becomes useful.
+
+   With these points in mind, here's how the DJ Control's transport controls
+   actually work in conjunction with Raptor:
+
+   - CUE moves the playback position to the anacrusis, while SHIFT+CUE sets
+     the anacrusis to the current playback position. This works separately for
+     each deck. When transport is rolling, CUE goes to the anacrusis
+     immediately (at the next beat), *without* stopping playback.
+
+   - SYNC syncs the playback position of all Raptor instances to that of the
+     time master, without changing the playback position of the master. It
+     also resets the anacrusis of all instances to 0. SHIFT+SYNC works in a
+     similar fashion, but also resets the playback position to 0 (beginning of
+     the bar and loop) on all instances. It doesn't matter on which deck you
+     press SYNC, it will always sync all instances to the time master.
+
+   - PLAY/PAUSE, you guessed it, starts and stops playback. If transport is
+     already rolling, and you press PLAY/PAUSE on the other deck, it switches
+     the time master to the other deck without disrupting playback. (Note,
+     however, that if the decks have different tempo settings, the tempo will
+     change when switching the time master.)
 
    JOG WHEELS:
 
@@ -127,10 +138,9 @@
 
    FEEDBACK:
 
-   This is also hard-wired, and will only work if you also connect the DJ
-   Control device to Pd's second MIDI *output*. It gives some feedback about
-   playback (lighting up the PLAY button on the deck which is the time master,
-   indicating the right button to press in order to stop transport), mute
+   This is also hard-wired, and only works if you also connect the DJ Control
+   device to Pd's second MIDI *output*. It gives some feedback about playback
+   (lighting up the PLAY button on the deck which is the time master), mute
    status (on the PFL a.k.a. headphone buttons in the mixer section), loop
    playback status (on the LOOP buttons), and vinyl a.k.a. scrubbing status
    (on the VINYL or shifted LOOP buttons; in the latter case you can press
@@ -146,8 +156,8 @@
    can change that value with the djcontrol_n_pulses variable near the
    beginning of raptor.pd_lua. Setting djcontrol_n_pulses to a very large
    value like 1000 will trigger each and every pulse. Decreasing the value
-   gradually thins out the rhythm display while keeping the rhythm intact.
-   Setting it to 0 disables the rhythm display.
+   gradually thins out the rhythm display. Setting it to 0 disables the rhythm
+   display.
 
    MAPPED CONTROLS:
 

@@ -2832,20 +2832,13 @@ function raptor:djcontrol_note(atoms)
       return true
    elseif num == 5 then
       -- SYNC button: rewind to the pattern start (pos 0)
-      if val > 0 and (self.deck == 0 or deck == self.deck) then
-	 if self.transport ~= 0 and self.arp.loopstate ~= 0 then
-	    -- reset the loop position (and the position in the bar)
-	    self.arp:set_loopidx(0)
-	    self.djdata.pos[deck] = 0
-	 end
-	 if self.transport == 0 or shift then
-	    -- set the anacrusis
-	    self:set_pos(0)
-	 else
-	    -- just reset the playback position, but don't change the
-	    -- anacrusis
-	    self.arp:set_idx(0)
-	 end
+      if val > 0 and self.id and self.master == self.id then
+	 -- we're the time master, tell all instances about our playback
+	 -- position so that they can sync up to us
+	 local playing = self.transport ~= 0 and not shift
+	 local pos = playing and self.arp.idx or 0
+	 local loop_pos = (playing and self.arp.loopstate ~= 0) and self.arp.loopidx or nil
+	 pd.send("all-arp", "sync", {pos, loop_pos})
       end
       return true
    elseif num == 6 then
@@ -2853,7 +2846,7 @@ function raptor:djcontrol_note(atoms)
       if val > 0 and (self.deck == 0 or deck == self.deck) then
 	 if shift then
 	    -- set the anacrusis
-	    self.pos = self.arp.idx
+	    self:set_pos(self.arp.idx)
 	 elseif self.transport ~= 0 and self.arp.loopstate ~= 0 then
 	    -- set the loop position
 	    local p = self.pos % self.arp.beats
@@ -3649,13 +3642,6 @@ end
 
 -- transport
 
-function raptor:in_1_transport_state(atoms)
-   if djcontrol ~= 0 then
-      -- djcontrol tie-in, updates the PLAY button
-      self:djcontrol_play(atoms[1])
-   end
-end
-
 function raptor:in_1_transport(atoms)
    self.transport = atoms[1]
 end
@@ -3668,6 +3654,24 @@ function raptor:in_1_master(atoms)
       return
    end
    self.master = id
+end
+
+-- djcontrol tie-ins
+
+function raptor:in_1_transport_state(atoms)
+   self:djcontrol_play(atoms[1])
+end
+
+function raptor:in_1_sync(atoms)
+   local pos, loop_pos = atoms[1], atoms[2]
+   -- reset the anacrusis
+   self:set_pos(0)
+   -- set the position in the bar
+   self.arp:set_idx(pos)
+   if loop_pos and self.transport ~= 0 and self.arp.loopstate ~= 0 then
+      -- also set the loop position
+      self.arp:set_loopidx(loop_pos)
+   end
 end
 
 -- looper
