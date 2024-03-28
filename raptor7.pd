@@ -1,4 +1,4 @@
-#N canvas 818 375 608 410 10;
+#N canvas 759 388 608 435 10;
 #X declare -path lib;
 #X obj 310 10 namecanvas \$1;
 #X obj 86 77 cnv 15 81 38 empty \$0-learn-mode empty 20 12 0 14 #e0e0e0
@@ -57,11 +57,11 @@
 #X text 153 318 tempo (bpm);
 #X floatatom 220 340 5 30 960 0 - #0-tempo-sync -, f 5;
 #X obj 150 216 meter-examples;
-#N canvas 1062 297 582 584 time 0;
+#N canvas 1062 297 627 584 time 0;
 #X obj 40 20 inlet;
 #X obj 230 20 tgl 15 1 empty \$0-master-toggle M 17 7 0 10 #fcfcfc
 #000000 #000000 1 1;
-#X obj 460 175 bng 15 50 10 0 pulse empty empty 17 7 0 10 #fcfcfc #000000
+#X obj 460 175 bng 15 50 10 0 empty empty empty 17 7 0 10 #fcfcfc #000000
 #000000;
 #X obj 390 44 tgl 15 0 empty \$0-metro empty 17 7 0 10 #fcfcfc #000000
 #000000 0 1;
@@ -84,7 +84,7 @@
 #X obj 170 230 r \$0-me;
 #X obj 282 100 outlet;
 #X obj 230 230 r all-master;
-#X obj 170 310 s \$0-master-toggle;
+#X obj 170 350 s \$0-master-toggle;
 #X obj 170 70 change -1;
 #X obj 40 260 sel 1;
 #X obj 40 285 f \$0;
@@ -116,7 +116,7 @@
 #000000 #000000;
 #X obj 240 480 spigot;
 #X obj 273 457 tgl 15 1 empty empty empty 17 7 0 10 #fcfcfc #000000
-#000000 1 1;
+#000000 0 1;
 #X obj 240 505 s \$0-pos;
 #X obj 120 413 t f f f;
 #X text 300 420 just leave this enabled \, in case your DAW doesn't
@@ -382,16 +382,62 @@ which case we just restart the metro. Not sure whether that's the best
 #X obj 273 369 r \$0-deck;
 #X obj 273 394 <= 0;
 #X text 310 394 if > 0 then most likely we want the SPP OFF;
+#X obj 460 198 t b b;
+#N canvas 612 407 450 300 new-master 0;
+#X obj 20 90 f;
+#X obj 35 60 r \$0-new-master;
+#X obj 20 115 sel 0 \$0;
+#X msg 35 190 0;
+#X obj 20 20 inlet;
+#X text 150 60 hand over to a new time master without disrupting playback
+, f 31;
+#X obj 235 170 f \$0;
+#X obj 65 140 t b f b;
+#X obj 20 240 s pulse;
+#X msg 84 190 \; \$1-play 1;
+#X msg 235 200 \; \$1-metro 0 \; \$1-play set 0;
+#X obj 104 240 outlet;
+#X connect 0 0 2 0;
+#X connect 1 0 0 1;
+#X connect 2 0 8 0;
+#X connect 2 1 8 0;
+#X connect 2 2 7 0;
+#X connect 3 0 0 1;
+#X connect 4 0 0 0;
+#X connect 6 0 10 0;
+#X connect 7 0 3 0;
+#X connect 7 1 9 0;
+#X connect 7 2 11 0;
+#X restore 460 220 pd new-master;
+#X obj 500 315 s all-arp;
+#X msg 500 290 transport \$1;
+#N canvas 807 417 450 300 mess 0;
+#X obj 20 50 t f f f f;
+#X obj 20 135 s \$0-arp;
+#X obj 20 20 inlet;
+#X obj 37 210 outlet;
+#X obj 143 210 outlet;
+#X obj 87 210 outlet;
+#X msg 20 110 transport_state \$1;
+#X connect 0 0 6 0;
+#X connect 0 1 3 0;
+#X connect 0 2 5 0;
+#X connect 0 3 4 0;
+#X connect 2 0 0 0;
+#X connect 6 0 1 0;
+#X restore 263 310 pd mess;
+#X msg 500 340 transport_state \$1;
+#X obj 500 365 s \$0-arp;
 #X connect 0 0 60 0;
 #X connect 1 0 57 0;
-#X connect 2 0 84 1;
+#X connect 2 0 90 0;
 #X connect 3 0 14 0;
 #X connect 4 0 6 0;
 #X connect 5 0 7 0;
 #X connect 8 0 32 0;
 #X connect 9 0 16 1;
 #X connect 12 1 13 0;
-#X connect 13 0 22 0;
+#X connect 13 0 94 0;
 #X connect 14 0 43 0;
 #X connect 15 0 75 0;
 #X connect 16 0 17 0;
@@ -405,6 +451,8 @@ which case we just restart the metro. Not sure whether that's the best
 #X connect 27 0 59 0;
 #X connect 27 1 26 0;
 #X connect 27 2 28 0;
+#X connect 27 2 93 0;
+#X connect 27 2 95 0;
 #X connect 27 3 18 0;
 #X connect 28 0 29 0;
 #X connect 30 0 84 0;
@@ -480,6 +528,15 @@ which case we just restart the metro. Not sure whether that's the best
 #X connect 86 0 79 0;
 #X connect 87 0 88 0;
 #X connect 88 0 50 0;
+#X connect 90 0 91 0;
+#X connect 90 1 84 1;
+#X connect 91 0 13 0;
+#X connect 93 0 92 0;
+#X connect 94 0 28 0;
+#X connect 94 0 72 0;
+#X connect 94 1 22 0;
+#X connect 94 2 58 0;
+#X connect 95 0 96 0;
 #X coords 0 -1 1 1 187 21 1 113 17;
 #X restore 30 30 pd time;
 #N canvas 349 256 423 381 input 0;

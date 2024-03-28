@@ -2025,15 +2025,30 @@ function raptor:set(param, x)
       end
    end
    -- transport
-   local master_check = self.assert_master or self.master and self.id == self.master
-   if self.play ~= last_play and master_check then
-      pd.send(string.format("%s-%s", self.id, "play"), "float", {self.play})
-      -- djcontrol tie-in, updates the PLAY buttons
-      self:djcontrol_play(self.play)
+   local time_master = self.master and self.id == self.master
+   local master_check = self.assert_master or time_master
+   -- we have to go to some lengths here to deal with the djcontrol which
+   -- may set transport parameters independently for each deck
+   if self.play ~= last_play then
+      if master_check then
+	 if not time_master and self.transport ~= 0 then
+	    -- if we're not the real time master and transport is rolling,
+	    -- tell the old master to hand over at the next pulse in order to
+	    -- not disrupt playback (djcontrol; this can only happen if the
+	    -- PLAY button was clicked on the other deck)
+	    pd.send(string.format("%s-%s", self.master, "new-master"), "float", {tonumber(self.id)})
+	 else
+	    -- we're the real time master, or transport is stopped; just
+	    -- start/stop the playback
+	    pd.send(string.format("%s-%s", self.id, "play"), "float", {self.play})
+	 end
+      end
    end
    if self.pos ~= last_pos and master_check then
       pd.send(string.format("%s-%s", self.id, "pos"), "float", {self.pos})
    elseif self.pos ~= last_pos and not master_check then
+      -- if we're not the time master, we still need to update the anacrusis
+      -- the difference is that this change isn't announced to all raptors
       pd.send(string.format("%s-%s", self.id, "pos"), "set", {self.pos})
       pd.send(string.format("%s-%s", self.id, "posvar"), "float", {self.pos})
    end
@@ -2094,6 +2109,7 @@ function raptor:initialize(sel, atoms)
 
    -- transport
    self.master = nil
+   self.transport = 0
    self.play = 0
    self.pulse = 0
    self.pos = 0
@@ -2685,8 +2701,8 @@ end
 -- feedback: play, loop, and mute buttons, and encoder backlight
 
 function raptor:djcontrol_state(button, state, deck)
-   deck = deck and deck or self.deck
    if djcontrol ~= 0 and self.id then
+      deck = deck and deck or self.deck
       pd.send(string.format("%s-djcontrol-%s", self.id, button), "list", {deck, state ~= 0 and 127 or 0})
    end
 end
@@ -2802,7 +2818,7 @@ function raptor:djcontrol_note(atoms)
       -- jog wheel touches, reset status
       self.djdata.last_delta[deck] = 0
       self.djdata.pos[deck] = self.arp.loopidx
-      if (self.deck == 0 or deck == self.deck) and (self.play == 0 or self.djdata.vinyl[deck] ~= 0 or self.stopped and val == 0) then
+      if (self.deck == 0 or deck == self.deck) and (self.transport == 0 or self.djdata.vinyl[deck] ~= 0 or self.stopped and val == 0) then
 	 self.stopped = val > 0
       end
       return true
@@ -2814,15 +2830,36 @@ function raptor:djcontrol_note(atoms)
 	 self:djcontrol_vinyl(self.djdata.vinyl[deck], deck)
       end
       return true
-   elseif num == 5 and not shift then
-      -- unshifted SYNC button: rewind to the pattern start (pos 0)
+   elseif num == 5 then
+      -- SYNC button: rewind to the pattern start (pos 0)
       if val > 0 and (self.deck == 0 or deck == self.deck) then
-	 self:set_pos(0)
+	 if self.transport ~= 0 and self.arp.loopstate ~= 0 then
+	    -- reset the loop position (and the position in the bar)
+	    self.arp:set_loopidx(0)
+	    self.djdata.pos[deck] = 0
+	 end
+	 if self.transport == 0 or shift then
+	    -- set the anacrusis
+	    self:set_pos(0)
+	 else
+	    -- just reset the playback position, but don't change the
+	    -- anacrusis
+	    self.arp:set_idx(0)
+	 end
       end
       return true
-   elseif num == 6 and not shift then
-      -- unshifted CUE button: rewind to the anacrusis (pos)
+   elseif num == 6 then
+      -- CUE button: rewind to the anacrusis (pos)
       if val > 0 and (self.deck == 0 or deck == self.deck) then
+	 if shift then
+	    -- set the anacrusis
+	    self.pos = self.arp.idx
+	 elseif self.transport ~= 0 and self.arp.loopstate ~= 0 then
+	    -- set the loop position
+	    local p = self.pos % self.arp.beats
+	    self.arp:set_loopidx(p)
+	    self.djdata.pos[deck] = p
+	 end
 	 self:do_rewind(self.pos)
       end
       return true
@@ -2886,7 +2923,7 @@ function raptor:djcontrol_ctl(atoms)
 	 -- instead. Thus "vinyl" mode just indicates whether the jog wheel
 	 -- is active (and scratching enabled) during playback (it's always
 	 -- on when transport is stopped).
-	 if i and (self.play == 0 or self.djdata.vinyl[deck] ~= 0) then
+	 if i and (self.transport == 0 or self.djdata.vinyl[deck] ~= 0) then
 	    -- scratch: true indicates scratch (top) mode, false normal (ring)
 	    -- movement. These behave slightly differently on the DJ Control.
 	    -- Specifically, ring movements run at two different speeds
@@ -2916,7 +2953,7 @@ function raptor:djcontrol_ctl(atoms)
 	    end
 	    -- we're moving, reset the stopped status
 	    self.stopped = false
-	    if self.arp.loopstate == 0 or self.play == 0 then
+	    if self.arp.loopstate == 0 or self.transport == 0 then
 	       -- set the playback position and/or anacrusis
 	       local pos = self.pos + delta
 	       -- clamp to the prescribed range
@@ -3611,6 +3648,17 @@ function raptor:locate_deck_i(i, deck)
 end
 
 -- transport
+
+function raptor:in_1_transport_state(atoms)
+   if djcontrol ~= 0 then
+      -- djcontrol tie-in, updates the PLAY button
+      self:djcontrol_play(atoms[1])
+   end
+end
+
+function raptor:in_1_transport(atoms)
+   self.transport = atoms[1]
+end
 
 function raptor:in_1_master(atoms)
    local id = atoms[1]

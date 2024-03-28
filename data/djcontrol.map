@@ -50,7 +50,7 @@
    - cross fade control, implemented by tying into the volume control
    - jog wheels for scrubbing (pos/anacrusis)
    - VINYL (enable/disable scrubbing)
-   - SYNC (set pos to 0) and CUE (reset the current playback pos to anacrusis)
+   - SYNC (rewind to the first beat) and CUE (rewind to the anacrusis)
    - mode 1 (HOT CUE) pads (cue a given bar of the loop during loop playback)
    - mode 2 (STEMS/LOOP) pads (select Raptor instances a.k.a. ccmaster)
 
@@ -67,23 +67,51 @@
    during loop playback, and can be remapped using MIDI learn in non-loop
    mode.
 
-   JOG WHEELS:
-
-   If needed, you can change the responsiveness of the jog wheels with the
-   djcontrol_scrub_factor variable in raptor.pd_lua.
+   TRANSPORT (PLAY/PAUSE, CUE, SYNC):
 
    Due to the fact that Raptor deals with bars and beats rather than samples,
-   there are some notable differences to standard DJ software. First,
-   scrubbing is *always* quantized to beats. Second, Raptor doesn't actually
-   have a "CDJ" mode; if you want to speed things up or slow them down, you'll
-   have to use the tempo control instead.
+   there are some notable differences to standard DJ software in how the
+   transport controls and the jog wheels work. First and foremost, in Raptor
+   playback is *always* synchronized to the time master, which can either be a
+   single Raptor instance or an external time source (MIDI clock), and
+   playback is *always* quantized to beats. Also, there's no way to set any
+   cues, because there is no track to begin with; just the arpeggiator output
+   which is generated on the fly or played back from the current loop.
+
+   The only implicit cue there is is the anacrusis (the position in the bar
+   where playback starts), and this is the position the CUE button moves to
+   when pressed. You can also press SHIFT+CUE to set the anacrusis to the
+   current playback position.
+
+   Since all playback is always synchronized to the time master, the usual
+   SYNC control isn't needed in Raptor. You can just switch the time master on
+   the fly with PLAY/PAUSE at any time, without disrupting playback if
+   transport is already rolling. Instead, SYNC is basically like CUE but moves
+   to the first beat instead, no matter what the current anacrusis is. If
+   transport is stopped, it will also reset the anacrusis to 0. (You can also
+   force that behavior during playback by pressing SHIFT+SYNC.)
+
+   Like the jog wheels, CUE and SYNC affect the playback position in the bar
+   only, if no loop is playing or transport is stopped. If transport is
+   rolling and a loop is currently playing, however, they set the playback
+   position in the loop instead (this will also affect the playback position
+   in the bar, but doesn't change the anacrusis unless SHIFT+SYNC is used).
+
+   JOG WHEELS:
+
+   NOTE: If needed, you can change the responsiveness of the jog wheels with
+   the djcontrol_scrub_factor variable in raptor.pd_lua.
+
+   The first thing to note here is that Raptor doesn't actually have a "CDJ"
+   mode; if you want to speed things up or slow them down, you'll have to use
+   the tempo control instead.
 
    Therefore the VINYL control (SHIFT+LOOP on some devices) merely determines
-   whether the jog wheels are active (and scrubbing enabled) during playback.
-   (They are always on when transport is stopped.) By default, the jog wheels
-   are off during playback, which ensures that you don't inadvertently move
-   the playback position by accidentally hitting a jog wheel. Use the VINYL
-   buttons to toggle this option separately for each deck.
+   whether the jog wheels are active (and scrubbing enabled) at all during
+   playback. (They are always on when transport is stopped.) By default, the
+   jog wheels are off during playback, so that that you don't inadvertently
+   move the playback position by accidentally hitting a jog wheel. Use the
+   VINYL buttons to toggle this option separately for each deck.
 
    Other than that, the jog wheels work pretty much like you'd expect them to
    on a DJ controller. That is, touching the top of the jog wheel temporarily
