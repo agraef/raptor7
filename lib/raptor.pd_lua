@@ -2192,6 +2192,10 @@ function raptor:initialize(sel, atoms)
    -- initialize the note-off timer
    self.clock = pd.Clock:new():register(self, "notes_off")
 
+   -- initialize and kick off the djcontrol initialization timer
+   self.init_clock = pd.Clock:new():register(self, "djcontrol_state_init")
+   self.init_clock:delay(500)
+
    return true
 end
 
@@ -2210,8 +2214,10 @@ function raptor:check_ccmaster(var)
 end
 
 function raptor:finalize()
+   self.init_clock:destruct()
    self.clock:destruct()
    self.recv:destruct()
+   self:djcontrol_state_fini()
    if self.ccmaster and self:check_ccmaster() then
       -- tell all running raptors that we're back to omni
       pd.send("all-arp", "ccmaster", {0, self.id})
@@ -2701,37 +2707,107 @@ local function djcontrol_deck(ch)
    end
 end
 
--- feedback: play, loop, and mute buttons, and encoder backlight
+-- feedback: play, cue, sync, vinyl, loop, and mute buttons, and the big
+-- encoder backlight which flashes along with the rhythm
 
-function raptor:djcontrol_state(button, state, deck)
-   if djcontrol ~= 0 and self.id then
-      deck = deck and deck or self.deck
-      pd.send(string.format("%s-djcontrol-%s", self.id, button), "list", {deck, state ~= 0 and 127 or 0})
+local djcontrol_button = {
+   big12 = { num = 48, ch = {18, 19}, default = 0, on = 127 },
+   sync = { num = 5, ch = {18, 19}, default = 1, on = 127 },
+   cue = { num = 6, ch = {18, 19}, default = 1, on = 127 },
+   play = { num = 7, ch = {18, 19}, default = 0, on = 127 },
+   mute = { num = 12, ch = {18, 19}, default = 0, on = 127 },
+   vinyl = { num = 3, ch = {18, 19}, default = 1, on = 127 },
+   loop = { num = 3, ch = {21, 22}, default = 0, on = 127 },
+   loop_in = { num = 9, ch = {18, 19}, default = 0, on = 127 },
+   loop_out = { num = 10, ch = {18, 19}, default = 0, on = 127 },
+   pulse = { num = 5, ch = 17, default = 0 },
+}
+
+-- initialize and finalize
+
+function raptor:djcontrol_state_init()
+   -- change all buttons to their defaults
+   if djcontrol ~= 0 and self.master and self.id == self.master then
+      for k, b in pairs(djcontrol_button) do
+	 local state = (b.on and b.on or 127)*b.default
+	 if type(b.ch) == "table" then
+	    pd.send(string.format("%s-djcontrol", self.id), "note", {b.num, state, b.ch[1]})
+	    pd.send(string.format("%s-djcontrol", self.id), "note", {b.num, state, b.ch[2]})
+	 else
+	    pd.send(string.format("%s-djcontrol", self.id), "note", {b.num, state, b.ch})
+	 end
+      end
    end
 end
 
+function raptor:djcontrol_state_fini()
+   -- turn all buttons off
+   if djcontrol ~= 0 and self.master and self.id == self.master then
+      for k, b in pairs(djcontrol_button) do
+	 if type(b.ch) == "table" then
+	    pd.send(string.format("%s-djcontrol", self.id), "note", {b.num, 0, b.ch[1]})
+	    pd.send(string.format("%s-djcontrol", self.id), "note", {b.num, 0, b.ch[2]})
+	 else
+	    pd.send(string.format("%s-djcontrol", self.id), "note", {b.num, 0, b.ch})
+	 end
+      end
+   end
+end
+
+-- state updates
+
+function raptor:djcontrol_state(button, state, deck)
+   if djcontrol ~= 0 then
+      if deck then
+	 if deck == 0 then
+	    -- do both deck 1 and 2
+	    self:djcontrol_state(button, state, 1)
+	    self:djcontrol_state(button, state, 2)
+	 elseif deck > 0 then
+	    local b = djcontrol_button[button]
+	    pd.send(string.format("%s-djcontrol", self.id), "note", {b.num, state*b.on, b.ch[deck]})
+	 end
+      elseif self.master and self.id == self.master then
+	 -- global controls (backlights)
+	 local b = djcontrol_button[button]
+	 if b.on then
+	    pd.send(string.format("%s-djcontrol", self.id), "note", {b.num, state*b.on, b.ch})
+	 else
+	    -- pulse
+	    pd.send(string.format("%s-djcontrol", self.id), "pulse", {b.num, state, b.ch})
+	 end
+      end
+   end
+end
+
+function raptor:djcontrol_deck(state)
+   self:djcontrol_state("big12", state, self.deck)
+end
+
 function raptor:djcontrol_play(state)
-   self:djcontrol_state("play", state)
+   self:djcontrol_state("play", state, self.deck)
 end
 
 function raptor:djcontrol_loop(state)
-   self:djcontrol_state("loop", state)
+   self:djcontrol_state("loop", state, self.deck)
+   self:djcontrol_state("loop_in", state, self.deck)
+   self:djcontrol_state("loop_out", state, self.deck)
 end
 
 function raptor:djcontrol_vinyl(state, deck)
-   self:djcontrol_state("loop", state, deck+3)
+   self:djcontrol_state("vinyl", state, self.deck)
 end
 
 function raptor:djcontrol_mute(state)
-   self:djcontrol_state("mute", state)
+   self:djcontrol_state("mute", state, self.deck)
 end
 
 function raptor:djcontrol_pulse(w, val)
    -- w is the weight, val the velocity, n the number of beats per bar to
    -- trigger, b the total number of beats.
    local n, b = djcontrol_n_pulses, self.arp.beats
-   if djcontrol ~= 0 and self.master and self.id == self.master and w >= b-n then
-      pd.send(string.format("%s-%s", self.id, "djcontrol-pulse"), "float", {val})
+   if w >= b-n then
+      self:djcontrol_state("pulse", val)
    end
 end
 
@@ -2821,8 +2897,12 @@ function raptor:djcontrol_note(atoms)
       -- jog wheel touches, reset status
       self.djdata.last_delta[deck] = 0
       self.djdata.pos[deck] = self.arp.loopidx
-      if (self.deck == 0 or deck == self.deck) and (self.transport == 0 or self.djdata.vinyl[deck] ~= 0 or self.stopped and val == 0) then
-	 self.stopped = val > 0
+      if self.deck == 0 or deck == self.deck then
+	 if self.transport == 0 or self.djdata.vinyl[deck] ~= 0 or self.stopped and val == 0 then
+	    self.stopped = val > 0
+	 end
+	 local vinyl = self.transport == 0 or self.djdata.vinyl[deck] ~= 0
+	 self:djcontrol_deck(val > 0 and vinyl and 1 or 0)
       end
       return true
    elseif num == 3 and not shift then
