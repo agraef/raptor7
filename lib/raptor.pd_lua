@@ -2840,7 +2840,7 @@ function raptor:djcontrol_note(atoms)
 	 -- position so that they can sync up to us
 	 local playing = self.transport ~= 0 and not shift
 	 local pos = playing and self.arp.idx or 0
-	 local loop_pos = (playing and self.arp.loopstate ~= 0) and self.arp.loopidx or nil
+	 local loop_pos = (playing and self.arp.loopstate ~= 0) and self.arp.loopidx or (not playing and 0 or nil)
 	 pd.send("all-arp", "sync", {pos, loop_pos})
       end
       return true
