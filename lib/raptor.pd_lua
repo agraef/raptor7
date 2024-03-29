@@ -2711,6 +2711,7 @@ end
 -- encoder backlight which flashes along with the rhythm
 
 local djcontrol_button = {
+   ccmaster = { num = 16, ch = {23, 24}, default = 0, on = 127 },
    big12 = { num = 48, ch = {18, 19}, default = 0, on = 127 },
    sync = { num = 5, ch = {18, 19}, default = 1, on = 127 },
    cue = { num = 6, ch = {18, 19}, default = 1, on = 127 },
@@ -2756,26 +2757,38 @@ end
 
 -- state updates
 
-function raptor:djcontrol_state(button, state, deck)
+function raptor:djcontrol_state(button, state, deck, offs)
    if djcontrol ~= 0 then
+      offs = offs and offs or 0
       if deck then
 	 if deck == 0 then
 	    -- do both deck 1 and 2
-	    self:djcontrol_state(button, state, 1)
-	    self:djcontrol_state(button, state, 2)
+	    self:djcontrol_state(button, state, 1, offs)
+	    self:djcontrol_state(button, state, 2, offs)
 	 elseif deck > 0 then
 	    local b = djcontrol_button[button]
-	    pd.send(string.format("%s-djcontrol", self.id), "note", {b.num, state*b.on, b.ch[deck]})
+	    pd.send(string.format("%s-djcontrol", self.id), "note", {b.num+offs, state*b.on, b.ch[deck]})
 	 end
       elseif self.master and self.id == self.master then
 	 -- global controls (backlights)
 	 local b = djcontrol_button[button]
 	 if b.on then
-	    pd.send(string.format("%s-djcontrol", self.id), "note", {b.num, state*b.on, b.ch})
+	    pd.send(string.format("%s-djcontrol", self.id), "note", {b.num+offs, state*b.on, b.ch})
 	 else
 	    -- pulse
-	    pd.send(string.format("%s-djcontrol", self.id), "pulse", {b.num, state, b.ch})
+	    pd.send(string.format("%s-djcontrol", self.id), "pulse", {b.num+offs, state, b.ch})
 	 end
+      end
+   end
+end
+
+function raptor:djcontrol_ccmaster(state)
+   local i = self:get_instance()
+   local deck = self.deck
+   if i > 0 then
+      i = next(raptor.decks) == nil and i or self:locate_i_deck(i, deck)
+      if i then
+	 self:djcontrol_state("ccmaster", state, deck, i-1)
       end
    end
 end
@@ -3623,12 +3636,16 @@ function raptor:in_1_ccmaster(atoms)
 	 self.ccmaster = nil
 	 -- give feedback on the panel
 	 pd.send(string.format("%s-ccmaster-status", self.id), "float", {0})
+	 -- djcontrol feedback
+	 self:djcontrol_ccmaster(0)
       else
 	 -- only the given raptor is receiving
 	 self.ccmaster = id
 	 -- give feedback on the panel
 	 flag = self:check_ccmaster() and 1 or 0
 	 pd.send(string.format("%s-ccmaster-status", self.id), "float", {flag})
+	 -- djcontrol feedback
+	 self:djcontrol_ccmaster(flag)
       end
    else
       -- no ids, assume omni
@@ -3718,6 +3735,26 @@ function raptor:locate_deck_i(i, deck)
 	 return nil
       end
       return locate(i, deck)
+   else
+      return i
+   end
+end
+
+-- find the index per deck by instance (reversal of the above)
+
+function raptor:locate_i_deck(i, deck)
+   if i and deck and deck > 0 then
+      -- count instances with the same deck
+      local k = 0
+      for j = 1, i do
+	 local d = raptor.decks[raptor.instances[j]]
+	 if d and d == deck then
+	    k = k+1
+	 end
+      end
+      -- assert k>0 (since raptor.decks[raptor.instances[i]] == deck, or we
+      -- wouldn't be here)
+      return k
    else
       return i
    end
