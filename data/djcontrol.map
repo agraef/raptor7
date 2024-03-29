@@ -167,7 +167,8 @@
    (lighting up the PLAY button on the deck which is the time master), mute
    status (on the PFL a.k.a. headphone buttons in the mixer section), loop
    playback status (on the loop IN/OUT buttons), and vinyl a.k.a. scrubbing
-   status (on the VINYL buttons).
+   status (on the VINYL buttons). If you have mode 2 enabled, you'll also see
+   the currently selected Raptor instance (if any) highlighted on the pads.
 
    Also, on the bigger devices like the Inpulse 500 which have backlighted
    deck numbers, the big "1" or "2" will light up while you touch the
@@ -175,8 +176,7 @@
 
    Last, but not least, the backlight of the big encoder pulses in different
    colors following the rhythm, as determined by the actual pulse weights and
-   velocities produced by the arpeggiator. (There's no feedback on the pads
-   yet, but we might still add that in the future.)
+   velocities produced by the arpeggiator.
 
    NOTE: The encoder backlight could get rather busy with complex meters if
    we'd simply trigger all pulses, so we only do the n most salient pulses, as
