@@ -2976,9 +2976,9 @@ function raptor:djcontrol_ctl(atoms)
       return false
    elseif deck == 0 then
       -- global control
-      if num == 1 then
-	 -- BROWSER (check the shift status here, to also check the ccmaster)
-	 if not shift or self:check_ccmaster() then
+      if num == 1 and not shift then
+	 -- BROWSER
+	 if self:check_ccmaster() then
 	    local i = self.presetno and self.presetno or 1
 	    i = val == 1 and i+1 or i-1
 	    self:recall_preset(i)
