@@ -2862,46 +2862,51 @@ function raptor:djcontrol_note(atoms)
    elseif pads then
       -- the pads are on a separate plane, must be checked first since note
       -- numbers partially overlap with the non-pad buttons
+      local check =  self.deck == 0 or deck == self.deck
       if num >= 0 and num < 8 then
 	 -- unshifted pads in mode 1 (labeled "HOT CUE")
 	 -- cue to bar in a loop, smooth transition
-	 if self.arp.loopstate == 0 then
-	    -- we only bind this control if a loop is currently playing
-	    goto skip
-	 elseif val > 0 then
-	    -- effective loop size
-	    local l = math.min(#self.arp.loop, self.arp.loopsize)
-	    if l > 0 then
-	       -- beginning of the bar
-	       local x = (num * self.arp.beats) % l
-	       -- current position in the bar
-	       local i = self.arp.idx
-	       -- set the loop index
-	       self.arp:set_loopidx(x + i)
+	 if check then
+	    if self.arp.loopstate == 0 then
+	       -- we only bind this control if a loop is currently playing
+	       goto skip
+	    elseif val > 0 then
+	       -- effective loop size
+	       local l = math.min(#self.arp.loop, self.arp.loopsize)
+	       if l > 0 then
+		  -- beginning of the bar
+		  local x = (num * self.arp.beats) % l
+		  -- current position in the bar
+		  local i = self.arp.idx
+		  -- set the loop index
+		  self.arp:set_loopidx(x + i)
+	       end
 	    end
 	 end
 	 return true
       elseif num >= 8 and num < 16 then
 	 -- shifted pads in mode 1 (labeled "HOT CUE")
 	 -- cue to bar in a loop, immediate
-	 if self.arp.loopstate == 0 then
-	    -- we only bind this control if a loop is currently playing
-	    goto skip
-	 elseif val > 0 then
-	    -- effective loop size
-	    local l = math.min(#self.arp.loop, self.arp.loopsize)
-	    if l > 0 then
-	       -- beginning of the bar
-	       local x = (num * self.arp.beats) % l
-	       -- set the loop index to the beginning of the bar
-	       self.arp:set_loopidx(x)
+	 if check then
+	    if self.arp.loopstate == 0 then
+	       -- we only bind this control if a loop is currently playing
+	       goto skip
+	    elseif val > 0 then
+	       -- effective loop size
+	       local l = math.min(#self.arp.loop, self.arp.loopsize)
+	       if l > 0 then
+		  -- beginning of the bar
+		  local x = (num * self.arp.beats) % l
+		  -- set the loop index to the beginning of the bar
+		  self.arp:set_loopidx(x)
+	       end
 	    end
 	 end
 	 return true
       elseif num >= 16 and num < 24 then
 	 -- unshifted pads in mode 2 (labeled "STEMS" on the MK2), we use these
 	 -- to do ccmaster switches
-	 if val > 0 then
+	 if check and val > 0 then
 	    -- This is a bit tricky, since this request is going to be processed
 	    -- in a single random instance which might not even have a deck
 	    -- assigned to it. Thus checking self.deck isn't going to do us any
