@@ -17,7 +17,7 @@
 
    The present implementation only supports (up to) two decks. This should
    hopefully suffice for the present DJ controller series by Hercules, as even
-   their flagship controllers have no more than 2 decks, AFAICT.
+   their flagship controllers have no more than 2 channels, AFAICT.
 
    IMPORTANT: To enable the deck-specific features, you need to assign a deck
    number to each raptor instance, which can be done in the init subpatch, or
@@ -31,18 +31,29 @@
    Also note that the available modes and number of pads vary with the
    particular device version. Recent Hercules DJ Control devices should give
    you at least two mode buttons and four pads, which is what the Raptor
-   implementation was designed to work with. (This has only been tested on the
-   DJ Control Inpulse 200 MK2 so far, which is the only device that I have
-   right now. If you can contribute adjustments for other types of DJ
-   controllers, please get in touch!)
+   implementation was designed to work with.
+
+   Unfortunately, the labels of some of the buttons are also inconsistent
+   between the various devices, especially in the loop section. We brush all
+   this aside and simply use LOOP as a shorthand for the shifted VINYL key,
+   where on the Inpulse 200 MK2 we pretend that the shifted functions are the
+   unshifted ones. On the Inpulse 500 and T7 devices, you can also push the
+   loop size encoder to get this function.
+
+   This should hopefully work with all Hercules DJ controllers out there, but
+   I could only test with the Inpulse 200 MK2 and 500 devices, which are the
+   only Hercules controllers that I have. Please report any bugs or
+   incompatibilites that you find with these or other variations of the
+   Hercules controllers. At this time, there are no plans to add support for
+   other DJ controllers, but feel free to send me a pull request if you do!
 
    HARD-WIRED CONTROLS:
 
    These are implemented in Raptor and thus can't be changed using MIDI
    learn. True to the nature of these controllers, the DJ Control
    implementation in Raptor has a lot of fancy performance controls that are
-   not readily available on other control surfaces. Here is what's currently
-   on offer:
+   not readily available in the Raptor GUI or on the other supported control
+   surfaces. Here is what's currently on offer:
 
    - BROWSER encoder for preset selection (use SHIFT to restrict to the
      currently selected instance)
@@ -50,9 +61,10 @@
    - cross fade control, implemented by tying into the volume control
    - jog wheels for scrubbing (pos/anacrusis)
    - VINYL (enable/disable scrubbing)
-   - SYNC (rewind to the first beat) and CUE (rewind to the anacrusis)
+   - SYNC (sync the playback positions of all instances to the time master)
+   - CUE (cue to the anacrusis)
    - mode 1 (HOT CUE) pads (cue a given bar of the loop during loop playback)
-   - mode 2 (STEMS/LOOP) pads (select Raptor instances a.k.a. ccmaster)
+   - mode 2 (LOOP/STEMS) pads (select Raptor instances a.k.a. ccmaster)
 
    Note that Raptor is MIDI-only, so the cross fader, volume, and balance
    controls are effectively 7 bit and rely on what your synthesizer offers;
@@ -64,13 +76,12 @@
    used while holding the shift key. When shifted, the pads relocate to the
    beginning of the bar immediately, otherwise they do a smooth transition
    without changing the position in the bar. These controls are only active
-   during loop playback, and can be remapped using MIDI learn in non-loop
-   mode.
+   during loop playback, and can be remapped using MIDI learn otherwise.
 
    TRANSPORT (PLAY/PAUSE, CUE, SYNC):
 
-   Raptor is really an unusual piece of DJ software. Because it deals with
-   MIDI, bars, and beats rather than audio tracks, there are some notable
+   Raptor is somewhat unusual as a DJ software. Because it deals with MIDI,
+   bars, and beats rather than audio tracks, there are some notable
    differences in how the transport controls and the jog wheels work.
 
    - First and foremost, in Raptor playback is *always* quantized to beats and
@@ -92,37 +103,36 @@
 
    - CUE moves the playback position to the anacrusis, while SHIFT+CUE sets
      the anacrusis to the current playback position. This works separately for
-     each deck. When transport is rolling, CUE goes to the anacrusis
-     immediately (at the next beat), *without* stopping playback.
+     each deck, and works during playback and when transport is stopped. When
+     transport is rolling, CUE goes to the anacrusis immediately (at the next
+     beat), *without* stopping playback.
 
    - SYNC syncs the playback position of all Raptor instances to that of the
      time master, without changing the playback position of the master. It
      also resets the anacrusis of all instances to 0. SHIFT+SYNC works in a
      similar fashion, but also resets the playback position to 0 (beginning of
-     the bar and loop) on all instances. It doesn't matter on which deck you
-     press SYNC, it will always sync all instances to the time master.
+     the bar and loop) immediately (at the next beat), on all instances. It
+     doesn't matter on which deck you press SYNC, it will always sync all
+     instances to the time master.
 
    - PLAY/PAUSE, you guessed it, starts and stops playback. If transport is
-     already rolling, and you press PLAY/PAUSE on the other deck, it switches
-     the time master to the other deck without disrupting playback. (Note,
-     however, that if the decks have different tempo settings, the tempo will
-     change when switching the time master.)
+     already rolling, and you press PLAY/PAUSE on the other deck which has the
+     button unlit, it switches the time master to the other deck without
+     disrupting playback. (Note, however, that if the decks have different
+     tempo settings, the tempo will change when switching the time master.)
 
    JOG WHEELS:
-
-   NOTE: If needed, you can change the responsiveness of the jog wheels with
-   the djcontrol_scrub_factor variable in raptor.pd_lua.
 
    The first thing to note here is that Raptor doesn't actually have a "CDJ"
    mode; if you want to speed things up or slow them down, you'll have to use
    the tempo control instead.
 
-   Therefore the VINYL control (SHIFT+LOOP on some devices) merely determines
-   whether the jog wheels are active (and scrubbing enabled) at all during
-   playback. (They are always on when transport is stopped.) By default, the
-   jog wheels are off during playback, so that that you don't inadvertently
-   move the playback position by accidentally hitting a jog wheel. Use the
-   VINYL buttons to toggle this option separately for each deck.
+   Therefore the VINYL control merely determines whether the jog wheels are
+   active (and scrubbing enabled) at all during playback. (They are always on
+   when transport is stopped.) By default, the jog wheels are on during
+   playback, but you can turn them off with the VINYL buttons, so that that
+   you don't inadvertently move the playback position by accidentally hitting
+   a jog wheel.
 
    Other than that, the jog wheels work pretty much like you'd expect them to
    on a DJ controller. That is, touching the top of the jog wheel temporarily
@@ -136,28 +146,29 @@
    position is relative to the *end* of the bar or loop (-1 denotes the last
    beat, -2 the second-last, etc.) .
 
+   A final note: You can change the responsiveness of the jog wheels with the
+   djcontrol_scrub_factor variable in raptor.pd_lua if needed. Please check
+   the source for further details.
+
    FEEDBACK:
 
    This is also hard-wired, and only works if you also connect the DJ Control
    device to Pd's second MIDI *output*. It gives some feedback about playback
    (lighting up the PLAY button on the deck which is the time master), mute
    status (on the PFL a.k.a. headphone buttons in the mixer section), loop
-   playback status (on the LOOP buttons), and vinyl a.k.a. scrubbing status
-   (on the VINYL or shifted LOOP buttons; in the latter case you can press
-   SHIFT to reveal the current status). Also, the backlight of the big encoder
+   playback status (on the loop IN/OUT buttons), and vinyl a.k.a. scrubbing
+   status (on the VINYL buttons). Also, the backlight of the big encoder
    pulses following the rhythm, as determined by the actual pulse weights and
    velocities produced by the arpeggiator. (There's no feedback on the pads
-   currently, but we might still add that in the future.)
+   yet, but we might still add that in the future.)
 
    NOTE: The led could get rather busy with complex meters if we'd simply
    trigger all pulses, so we only do the n most salient pulses, as determined
    by the pulse weights, where the value n is currently hard-coded. I found
    that a value of 7 seems to work best with most common meters. YMMV, so you
    can change that value with the djcontrol_n_pulses variable near the
-   beginning of raptor.pd_lua. Setting djcontrol_n_pulses to a very large
-   value like 1000 will trigger each and every pulse. Decreasing the value
-   gradually thins out the rhythm display. Setting it to 0 disables the rhythm
-   display.
+   beginning of raptor.pd_lua. Again, please check the source for further
+   details.
 
    MAPPED CONTROLS:
 
@@ -173,7 +184,7 @@
    - PFL buttons (mute toggles, panel)
    - MASTER button (global mute toggle, sends to all Raptor instances)
    - BROWSER button (global latch toggle, sends to all Raptor instances)
-   - LOOP (loop toggles, panel)
+   - LOOP a.ka. SHIFT+VINYL (loop toggles, panel)
    - IN and OUT (previous/next loop, looper subpatch)
    - LOAD and SHIFT+LOAD (load/save loop file, looper subpatch)
    - TEMPO faders (tempo controls, panel)
@@ -191,9 +202,13 @@
    most important of these (latch, mute) also have shortcuts in the mixer
    section of the device, where they can be accessed more easily.
 
+   On the Inpulse 500 and T7, you can also push the encoder above the IN/OUT
+   buttons for the LOOP function, and you can change the loop size (in the
+   panel) with the encoder itself.
+
    While you can change all of these bindings, I'd suggest that you keep at
-   least the mapping of the PLAY/PAUSE and PFL buttons as is, since they match
-   up with the hard-wired feedback for these buttons.
+   least the mapping of the PLAY/PAUSE, IN/OUT, and PFL buttons as is, since
+   they match up with the hard-wired feedback for these buttons.
 
 ]]
 
@@ -202,11 +217,16 @@
     [18] = "tempo",
     [19] = "tempo"
   },
+  -- loop size encoder, only available on the Inpulse 500 and T7 models
+  [14] = {
+    [18] = "loopsize",
+    [19] = "loopsize",
+  },
   [128] = { [17] = { "latch", true } },
   [130] = { [17] = { "mute", true } },
   [131] = {
-    [18] = { "loop", true },
-    [19] = { "loop", true }
+    [21] = { "loop", true },
+    [22] = { "loop", true }
   },
   [135] = {
     [18] = { "play", true },
@@ -229,6 +249,11 @@
     [19] = { "loop-load", true },
     [21] = { "loop-save", true },
     [22] = { "loop-save", true }
+  },
+  -- loop size encoder button, only available on the Inpulse 500 and T7 models
+  [172] = {
+    [18] = { "loop", true },
+    [19] = { "loop", true }
   },
   [176] = {
     [23] = { "mute", true },

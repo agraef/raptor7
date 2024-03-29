@@ -72,7 +72,10 @@ local djcontrol = 1
 -- trigger the n most salient pulses instead, as determined by the weight of
 -- the pulse (using Barlow indispensabilities) and the total number of
 -- beats. The default which I found to work best with most meters is 7, but
--- you can adjust that value according to your preferences below.
+-- you can adjust that value according to your preferences below. Setting
+-- djcontrol_n_pulses to a very large value like 1000 will trigger each and
+-- every pulse. Decreasing the value gradually thins out the rhythm
+-- display. Setting it to 0 disables the rhythm display.
 local djcontrol_n_pulses = 7
 
 -- This value determines how fast the playback position moves in response to
@@ -2671,7 +2674,7 @@ function raptor:djcontrol_init()
       -- XXXFIXME: only two decks supported at this time, but this should
       -- hopefully do for the Hercules controllers at least
       self.djdata = { last_delta = {0, 0}, last_count = {0, 0},
-		      vinyl = {0, 0}, pos = {0, 0},
+		      vinyl = {1, 1}, pos = {0, 0},
 		      vol = {127, 127}, xfade = 0.5 }
    end
 end
@@ -2801,8 +2804,8 @@ function raptor:djcontrol_note(atoms)
 	    -- in a single random instance which might not even have a deck
 	    -- assigned to it. Thus checking self.deck isn't going to do us any
 	    -- good here. Instead, we check if the global decks table is empty,
-	    -- in which case we do a regular instance switch, otherwise we try to
-	    -- locate an instance for the deck indicated by the message. This
+	    -- in which case we do a regular instance switch, otherwise we try
+	    -- to locate an instance for the deck indicated by the message. This
 	    -- should do the right thing in most cases. But note that if you're
 	    -- running an ensemble where some raptors have a deck assigned to
 	    -- them, while others have not, then djcontrol won't give you access
@@ -2822,8 +2825,8 @@ function raptor:djcontrol_note(atoms)
 	 self.stopped = val > 0
       end
       return true
-   elseif num == 3 and shift then
-      -- shifted LOOP (VINYL) button: toggle scratch mode
+   elseif num == 3 and not shift then
+      -- VINYL button: toggle scratch mode
       if val > 0 and (self.deck == 0 or deck == self.deck) then
 	 self.djdata.vinyl[deck] = self.djdata.vinyl[deck] == 0 and 1 or 0
 	 -- feedback
@@ -2831,7 +2834,7 @@ function raptor:djcontrol_note(atoms)
       end
       return true
    elseif num == 5 then
-      -- SYNC button: rewind to the pattern start (pos 0)
+      -- SYNC button: sync playback position to the time master
       if val > 0 and self.id and self.master == self.id then
 	 -- we're the time master, tell all instances about our playback
 	 -- position so that they can sync up to us
