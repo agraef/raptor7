@@ -2475,8 +2475,13 @@ function raptor:recall_preset(i)
 	 --print(string.format("%s = %s", var, tostring(val)))
 	 self:param(var, val)
 	 if self.id then
-	    -- send the parameter so that it can be picked up by the panel
-	    pd.send(string.format("%s-%s", self.id, var), "set", {val})
+	    -- grab the value again, as raptor:param() might have updated it
+	    local i = param_i[var]
+	    if i then
+	       val = self.param_val[i]
+	       -- send the parameter so that it can be picked up by the panel
+	       pd.send(string.format("%s-%s", self.id, var), "set", {val})
+	    end
 	 end
       end
    end
@@ -3202,10 +3207,10 @@ function raptor:in_1_note(atoms)
 	    end
 	 end
 	 self.arp:note(num, val)
+	 self.chan = self:get_chan(ch)
 	 if self.chan ~= 10 then
 	    self.backup_chan = self.chan
 	 end
-	 self.chan = self:get_chan(ch)
       end
    end
 end
@@ -3882,6 +3887,16 @@ function raptor:param(var, val)
 	 end
 	 if self.param_set[i] and v ~= self.param_val[i] then
 	    local last_loopstate = self.arp.loopstate
+	    if var == "outchan" then
+	       if v == 0 then
+		  -- kludge: reset to the last non-drum channel we played on,
+		  -- in order to not be stuck on channel 10
+		  self.chan = self.backup_chan
+		  v = self.chan
+	       elseif v ~= 10 then
+		  self.backup_chan = v
+	       end
+	    end
 	    -- update the current value
 	    self.param_val[i] = v
 	    if self.param_set[i] == self.set then
@@ -3890,11 +3905,6 @@ function raptor:param(var, val)
 	    else
 	       -- these all live in the arpeggiator
 	       self.param_set[i](self.arp, v)
-	    end
-	    if var == "outchan" and val == 0 then
-	       -- kludge: reset to the last non-drum channel we played on, in
-	       -- order to not be stuck on channel 10
-	       self.chan = self.backup_chan
 	    end
 	    if self.id and not params[i].transport then
 	       -- report changes to the panel
