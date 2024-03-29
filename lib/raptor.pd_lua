@@ -2736,11 +2736,16 @@ function raptor:djcontrol_state_init()
    if djcontrol ~= 0 and self.master and self.id == self.master then
       for k, b in pairs(djcontrol_button) do
 	 local state = (b.on and b.on or 127)*b.default
-	 if type(b.ch) == "table" then
-	    pd.send(string.format("%s-djcontrol", self.id), "note", {b.num, state, b.ch[1]})
-	    pd.send(string.format("%s-djcontrol", self.id), "note", {b.num, state, b.ch[2]})
-	 else
-	    pd.send(string.format("%s-djcontrol", self.id), "note", {b.num, state, b.ch})
+	 -- The ccmaster button is actually a whole range of pads.
+	 -- This assumes that the device has at most 8 pads.
+	 local num_buttons = k == "ccmaster" and 8 or 1
+	 for offs = 0, num_buttons-1 do
+	    if type(b.ch) == "table" then
+	       pd.send(string.format("%s-djcontrol", self.id), "note", {b.num+offs, state, b.ch[1]})
+	       pd.send(string.format("%s-djcontrol", self.id), "note", {b.num+offs, state, b.ch[2]})
+	    else
+	       pd.send(string.format("%s-djcontrol", self.id), "note", {b.num+offs, state, b.ch})
+	    end
 	 end
       end
    end
@@ -2750,11 +2755,14 @@ function raptor:djcontrol_state_fini()
    -- turn all buttons off
    if djcontrol ~= 0 and self.master and self.id == self.master then
       for k, b in pairs(djcontrol_button) do
-	 if type(b.ch) == "table" then
-	    pd.send(string.format("%s-djcontrol", self.id), "note", {b.num, 0, b.ch[1]})
-	    pd.send(string.format("%s-djcontrol", self.id), "note", {b.num, 0, b.ch[2]})
-	 else
-	    pd.send(string.format("%s-djcontrol", self.id), "note", {b.num, 0, b.ch})
+	 local num_buttons = k == "ccmaster" and 8 or 1
+	 for offs = 0, num_buttons-1 do
+	    if type(b.ch) == "table" then
+	       pd.send(string.format("%s-djcontrol", self.id), "note", {b.num+offs, 0, b.ch[1]})
+	       pd.send(string.format("%s-djcontrol", self.id), "note", {b.num+offs, 0, b.ch[2]})
+	    else
+	       pd.send(string.format("%s-djcontrol", self.id), "note", {b.num+offs, 0, b.ch})
+	    end
 	 end
       end
    end
