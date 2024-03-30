@@ -30,7 +30,7 @@ local raptor = pd.Class:new():register("raptor")
 -- everything, including note input. Output goes to the Pd console.
 -- NOTE: To debug the internal state of the arpeggiator object, including
 -- pattern changes and note generation, use the arp.debug setting below.
-local debug_level = 1
+local debug_level = 0
 
 -- Special device support. At present, these all work together nicely, so we
 -- have them all enabled by default. But you can turn them on an off
