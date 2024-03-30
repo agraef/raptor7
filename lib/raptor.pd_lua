@@ -3756,6 +3756,9 @@ function raptor:in_1_ccmaster_next()
       local i = self.ccmaster and self:get_instance(self.ccmaster) or 0
       if i == 0 then
 	 i = 1
+      elseif i == #raptor.instances then
+	 -- leaving i as is will return to omni mode so that we can wrap
+	 -- around next time
       else
 	 i = i % (#raptor.instances) + 1
       end
@@ -3768,6 +3771,9 @@ function raptor:in_1_ccmaster_prev()
       local i = self.ccmaster and self:get_instance(self.ccmaster) or 0
       if i == 0 then
 	 i = #raptor.instances
+      elseif i == 1 then
+	 -- leaving i as is will return to omni mode so that we can wrap
+	 -- around next time
       else
 	 i = (i-2) % (#raptor.instances) + 1
       end
