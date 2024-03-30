@@ -141,6 +141,8 @@ Also note that if you're running multiple Raptor instances, normally MIDI contro
 
 Beyond MIDI learn, Raptor also offers special support for some controllers, as detailed below. This typically includes some hard-wired bindings to select Raptor instances for receiving control data, as well as a custom MIDI map file. It is generally assumed that these devices are in their factory state and are connected to Pd's *second* MIDI input port, so that they don't interfere with MIDI data from your primary input device on the first MIDI input, where you'd typically connect your MIDI keyboard, pad controller, etc. (Note that, in contrast, the MIDI learn facility can map MIDI controls no matter what the input port and MIDI channel is, thus it will work with your primary input device as well as all devices on secondary inputs.)
 
+Amazingly, the special device support included in Raptor right now all works together without any conflicts, so we have them all enabled by default. But if the bindings interfere with your own controllers or if you're worried about the overhead for devices that you don't have, you can easily turn them on and off using the corresponding variables at the beginning of the raptor.pd_lua source file in the lib subdirectory.
+
 #### Novation Launch Control XL
 
 The [Novation Launch Control XL][] is a popular mixer-style controller with lots of knobs and faders, which makes for a nice Raptor control surface, so Raptor has special support for it. To make this work, the Launch Control XL must be set to the first factory preset, and you need to connect it to Pd's second MIDI input port.
@@ -155,9 +157,19 @@ The [AKAI MIDIMIX][] is another popular (and more budget-friendly) controller wh
 
 Note that this mapping is a bit quirky because the MIDIMIX has less buttons. In particular, it lacks a dedicated device select button, so the SOLO button is used as a kind of shift button for selecting Raptor instances instead. To do this, press (and hold) the SOLO button, while you push the BANK LEFT and RIGHT buttons to cycle through the Raptor instances, or the REC ARM buttons labeled 1-8 to directly change to the corresponding instance (or switch back to "omni" if the given instance was already selected).
 
+#### Nektar PACER
+
+The [Nektar PACER][] is a programmable foot controller, which keeps your hands free for playing chords while switching presets and controlling Raptor with your feet. In fact I often use this controller along with a MIDI guitar for playing Raptor, which works pretty well as a live performance setup.
+
+The hard-wired bindings feature Raptor instance switching (stomp 1+2) as well as preset switching (stomp 3+4), while the included MIDI map binds some useful extra functions such as play/loop on stomp 5+6 and gain/gate on the expression pedals; please check the data/pacer.map file for details.
+
+To use this mapping, copy pacer.map to midi.map and make sure that you have selected the D3 KBDTL factory preset on the PACER, and that the controller is connected to Pd's second MIDI input.
+
+NOTE: Our current mapping is pretty basic by design, so that it doesn't require any custom PACER preset; the D3 KBDTL factory preset works best for that purpose. But you can easily edit the factory preset to beef it up a little (or a lot), using François Georgy's excellent online [PACER editor](https://studiocode.dev/pacer-editor).
+
 #### Hercules DJ Control
 
-[Hercules](https://www.hercules.com) offers an entire series of DJ controllers which can be used with Raptor. True to the nature of this very interesting class of devices, the Raptor implementation supports multiple decks and offers some fancy performance controls that are not readily available on the other control surfaces. However, I only have the DJ Control Inpulse 200 MK2 available for testing at the time of this writing, thus support for these devices is still considered experimental. Please check the comments at the beginning of the MIDI mapping in data/djcontrol.map for details.
+[Hercules](https://www.hercules.com) offers an entire series of DJ controllers which can be used with Raptor. True to the nature of this very interesting class of devices, the Raptor implementation supports two decks and offers some fancy performance controls that are not readily available on the other control surfaces. However, I only have the Inpulse 200 MK2  and Inpulse 500 available for testing at the time of this writing, thus support for these devices is still considered a bit experimental, and proper documentation of the many features of the Raptor implementation still needs to be written. But there's a fairly comprehensive overview in the comments at the beginning of the MIDI mapping in data/djcontrol.map, so please check this file for details.
 
 ## Quirks and Limitations
 
@@ -193,6 +205,7 @@ Special support is already available for some devices, but it's always good to h
 [Qsynth]: https://qsynth.sourceforge.io/
 [Novation Launch Control XL]: https://novationmusic.com/products/launch-control-xl
 [AKAI MIDIMIX]: https://www.akaipro.com/midimix
+[Nektar PACER]: https://nektartech.com/pacer-midi-daw-footswitch-controller/
 [Ableton Link]: https://www.ableton.com/link/
 [bug report]: https://github.com/agraef/raptor7/issues
 [pull request]: https://github.com/agraef/raptor7/pulls

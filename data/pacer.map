@@ -1,0 +1,33 @@
+-- -*- mode: lua -*-
+
+-- MIDI map for the Nektar PACER. Albert Gräf <agggraef@gmail.com>, 2024
+
+-- To use this, copy this file to midi.map, connect the PACER to Pd's second
+-- MIDI input, and you should be set.
+
+-- This assumes the D3 KBDTL factor preset of the PACER. The mapping is very
+-- basic, as I wanted to provide something that doesn't require any custom
+-- preset and is simple but convenient. The PACER offers fairly advanced
+-- features, so you may want to edit the factory preset to beef it up a little
+-- (or a lot), using François Georgy's excellent PACER editor available at
+-- https://studiocode.dev/pacer-editor.
+
+-- Note that the stomps 1-4 are hard-wired in the Raptor implementation.
+-- Together with these you have the following bindings (FS 1+2 indicates the
+-- extra foot switches connected to the unit, EXP 1+2 the connected expression
+-- pedals, please check the PACER manual for details):
+
+--         - looper -                      - panel -
+-- [FS 1: load] [FS 2: save]       [EXP 1: gain] [EXP 2: gate]
+
+-- - ccmaster select - - preset select -   - transport/loop -
+-- [1: prev] [2: next] [3: prev] [4: next] [5: play] [6: loop]
+
+{
+  [7] = { [17] = "gain" },
+  [11] = { [17] = "gate" },
+  [68] = { [17] = { "play", true } },
+  [69] = { [17] = { "loop", true } },
+  [80] = { [17] = { "loop-load", true } },
+  [81] = { [17] = { "loop-save", true } },
+}

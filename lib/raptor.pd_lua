@@ -32,40 +32,40 @@ local raptor = pd.Class:new():register("raptor")
 -- pattern changes and note generation, use the arp.debug setting below.
 local debug_level = 1
 
--- launchcontrol: This enables some hard-wired MIDI bindings for the Novation
--- Launch Control XL which makes it easy to switch the global ccmaster (the
--- target instance which receives MIDI-mapped controls if you're running
--- multiple raptor instances, see the MIDI learn and ccmaster ops below).
+-- Special device support. At present, these all work together nicely, so we
+-- have them all enabled by default. But you can turn them on an off
+-- individually by adjusting the corresponding variables below. The different
+-- devices usually have an accompanying custom MIDI map in the data
+-- subdirectory, which you may want to add to your midi.map file. The bindings
+-- all assume that the devices are connected to Pd's *second* MIDI input port,
+-- so that they don't interfere with your primary input controller.
 
--- These bindings will only work if the Launch Control is switched to the
--- first factory preset (which transmits on MIDI channel 9), and is connected
--- to Pd's second MIDI input. It binds the Device Hold + Prev/Next Device
--- Select and Device Hold + Device Bank button combinations so that they will
--- switch the ccmaster accordingly.
+-- For further details about each device, please check the documentation and
+-- the corresponding MIDI map in the data subdirectory.
 
--- For convenience, we have this enabled by default, which shouldn't normally
--- cause any issues, but you can disable this here if you don't need this
--- functionality.
+-- launchcontrol: Special support for the Novation Launch Control XL. This
+-- requires that the Launch Control is switched to the first factory preset
+-- (which transmits on MIDI channel 9), and is connected to Pd's second MIDI
+-- input. It binds the Device Hold + Prev/Next Device Select and Device Hold +
+-- Device Bank button combinations so that they will switch the ccmaster
+-- accordingly.
 local launchcontrol = 1
 
 -- midimix: Special support for the AKAI Professional MIDIMIX. This works
 -- pretty much like the Launch Control XL support above. The MIDIMIX needs to
--- be on factory settings and connected to Pd's second MIDI input.
-
--- The MIDIMIX binding is a bit quirky as the device lacks some of the buttons
--- that the Launch Control XL has. The SOLO button is used as a shift button
--- in lieu of the Launch Control's Device Hold button. SOLO + BANK LEFT/RIGHT
--- and SOLO + REC ARM 1-8 can then be used to switch the ccmaster.
+-- be on factory settings. The SOLO button is used as a shift button, thus
+-- SOLO + BANK LEFT/RIGHT and SOLO + REC ARM 1-8 switches the ccmaster.
 local midimix = 1
 
--- djcontrol: Special support for the Hercules DJControl devices (experimental).
+-- pacer: Special support for the Nektar PACER. This requires the D3 KBDTL
+-- preset to be loaded on the PACER. It maps stomp switches 1+2 to ccmaster
+-- prev/next and 3+4 to prev/next preset.
+local pacer = 1
 
--- In particular, this maps the big BROWSER encoder and the two jog wheels
--- (the "turntables"), and filters out messages based on the assigned deck
--- number. It also provides some feedback on the PLAY keys to indicate which
--- deck is the time measter, and flashes the backlight of the encoder with the
--- rhythm. Tested with the DJControl Inpulse 200 MK2, other similar devices
--- might need some work.
+-- djcontrol: Special support for the Hercules DJ Control devices. Various
+-- parameters for the implementation can be adjusted with the additional
+-- variables below. Currently tested (and known to work) with the DJ Control
+-- Inpulse 200 MK2 and Inpulse 500 devices.
 local djcontrol = 1
 
 -- The rhythm backlight could get rather busy with complex meters, so we only
@@ -83,8 +83,13 @@ local djcontrol_n_pulses = 7
 -- up. The default value of 10 seems to be about right for me, but YMMV.
 local djcontrol_scrub_factor = 10
 
+-- -------------------------------------------------------------------------
+
 -- make sure that this is set if any of the above is enabled
-local have_control = launchcontrol ~= 0 or midimix ~= 0 or djcontrol ~= 0
+local have_control = launchcontrol ~= 0 or midimix ~= 0 or
+   pacer ~= 0 or djcontrol ~= 0
+
+-- -------------------------------------------------------------------------
 
 -- For MIDI pass-through, we filter out MIDI data from port #2 by default, if
 -- any of the control surfaces is enabled. This prevents control surface data
@@ -2676,6 +2681,45 @@ function raptor:midimix_ctl(atoms)
    return false
 end
 
+-- Nektar PACER
+
+function raptor:pacer_note(atoms)
+   -- pass
+   return false
+end
+
+function raptor:pacer_ctl(atoms)
+   local val, num, ch = table.unpack(atoms)
+   if ch == 17 then
+      if val > 0 then
+	 local id = self.id
+	 -- 64, 65 (Stomp 1+2) = prev, next ccmaster
+	 -- 66, 67 (Stomp 3+4) = prev, next preset
+	 if num == 64 then
+	    self:in_1_ccmaster_prev()
+	 elseif num == 65 then
+	    self:in_1_ccmaster_next()
+	 elseif num == 66 then
+	    if self:check_ccmaster() then
+	       local i = self.presetno and self.presetno or 1
+	       i = i-1
+	       self:recall_preset(i)
+	    end
+	 elseif num == 67 then
+	    if self:check_ccmaster() then
+	       local i = self.presetno and self.presetno or 1
+	       i = i+1
+	       self:recall_preset(i)
+	    end
+	 else
+	    return false
+	 end
+      end
+      return true
+   end
+   return false
+end
+
 -- Hercules DJControl (experimental)
 
 function raptor:djcontrol_init()
@@ -3123,6 +3167,10 @@ function raptor:process_note(atoms)
    if res then
       return res
    end
+   res = pacer ~= 0 and self:pacer_note(atoms)
+   if res then
+      return res
+   end
    -- always put djcontrol last since it also filters out messages, which
    -- might interfere with the other controllers
    res = djcontrol ~= 0 and self:djcontrol_note(atoms)
@@ -3138,6 +3186,10 @@ function raptor:process_ctl(atoms)
       return res
    end
    res = midimix ~= 0 and self:midimix_ctl(atoms)
+   if res then
+      return res
+   end
+   res = pacer ~= 0 and self:pacer_ctl(atoms)
    if res then
       return res
    end
