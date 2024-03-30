@@ -1,0 +1,20 @@
+-- -*- mode: lua -*-
+
+-- MIDI map for the AKAI MPK mini plus keyboard.
+-- Albert Gräf <agggraef@gmail.com>, 30 March 2024
+
+-- To use this, load the map in Raptor and connect the MPK mini plus to Pd's
+-- first MIDI input. It maps the MPK's transport buttons as follows:
+-- PLAY = play, REC = loop, STOP = mute, << = rewind, >> = pulse
+
+-- The MPK mini plus doesn't enough buttons to do anything more comprehensive,
+-- and your bindings are as good as mine, so feel free to change these as
+-- needed. But it should at least give you a decent starting point.
+
+{
+  [115] = { [1] = { "rewind", true } },
+  [116] = { [1] = { "pulse", true } },
+  [117] = { [1] = { "mute", true } },
+  [118] = { [1] = { "play", true } },
+  [119] = { [1] = { "loop", true } },
+}
