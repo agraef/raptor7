@@ -2956,18 +2956,19 @@ function raptor:djcontrol_note(atoms)
       elseif num >= 16 and num < 24 then
 	 -- unshifted pads in mode 2 (labeled "STEMS" on the MK2), we use these
 	 -- to do ccmaster switches
-	 if check and val > 0 then
-	    -- This is a bit tricky, since this request is going to be processed
-	    -- in a single random instance which might not even have a deck
-	    -- assigned to it. Thus checking self.deck isn't going to do us any
-	    -- good here. Instead, we check if the global decks table is empty,
-	    -- in which case we do a regular instance switch, otherwise we try
-	    -- to locate an instance for the deck indicated by the message. This
-	    -- should do the right thing in most cases. But note that if you're
-	    -- running an ensemble where some raptors have a deck assigned to
-	    -- them, while others have not, then djcontrol won't give you access
-	    -- to all those instances. (As a remedy, you can still use a
-	    -- secondary controller like the MIDIMIX for that purpose.)
+	 if val > 0 then
+	    -- This is a bit tricky, since this request is going to be
+	    -- processed in a single random instance which might not even have
+	    -- a deck assigned to it. Thus checking self.deck isn't going to
+	    -- do us any good here. Instead, we check if the global decks
+	    -- table is empty, in which case we do a regular instance switch,
+	    -- otherwise we try to locate an instance for the deck indicated
+	    -- by the message. This should do the right thing in most
+	    -- cases. But note that if you're running an ensemble where some
+	    -- raptors have a deck assigned to them, while others have not,
+	    -- then djcontrol won't give you access to all those
+	    -- instances. (As a remedy, you can still use a secondary
+	    -- controller like the MIDIMIX for that purpose.)
 	    local i = next(raptor.decks) == nil and num-15 or
 	       self:locate_deck_i(num-15, deck)
 	    self:in_1_ccmaster_set({i})
