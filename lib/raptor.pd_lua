@@ -2815,6 +2815,12 @@ end
 -- state updates
 
 function raptor:djcontrol_state(button, state, deck, offs)
+   if not self.id then
+      -- This is very early on when the id hasn't been set yet, but we need it
+      -- in order to send messages to the djcontrol subpatch. Just bail out at
+      -- this point, there's not much else that we can do...
+      return
+   end
    if djcontrol ~= 0 then
       offs = offs and offs or 0
       if deck then
