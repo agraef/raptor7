@@ -135,25 +135,33 @@ You can also first operate the control in the patch and then the MIDI control, i
 
 The learned MIDI binding will be in effect immediately, in *all* running Raptor instances. It will also be stored in the midi.map file in the data directory, from where all bindings will be reloaded next time you fire up Raptor. Note that while it's possible to map different MIDI controls to the same Raptor parameter, at present you can't have a MIDI control affect multiple parameters at once (no macro controls, sorry!).
 
-Also note that if you're running multiple Raptor instances, normally MIDI controls will affect them all, so their parameters will change in lockstep. If you want to operate a single Raptor instance instead, you can click the unlabeled button in the top left corner of the panel. The button will turn blue to indicate that only this instance is now receiving the control data. You can switch instances at any time, and clicking the blue button again will return the Raptor controls to omni mode, in which all instances receive the control data.
+Also note that if you're running multiple Raptor instances, normally MIDI controls will affect them all, so their parameters will change in lockstep. If you want to operate a single Raptor instance instead, you can click the unlabeled button in the top left corner of the panel. The button will turn blue to indicate that the instance was selected and is now receiving the control data. At most one instance can be selected at any one time, but you can switch instances at any time, and clicking the blue button in the selected instance again will return the Raptor controls to "omni" mode, in which all instances receive the control data.
+
+#### Saving and Loading MIDI Maps
+
+Raptor needs no special operation for *saving* the MIDI map after changes, since this happens automatically. However, once you're done with a specific set of mappings, you may want to store away the midi.map file in the data directory. There's no special operation for this task, but you can accomplish this quite easily with your file manager by copying the data/midi.map file to a new name or location. By these means, you have a backup copy in case you lose your current map, which can also be shared with others if wanted.
+
+Raptor has an operation for *loading* MIDI map files, however, so that you can merge existing map files from your own backup copies or MIDI maps shared by other people into your current MIDI map. Just click the `load map` button beneath the "MIDI Learn" label in the main patch. This opens a file dialog in the data subdirectory, from where you can navigate to any location on your hard disk and open any .map file that you have there. The operation will provide some feedback in the console window about how many bindings were added, and if there were any conflicts where an existing binding had to be modified.
 
 #### Special Device Support
 
-Beyond MIDI learn, Raptor also offers special support for some controllers, as detailed below. This typically includes some hard-wired bindings to select Raptor instances for receiving control data, as well as a custom MIDI map file. It is generally assumed that these devices are in their factory state and are connected to Pd's *second* MIDI input port, so that they don't interfere with MIDI data from your primary input device on the first MIDI input, where you'd typically connect your MIDI keyboard, pad controller, etc. (Note that, in contrast, the MIDI learn facility can map MIDI controls no matter what the input port and MIDI channel is, thus it will work with your primary input device as well as all devices on secondary inputs.)
+Beyond MIDI learn, Raptor also offers special support for some controllers, as detailed below. This typically includes some hard-wired bindings to select Raptor instances for receiving control data, as well as a custom MIDI map file. It is generally assumed that these devices are in their factory state and are connected to Pd's *second* MIDI input port, so that they don't interfere with MIDI data from your primary input device on the first MIDI input, where you'd typically connect your MIDI keyboard, pad controller, etc. (Note that, in contrast, the MIDI learn facility can pick up MIDI data from any input port and MIDI channel, thus it will work with your primary input device as well as all devices on secondary inputs.)
 
-Amazingly, the special device support included in Raptor right now all works together without any conflicts, so we have them all enabled by default. But if the bindings interfere with your own controllers or if you're worried about the overhead for devices that you don't have, you can easily turn them on and off using the corresponding variables at the beginning of the raptor.pd_lua source file in the lib subdirectory.
+Amazingly, the special device support included in Raptor right now all works together without any conflicts, so we have them all enabled by default. But if the bindings interfere with your own controllers or if you're worried about the overhead for devices that you don't have, you can easily turn them off using the corresponding variables at the beginning of the raptor.pd_lua source file in the lib subdirectory.
+
+All devices that are supported right now come with corresponding MIDI maps, which you should load using the `load map` button described above, if you want the full experience. (Otherwise most device implementations only offer a few essential bindings, typically stuff that can't be mapped using MIDI learn.)
 
 #### Novation Launch Control XL
 
 The [Novation Launch Control XL][] is a popular mixer-style controller with lots of knobs and faders, which makes for a nice Raptor control surface, so Raptor has special support for it. To make this work, the Launch Control XL must be set to the first factory preset, and you need to connect it to Pd's second MIDI input port.
 
-The Launch Control XL support consists of two parts. First, there's a launchcontrol.map file in the data directory with ready-made MIDI bindings for the device. To use it, just copy that file to midi.map and you should be set. Check the comments at the beginning of the file for information on the bindings.
+The Launch Control XL support consists of two parts. First, there's a launchcontrol.map file in the data directory with ready-made MIDI bindings for the device that you can load. Check the comments at the beginning of the file for information on the bindings.
 
 Second, Raptor includes some hard-wired MIDI bindings for the Launch Control which let you switch the target Raptor instance for MIDI control easily and quickly. To do this, press (and hold) the "Device Hold" button, while you push one of the "Device Select" (left/right) buttons to cycle through the Raptor instances, or the "Device Bank" buttons labeled 1-8 to directly change to the corresponding instance (or switch back to "omni" if the given instance was already selected).
 
 #### AKAI Professional MIDIMIX
 
-The [AKAI MIDIMIX][] is another popular (and more budget-friendly) controller which has a very similar layout to the Launch Control XL. Raptor includes support for this device as well, consisting of a MIDI mapping and some hard-wired bindings for switching Raptor instances. These assume that the device uses the factory configuration. A description of the mapping can be found in the midimix.map file in the data directory. To use this mapping, copy the file to midi.map and make sure that the MIDIMIX is connected to Pd's second MIDI input.
+The [AKAI MIDIMIX][] is another popular (and more budget-friendly) controller which has a very similar layout to the Launch Control XL. Raptor includes support for this device as well, consisting of a MIDI mapping and some hard-wired bindings for switching Raptor instances. These assume that the device uses the factory configuration. A description of the mapping can be found in the midimix.map file in the data directory. To use this mapping, load the map file and make sure that the MIDIMIX is connected to Pd's second MIDI input.
 
 Note that this mapping is a bit quirky because the MIDIMIX has less buttons. In particular, it lacks a dedicated device select button, so the SOLO button is used as a kind of shift button for selecting Raptor instances instead. To do this, press (and hold) the SOLO button, while you push the BANK LEFT and RIGHT buttons to cycle through the Raptor instances, or the REC ARM buttons labeled 1-8 to directly change to the corresponding instance (or switch back to "omni" if the given instance was already selected).
 
@@ -163,13 +171,15 @@ The [Nektar PACER][] is a programmable foot controller, which keeps your hands f
 
 The hard-wired bindings feature Raptor instance switching (stomp 1+2) as well as preset switching (stomp 3+4), while the included MIDI map binds some useful extra functions such as play/loop on stomp 5+6 and gain/gate on the expression pedals; please check the data/pacer.map file for details.
 
-To use this mapping, copy pacer.map to midi.map and make sure that you have selected the D3 KBDTL factory preset on the PACER, and that the controller is connected to Pd's second MIDI input.
+To use this mapping, load pacer.map and make sure that you have selected the D3 KBDTL factory preset on the PACER, and that the controller is connected to Pd's second MIDI input.
 
-NOTE: Our current mapping is pretty basic by design, so that it doesn't require any custom PACER preset; the D3 KBDTL factory preset works best for that purpose. But you can easily edit the factory preset to beef it up a little (or a lot), using François Georgy's excellent online [PACER editor](https://studiocode.dev/pacer-editor).
+NOTE: Our current mapping is pretty basic by design, so that it doesn't require any custom PACER preset. The D3 KBDTL factory preset works best for that purpose. But you can easily edit the factory preset to beef it up a little (or a lot), using François Georgy's excellent online [PACER editor](https://studiocode.dev/pacer-editor).
 
 #### Hercules DJ Control
 
-[Hercules](https://www.hercules.com) offers an entire series of DJ controllers which can be used with Raptor. True to the nature of this very interesting class of devices, the Raptor implementation supports two decks and offers some fancy performance controls that are not readily available on the other control surfaces. However, I only have the Inpulse 200 MK2  and Inpulse 500 available for testing at the time of this writing, thus support for these devices is still considered a bit experimental, and proper documentation of the many features of the Raptor implementation still needs to be written. But there's a fairly comprehensive overview in the comments at the beginning of the MIDI mapping in data/djcontrol.map, so please check this file for details.
+[Hercules](https://www.hercules.com) offers an entire series of DJ controllers which can be used with Raptor. True to the nature of this very interesting class of devices, the Raptor implementation supports two decks and offers some fancy performance controls that are not readily available on the other control surfaces. This is the most comprehensive device support to date, which ties in deeply with Raptor's internal interfaces, and also includes device feedback (flashing blinkenlights galore) if you connect the controller to Pd's second MIDI output port.
+
+However, because the Raptor implementation is so complicated, and I only have the Inpulse 200 MK2 and Inpulse 500 available for testing right now, support for these devices is still considered a bit experimental. Also, proper documentation of its many features still needs to be written. There's a fairly comprehensive overview in the comment section at the beginning of the MIDI map in data/djcontrol.map, though, so please check that file for details if you want to give it a go.
 
 ## Quirks and Limitations
 
@@ -191,7 +201,7 @@ Overdubbing and more advanced loop editing capabilities would be nice to have; b
 
 In a similar vein, Raptor's MIDI learn facility is also fairly basic. It's only possible to map MIDI CC and note messages at present. Having support for other kinds of messages such as aftertouch could be useful; we might add this in a future update. Also, there's no support for macro controls. That's unlikely to change in the near future, as it would complicate usage and require some GUI integration in order to adjust the macro value mapping.
 
-Special support is already available for some devices, but it's always good to have more, and there are plenty of awesome MIDI controllers on the market these days. Thus, if anyone can contribute MIDI maps or special support for other devices (or alternative bindings for the existing ones), please submit a [pull request][]!
+Special support is already available for some devices, but it's always good to have more. There is an abundance of awesome MIDI devices on the market these days which make for good Raptor controllers. Obviously, I can't support more than a tiny fraction of them myself. Thus, please share your MIDI maps or special support for other devices (or alternative bindings for the existing ones) in any way that's convenient for you, and let me know (or, preferably, please submit a [pull request][])!
 
 
 [ICMC 2006 paper]: https://github.com/agraef/raptor7/blob/main/scale.pdf

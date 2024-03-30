@@ -36,7 +36,7 @@ local debug_level = 0
 -- have them all enabled by default. But you can turn them on an off
 -- individually by adjusting the corresponding variables below. The different
 -- devices usually have an accompanying custom MIDI map in the data
--- subdirectory, which you may want to add to your midi.map file. The bindings
+-- subdirectory, which you may want to load inside Raptor. The bindings
 -- all assume that the devices are connected to Pd's *second* MIDI input port,
 -- so that they don't interfere with your primary input controller.
 
@@ -58,8 +58,8 @@ local launchcontrol = 1
 local midimix = 1
 
 -- pacer: Special support for the Nektar PACER. This requires the D3 KBDTL
--- preset to be loaded on the PACER. It maps stomp switches 1+2 to ccmaster
--- prev/next and 3+4 to prev/next preset.
+-- preset to be set on the PACER. It maps stomp switches 1+2 to ccmaster
+-- prev/next and stomps 3+4 to prev/next preset.
 local pacer = 1
 
 -- djcontrol: Special support for the Hercules DJ Control devices. Various
@@ -3476,18 +3476,45 @@ function raptor:cctostring(cc, ch)
    end
 end
 
-function raptor:load_map()
-   local fname = self._canvaspath .. "data/" .. midimap_name
+function raptor:load_map(fname2)
+   local fname = fname2 and fname2 or self._canvaspath .. "data/" .. midimap_name
    local fp = io.open(fname, "r")
    if fp then
       local midi_map = fp:read("a")
       if midi_map then
+	 local function check_map(midi_map)
+	    if type(midi_map) ~= "table" then
+	       return false
+	    end
+	    for cc, map in pairs(midi_map) do
+	       if type(map) ~= "table" or type(cc) ~= "number" or math.floor(cc) ~= cc or cc < 0 or cc > 256 then
+		  return false
+	       end
+	       for ch, v in pairs(map) do
+		  local var, tgl
+		  if type(v) == "table" then
+		     var, tgl = table.unpack(v)
+		  else
+		     var, tgl = v, nil
+		  end
+		  if type(var) ~= "string" or (tgl and type(tgl) ~= "boolean") or type(ch) ~= "number" or math.floor(ch) ~= ch or ch < 1 or ch > 128 then
+		     return false
+		  end
+	       end
+	    end
+	    return true
+	 end
 	 local f = load("return " .. midi_map)
 	 if type(f) == "function" then
 	    midi_map = f()
 	    -- do some quick plausability checks
-	    if type(midi_map) == "table" then
-	       self.midi_map = midi_map
+	    if check_map(midi_map) then
+	       if fname2 then
+		  fp:close()
+		  return midi_map
+	       else
+		  self.midi_map = midi_map
+	       end
 	    end
 	 end
       end
@@ -3696,6 +3723,56 @@ function raptor:in_1_unlearn()
       self:map_mode(1)
       print("MIDI learn mode, send MIDI or wiggle a control")
       print("press learn again to abort")
+   end
+end
+
+function raptor:in_1_open_map()
+   if self.id then
+      local dir = self._canvaspath .. "data"
+      pd.send(string.format("%s-open-map", self.id), "symbol", {dir})
+   end
+end
+
+function raptor:in_1_merge_map(atoms)
+   if type(atoms[1]) == "string" then
+      local fname = atoms[1]
+      local mmap = self:load_map(fname)
+      if mmap then
+	 local function merge(mmap)
+	    local k, p, q = 0, 0, 0
+	    for cc, map in pairs(mmap) do
+	       for ch, v in pairs(map) do
+		  k = k+1
+		  local var, tgl
+		  if type(v) == "table" then
+		     var, tgl = table.unpack(v)
+		  else
+		     var, tgl = v, nil
+		  end
+		  local var2, tgl2 = self:map_get(cc, ch)
+		  if var2 then
+		     if var2 ~= var or tgl2 ~= tgl then
+			p = p+1
+			q = q+1
+			print(string.format("%s remapped from %s%s to %s%s", self:cctostring(cc, ch), var2, tgl2 and " [toggle]" or "", var, tgl and " [toggle]" or ""))
+			self:map_set(cc, ch, var, tgl)
+		     end
+		  else
+		     p = p+1
+		     self:map_set(cc, ch, var, tgl)
+		  end
+	       end
+	    end
+	    return k, p, q
+	 end
+	 local k, p, q = merge(mmap)
+	 print(string.format("added %d/%d mapping%s, %s conflict%s", p, k, p==1 and "" or "s", q>0 and tostring(q) or "no", q==1 and "" or "s"))
+	 if p > 0 then
+	    self:save_map()
+	 end
+      else
+	 self:error("couldn't load " .. fname)
+      end
    end
 end
 

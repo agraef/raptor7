@@ -2,7 +2,7 @@
 
 -- MIDI map for the AKAI MIDIMIX. Albert Gräf <agggraef@gmail.com>, 2024
 
--- To use this, copy this file to midi.map, connect the MIDIMIX to Pd's second
+-- To use this, load this map in Raptor, connect the MIDIMIX to Pd's second
 -- MIDI input, and you should be set.
 
 -- This is similar to the Launch Control XL map. The mapping of the knobs and

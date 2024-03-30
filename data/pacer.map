@@ -2,7 +2,7 @@
 
 -- MIDI map for the Nektar PACER. Albert Gräf <agggraef@gmail.com>, 2024
 
--- To use this, copy this file to midi.map, connect the PACER to Pd's second
+-- To use this, load this map in Raptor, connect the PACER to Pd's second
 -- MIDI input, and you should be set.
 
 -- This assumes the D3 KBDTL factor preset of the PACER. The mapping is very

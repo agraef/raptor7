@@ -5,17 +5,18 @@
 --[[
 
    This is preliminary, to complement the hard-wired controls with some
-   essential functions. This comment section here also serves as the missing
-   manual for the DJ Control support in Raptor, while proper documentation
-   still needs to be written.
+   essential or at least convenient functions. This comment section here also
+   serves as the missing manual for the DJ Control support in Raptor, while
+   proper documentation still needs to be written.
 
-   As with the other controller mappings, you can use this by copying the
-   djcontrol.map file to midi.map and making sure that your DJ Control device
-   is hooked up to Pd's second MIDI input port. If you want to enjoy the
-   blinkenlights (see FEEDBACK below), make sure that you hook it up to Pd's
-   second MIDI *output* port as well. This gives you valuable information
+   As with the other controller mappings, you can use this by loading the
+   djcontrol.map file in Raptor and making sure that your DJ Control device is
+   hooked up to Pd's second MIDI input port. If you want to enjoy the
+   blinkenlights (see FEEDBACK below), you need to hook it up to Pd's second
+   MIDI *output* port as well. This isn't just for the light show (although
+   that certainly is a cool byproduct), it also gives you valuable information
    about Raptor's state without having to stare at the computer screen, which
-   is always nice when performing with the device.
+   is always nice in a live performance.
 
    NOTES:
 
