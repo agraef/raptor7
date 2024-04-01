@@ -43,6 +43,11 @@ local debug_level = 0
 -- For further details about each device, please check the documentation and
 -- the corresponding MIDI map in the data subdirectory.
 
+-- launchpad: Special support for the Novation Launchpad Pro. (Only tested
+-- with the MK3 version of the device.) NOTE: This needs its own MIDI port.
+-- Connect input and output to port #3.
+local launchpad = 1
+
 -- launchcontrol: Special support for the Novation Launch Control XL. This
 -- requires that the Launch Control is switched to the first factory preset
 -- (which transmits on MIDI channel 9), and is connected to Pd's second MIDI
@@ -86,7 +91,7 @@ local djcontrol_scrub_factor = 10
 -- -------------------------------------------------------------------------
 
 -- make sure that this is set if any of the above is enabled
-local have_control = launchcontrol ~= 0 or midimix ~= 0 or
+local have_control = launchpad ~= 0 or launchcontrol ~= 0 or midimix ~= 0 or
    pacer ~= 0 or djcontrol ~= 0
 
 -- -------------------------------------------------------------------------
@@ -2197,11 +2202,21 @@ function raptor:initialize(sel, atoms)
    -- initialize the note-off timer
    self.clock = pd.Clock:new():register(self, "notes_off")
 
-   -- initialize and kick off the djcontrol initialization timer
-   self.init_clock = pd.Clock:new():register(self, "djcontrol_state_init")
+   -- initialize the launchpad fader timer
+   self.launchpad_clock = pd.Clock:new():register(self, "launchpad_fader_timer_cb")
+
+   -- initialize and kick off the launchpad/djcontrol initialization timer
+   self.init_clock = pd.Clock:new():register(self, "late_init")
    self.init_clock:delay(500)
 
    return true
+end
+
+function raptor:late_init()
+   -- launchpad initialization
+   self:launchpad_init()
+   -- djcontrol initialization
+   self:djcontrol_state_init()
 end
 
 function raptor:check_ccmaster(var)
@@ -2222,6 +2237,7 @@ function raptor:finalize()
    self.init_clock:destruct()
    self.clock:destruct()
    self.recv:destruct()
+   self:launchpad_fini()
    self:djcontrol_state_fini()
    if self.ccmaster and self:check_ccmaster() then
       -- tell all running raptors that we're back to omni
@@ -2592,11 +2608,246 @@ end
 -- here. Everything else should go into the corresponding MIDI map.
 
 -- NOTE: We always assume controllers to be connected to Pd's MIDI input port
--- #2, so that the note and CC messages from the device don't interfere with
--- messages from the primary MIDI input devices on port #1 (typically a MIDI
--- keyboard, pad controller, or other note input device). Therefore the Pd
--- MIDI channel that we're listening to is something like 16+n where n is the
+-- #2 (or port #3, in the case of the Launchpad), so that the note and CC
+-- messages from the device don't interfere with messages from the primary
+-- MIDI input devices on port #1 (typically a MIDI keyboard, pad controller,
+-- or other note input device). Therefore the Pd MIDI channel that we're
+-- listening to is something like 16+n (32+n for the Launchpad) where n is the
 -- actual MIDI channel number(s) of the device.
+
+-- Launchpad Pro
+
+-- This doesn't touch any of the custom modes, it works entirely in DAW
+-- a.k.a. session mode.
+
+function raptor:launchpad_init()
+   if launchpad ~= 0 and self.master and self.id == self.master then
+      -- switch the Launchpad into DAW/session mode
+      self:outlet(1, "sysex", {0, 32, 41, 2, 14, 16, 1})
+      -- light up all buttons
+      local color = {5, 3, 1, 1, 5, 9, 45, 45}
+      for i = 1, 8 do
+	 -- left- and rightmost columns in white
+	 self:outlet(1, "note", {10*i, color[i], 33})
+	 self:outlet(1, "note", {10*i+9, 1, 33})
+      end
+      color = {5, 61, 21, 60, 62, 64, 66, 32}
+      for i = 1, 8 do
+	 -- lower bottom row
+	 self:outlet(1, "note", {i, color[i], 33})
+	 -- upper bottom row
+	 self:outlet(1, "note", {i+100, 45, 33})
+      end
+      -- left and right buttons in the top row
+      self:outlet(1, "note", {91, 45, 33})
+      self:outlet(1, "note", {92, 45, 33})
+      -- launch grid
+      for i = 1, 8 do
+	 for j = 1, 8 do
+	    self:outlet(1, "note", {i*10+j, 36, 33})
+	 end
+      end
+      -- drum grid
+      for i = 0, 63 do
+	 local color = 8*(i//16)+33
+	 self:outlet(1, "note", {i+36, color, 41})
+      end
+      -- set up the fader banks
+      color = {60, 62, 64, 66}
+      for b = 0, 3 do
+	 for i = 0, 7 do
+	    -- map out the controls in a way that's compatible with the Launch
+	    -- Control XL (factor preset 1); b = 0 = Volume, 1 = Pan
+	    -- (bipolar), 2 = Send A (Send), 3 = Send B (Device)
+	    local j = (b==0 and 76 or b==1 and 48 or b==2 and 12 or 28) + i + 1
+	    self:outlet(1, "sysex", {0, 32, 41, 2, 14, 1, b, 0, i, b==1 and 1 or 0, j, color[b+1]})
+	 end
+      end
+      -- switch to drums mode
+      self.launchpad_drums = true
+      self:outlet(1, "sysex", {0, 32, 41, 2, 14, 0, 2})
+   end
+end
+
+function raptor:launchpad_fini()
+   if launchpad ~= 0 and self.master and self.id == self.master then
+      -- turn off all buttons
+      for i = 1, 8 do
+	 -- left- and rightmost columns
+	 self:outlet(1, "note", {10*i, 0, 33})
+	 self:outlet(1, "note", {10*i+9, 0, 33})
+      end
+      for i = 1, 8 do
+	 -- lower bottom row
+	 self:outlet(1, "note", {i, 0, 33})
+	 -- upper bottom row
+	 self:outlet(1, "note", {i+100, 0, 33})
+      end
+      -- left and right buttons in the top row
+      self:outlet(1, "note", {91, 0, 33})
+      self:outlet(1, "note", {92, 0, 33})
+      -- launch grid will be turned off automatically with the sysex
+      -- drum grid
+      for i = 0, 63 do
+	 self:outlet(1, "note", {i+36, 0, 41})
+      end
+      -- switch the Launchpad back into standalone mode
+      self:outlet(1, "sysex", {0, 32, 41, 2, 14, 16, 0})
+   end
+end
+
+function raptor:launchpad_note(atoms)
+   local num, val, ch = table.unpack(atoms)
+   if ch == 33 then -- channel 1 on port #3
+      print("note", table.unpack(atoms))
+      return true
+   elseif ch == 41 then -- channel 9 on port #3 (drum mode)
+      atoms[3] = 10
+      return atoms
+   end
+   return false
+end
+
+function raptor:launchpad_fader_timer_cb()
+   -- switch to long-press state
+   self.launchpad_momentary = 1
+end
+
+function raptor:launchpad_fader_timer_off()
+   if self.launchpad_momentary == 0 then
+      self.launchpad_clock:unset()
+      self.launchpad_momentary = nil
+   end
+end
+
+function raptor:launchpad_fader_page(page)
+   if page then
+      -- switch to the new page
+      self:outlet(1, "sysex", {0, 32, 41, 2, 14, 0, 1, page, 0})
+      self.launchpad_faders = page
+      -- kick off the momentary timer, initial state 0 (waiting for timer)
+      self.launchpad_momentary = 0
+      -- threshold for momentary changes
+      self.launchpad_clock:delay(500)
+   else
+      -- switch back to the previous non-fader page
+      local l, p = self.launchpad_page and table.unpack(self.launchpad_page) or 0, 0
+      self:outlet(1, "sysex", {0, 32, 41, 2, 14, 0, l, p, 0})
+      self.launchpad_faders = -1
+      -- kill off the timer if needed
+      self:launchpad_fader_timer_off()
+   end
+end
+
+function raptor:launchpad_ctl(atoms)
+   local val, num, ch = table.unpack(atoms)
+   if ch == 33 then
+      if num == 8 then
+	 if val > 0 then
+	    -- Stop Clip toggles drum mode
+	    self.launchpad_drums = not self.launchpad_drums
+	    local flag = self.launchpad_drums and 2 or 1
+	    self:outlet(1, "sysex", {0, 32, 41, 2, 14, 0, flag})
+	 end
+      elseif num >= 4 and num <= 7 then
+	 if val > 0 then
+	    -- switch to one of the four fader banks:
+	    -- volumes, pans, sends, devices
+	    local page = num-4
+	    local old_page = self.launchpad_faders and self.launchpad_faders or -1
+	    if page ~= old_page then
+	       -- switch to the new page
+	       self:launchpad_fader_page(page)
+	    else
+	       -- switch back to the previous non-fader page
+	       self:launchpad_fader_page()
+	    end
+	 elseif self.launchpad_momentary == 0 then
+	    -- still momentary, cancel the timer
+	    self:launchpad_fader_timer_off()
+	 elseif self.launchpad_momentary == 1 then
+	    -- timer has triggered already, so we're in long-press state where
+	    -- we switch back to the previous non-fader page as soon as the
+	    -- button is released (which we just detected)
+	    self:launchpad_fader_page()
+	 end
+      elseif num == 91 then
+	 if val > 0 then
+	    self:in_1_ccmaster_prev()
+	 end
+      elseif num == 92 then
+	 if val > 0 then
+	    self:in_1_ccmaster_next()
+	 end
+      elseif num == 80 then
+	 if val > 0 and self:check_ccmaster() then
+	    local i = self.presetno and self.presetno or 1
+	    i = i-1
+	    self:recall_preset(i)
+	 end
+      elseif val > 0 and num == 70 then
+	 if self:check_ccmaster() then
+	    local i = self.presetno and self.presetno or 1
+	    i = i+1
+	    self:recall_preset(i)
+	 end
+      elseif num >= 101 and num <= 108 then
+	 if val > 0 then
+	    self:in_1_ccmaster_set({num-100})
+	 end
+      else
+	 return false
+      end
+      return true
+   elseif ch == 37 then
+      -- output from faders
+      return atoms
+   end
+   return false
+end
+
+function raptor:launchpad_sysex(atoms)
+   -- check that this is a Launchpad Pro message
+   local lppro_id = {0, 32, 41, 2, 14}
+   for i = 1, 5 do
+      if atoms[i] ~= lppro_id[i] then
+	 -- not for us, pass
+	 return false
+      end
+   end
+   --print("sysex", table.unpack(atoms))
+   if atoms[6] == 0 then
+      -- layout/page change, we want to record this unless it's a fader page
+      if atoms[7] ~= 1 then
+	 self.launchpad_page = {atoms[7], atoms[8]}
+	 self:launchpad_fader_timer_off()
+      end
+   end
+   return true
+end
+
+-- feedback
+
+function raptor:launchpad_ccmaster(state)
+   if launchpad ~= 0 then
+      local i = self:get_instance()
+      if i > 0 and i <= 8 then
+	 self:outlet(1, "note", {i+100, 45+8*state, 33})
+      end
+   end
+end
+
+function raptor:launchpad_play(state)
+   if launchpad ~= 0 then
+      self:outlet(1, "note", {20, 3+22*state, 33})
+   end
+end
+
+function raptor:launchpad_loop(state)
+   if launchpad ~= 0 then
+      self:outlet(1, "note", {10, 5+24*state, 33})
+   end
+end
 
 -- Launch Control XL
 
@@ -3166,6 +3417,10 @@ end
 -- preprocessing of note and control data using the enabled control surfaces
 
 function raptor:process_note(atoms)
+   local res = launchpad ~= 0 and self:launchpad_note(atoms)
+   if res then
+      return res
+   end
    local res = launchcontrol ~= 0 and self:launchcontrol_note(atoms)
    if res then
       return res
@@ -3188,6 +3443,10 @@ function raptor:process_note(atoms)
 end
 
 function raptor:process_ctl(atoms)
+   local res = launchpad ~= 0 and self:launchpad_ctl(atoms)
+   if res then
+      return res
+   end
    local res = launchcontrol ~= 0 and self:launchcontrol_ctl(atoms)
    if res then
       return res
@@ -3200,7 +3459,13 @@ function raptor:process_ctl(atoms)
    if res then
       return res
    end
-   res = djcontrol ~= 0 and self:djcontrol_ctl(atoms)
+   -- we do the djcontrol separately since it needs a different output handling
+   return false
+end
+
+function raptor:process_sysex(atoms)
+   -- only the Launchpad processes sysex at this time
+   local res = launchpad ~= 0 and self:launchpad_sysex(atoms)
    if res then
       return res
    end
@@ -3247,7 +3512,9 @@ function raptor:in_1_thru(atoms)
 end
 
 function raptor:in_1_note(atoms)
-   if self:process_note(atoms) then
+   local res = self:process_note(atoms)
+   -- launchpad: mapped note gets processed as if it was on input
+   if res and type(res) ~= "table" then
       return
    end
    -- for the purposes of MIDI learn, notes are treated as if they were
@@ -3291,8 +3558,15 @@ end
 
 function raptor:in_1_ctl(atoms)
    local res = self:process_ctl(atoms)
+   if res and type(res) ~= "table" then
+      return
+   elseif res then
+      -- launchpad: mapped CC gets processed as if it was on input
+      goto skip
+   end
+   res = djcontrol ~= 0 and self:djcontrol_ctl(atoms)
    if type(res) == "table" and #res==3 then
-      -- mapped CC, passed through as if it was on input
+      -- djcontrol: mapped CC, passed through as if it was on input
       if self.assert_master or self:check_ccmaster() then
 	 self:outlet(1, "ctl", self:rechan(res))
       end
@@ -3301,6 +3575,7 @@ function raptor:in_1_ctl(atoms)
    elseif res then
       return
    end
+   ::skip::
    if self:check_midi_learn(atoms[1], atoms[2], atoms[3]) or
       self:check_midi_map(atoms[1], atoms[2], atoms[3]) then
       self.assert_master = false
@@ -3375,7 +3650,9 @@ function raptor:in_1_polytouch(atoms)
 end
 
 function raptor:in_1_sysex(atoms)
-   self:outlet(1, "sysex", atoms)
+   local res = self:process_sysex(atoms)
+   -- no pass-through here, this seems dangerous
+   --self:outlet(1, "sysex", atoms)
 end
 
 -- instance parameters (these need special treatment)
@@ -3790,16 +4067,18 @@ function raptor:in_1_ccmaster(atoms)
 	 self.ccmaster = nil
 	 -- give feedback on the panel
 	 pd.send(string.format("%s-ccmaster-status", self.id), "float", {0})
-	 -- djcontrol feedback
+	 -- ccmaster feedback
 	 self:djcontrol_ccmaster(0)
+	 self:launchpad_ccmaster(0)
       else
 	 -- only the given raptor is receiving
 	 self.ccmaster = id
 	 -- give feedback on the panel
 	 flag = self:check_ccmaster() and 1 or 0
 	 pd.send(string.format("%s-ccmaster-status", self.id), "float", {flag})
-	 -- djcontrol feedback
+	 -- ccmaster feedback
 	 self:djcontrol_ccmaster(flag)
+	 self:launchpad_ccmaster(flag)
       end
    else
       -- no ids, assume omni
@@ -3936,10 +4215,11 @@ function raptor:in_1_master(atoms)
    self.master = id
 end
 
--- djcontrol tie-ins
+-- djcontrol and launchpad tie-ins
 
 function raptor:in_1_transport_state(atoms)
    self:djcontrol_play(atoms[1])
+   self:launchpad_play(atoms[1])
 end
 
 function raptor:in_1_sync(atoms)
@@ -4067,8 +4347,9 @@ function raptor:param(var, val)
 	       pd.send(string.format("%s-%s", id, var), "set", {v})
 	    end
 	    if last_loopstate ~= self.arp.loopstate then
-	       -- djcontrol tie-in, updates the LOOP buttons
+	       -- djcontrol and launchpad tie-in, updates the LOOP buttons
 	       self:djcontrol_loop(self.arp.loopstate)
+	       self:launchpad_loop(self.arp.loopstate)
 	    end
 	 end
       end
@@ -4094,8 +4375,9 @@ function raptor:in_1(sel, atoms)
 	 self:outlet(1, res, {val})
       end
       if last_loopstate ~= self.arp.loopstate then
-	 -- djcontrol tie-in, updates the LOOP buttons
+	 -- djcontrol and launchpad tie-in, updates the LOOP buttons
 	 self:djcontrol_loop(self.arp.loopstate)
+	 self:launchpad_loop(self.arp.loopstate)
       end
    else
       if self.midi_learn == 1 and
