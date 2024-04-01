@@ -43,10 +43,15 @@ local debug_level = 0
 -- For further details about each device, please check the documentation and
 -- the corresponding MIDI map in the data subdirectory.
 
--- launchpad: Special support for the Novation Launchpad Pro. (Only tested
--- with the MK3 version of the device.) NOTE: This needs its own MIDI port.
--- Connect input and output to port #3.
+-- launchpad: Special support for the Novation Launchpad. (Probably only works
+-- with recent versions, and only tested with the Pro MK3 so far.) NOTE: This
+-- needs its own MIDI port. Please connect input and output to port #3.
 local launchpad = 1
+
+-- If you know the id (12 = X, 13 = Mini MK3, 14 = Pro MK3) of your Launchpad,
+-- which will make it recognize sysex messages, put it below, otherwise we'll
+-- try to guess it with an identity inquiry sysex at startup.
+local launchpad_id = nil
 
 -- launchcontrol: Special support for the Novation Launch Control XL. This
 -- requires that the Launch Control is switched to the first factory preset
@@ -2205,6 +2210,9 @@ function raptor:initialize(sel, atoms)
    -- initialize the launchpad fader timer
    self.launchpad_clock = pd.Clock:new():register(self, "launchpad_fader_timer_cb")
 
+   -- this one only fires once, some time *after* the launchpad/djcontrol initialization timer
+   self.launchpad_idreq_clock = pd.Clock:new():register(self, "launchpad_idreq_timer_cb")
+
    -- initialize and kick off the launchpad/djcontrol initialization timer
    self.init_clock = pd.Clock:new():register(self, "late_init")
    self.init_clock:delay(500)
@@ -2214,7 +2222,13 @@ end
 
 function raptor:late_init()
    -- launchpad initialization
-   self:launchpad_init()
+   if launchpad_id then
+      self:launchpad_init()
+   else
+      -- device inquiry message (we'll pick up the result later)
+      self:outlet(1, "sysex", {126, 127, 6, 1})
+      self.launchpad_idreq_clock:delay(500)
+   end
    -- djcontrol initialization
    self:djcontrol_state_init()
 end
@@ -2234,6 +2248,8 @@ function raptor:check_ccmaster(var)
 end
 
 function raptor:finalize()
+   self.launchpad_clock:destruct()
+   self.launchpad_idreq_clock:destruct()
    self.init_clock:destruct()
    self.clock:destruct()
    self.recv:destruct()
@@ -2615,7 +2631,7 @@ end
 -- listening to is something like 16+n (32+n for the Launchpad) where n is the
 -- actual MIDI channel number(s) of the device.
 
--- Launchpad Pro
+-- Launchpad
 
 -- This doesn't touch any of the custom modes, it works entirely in DAW
 -- a.k.a. session mode.
@@ -2626,7 +2642,7 @@ local blank, assigned = 0, 36
 function raptor:launchpad_init()
    if launchpad ~= 0 and self.master and self.id == self.master then
       -- switch the Launchpad into DAW/session mode
-      self:outlet(1, "sysex", {0, 32, 41, 2, 14, 16, 1})
+      self:outlet(1, "sysex", {0, 32, 41, 2, launchpad_id, 16, 1})
       -- light up all buttons
       local color = {57, 3, 1, 1, 1, 1, 45, 45}
       for i = 1, 8 do
@@ -2663,9 +2679,11 @@ function raptor:launchpad_init()
 	 end
       end
       -- drum grid
-      for i = 0, 63 do
-	 local color = 8*(i//16)+33
-	 self:outlet(1, "note", {i+36, color, 41})
+      if launchpad_id ~= 13 then -- not available on the Mini
+	 for i = 0, 63 do
+	    local color = 8*(i//16)+33
+	    self:outlet(1, "note", {i+36, color, 41})
+	 end
       end
       self.launchpad_drums = false
       -- set up the fader banks
@@ -2676,7 +2694,7 @@ function raptor:launchpad_init()
 	    -- Control XL (factor preset 1); b = 0 = Volume, 1 = Pan
 	    -- (bipolar), 2 = Send A (Send), 3 = Send B (Device)
 	    local j = (b==0 and 76 or b==1 and 48 or b==2 and 12 or 28) + i + 1
-	    self:outlet(1, "sysex", {0, 32, 41, 2, 14, 1, b, 0, i, b==1 and 1 or 0, j, color[b+1]})
+	    self:outlet(1, "sysex", {0, 32, 41, 2, launchpad_id, 1, b, 0, i, b==1 and 1 or 0, j, color[b+1]})
 	 end
       end
    end
@@ -2705,21 +2723,23 @@ function raptor:launchpad_fini()
 	 self:outlet(1, "note", {i+36, 0, 41})
       end
       -- switch the Launchpad back into standalone mode
-      self:outlet(1, "sysex", {0, 32, 41, 2, 14, 16, 0})
+      self:outlet(1, "sysex", {0, 32, 41, 2, launchpad_id, 16, 0})
    end
 end
 
 function raptor:launchpad_note(atoms)
-   local num, val, ch = table.unpack(atoms)
-   if ch == 33 then -- channel 1 on port #3 (launch grid)
-      if val > 0 then
-	 -- handle like buttons
-	 atoms[2] = 127
+   if launchpad ~= 0 then
+      local num, val, ch = table.unpack(atoms)
+      if ch == 33 then -- channel 1 on port #3 (launch grid)
+	 if val > 0 then
+	    -- handle like buttons
+	    atoms[2] = 127
+	 end
+	 return atoms
+      elseif ch == 41 then -- channel 9 on port #3 (drum grid)
+	 atoms[3] = 10
+	 return atoms
       end
-      return atoms
-   elseif ch == 41 then -- channel 9 on port #3 (drum grid)
-      atoms[3] = 10
-      return atoms
    end
    return false
 end
@@ -2727,6 +2747,25 @@ end
 function raptor:launchpad_fader_timer_cb()
    -- switch to long-press state
    self.launchpad_momentary = 1
+end
+
+local launchpad_check
+
+function raptor:launchpad_idreq_timer_cb()
+   -- disable the Launchpad driver if we didn't get the expected reply
+   -- this will be checked by whatever instance gets here first
+   if launchpad ~= 0 and not launchpad_check then
+      if launchpad_id then
+	 local names = { [12] = "X", [13] = "Mini MK3", [14] = "Pro MK3" }
+	 local name = names[launchpad_id] and names[launchpad_id] or "??"
+	 print(string.format("Launchpad %s detected, driver enabled", name))
+	 self:launchpad_init()
+      else
+	 print("No known Launchpad device detected, driver disabled")
+	 launchpad = 0
+      end
+      launchpad_check = true
+   end
 end
 
 function raptor:launchpad_fader_timer_off()
@@ -2737,109 +2776,151 @@ function raptor:launchpad_fader_timer_off()
 end
 
 function raptor:launchpad_fader_page(page)
-   if page then
-      -- switch to the new page
-      self:outlet(1, "sysex", {0, 32, 41, 2, 14, 0, 1, page, 0})
-      self.launchpad_faders = page
-      -- kick off the momentary timer, initial state 0 (waiting for timer)
-      self.launchpad_momentary = 0
-      -- threshold for momentary changes
-      self.launchpad_clock:delay(500)
-   else
-      -- switch back to the previous non-fader page
-      local l, p = self.launchpad_page and table.unpack(self.launchpad_page) or 0, 0
-      self:outlet(1, "sysex", {0, 32, 41, 2, 14, 0, l, p, 0})
-      self.launchpad_faders = -1
-      -- kill off the timer if needed
-      self:launchpad_fader_timer_off()
+   if launchpad ~= 0 then
+      if page then
+	 -- switch to the new page
+	 self:outlet(1, "sysex", {0, 32, 41, 2, launchpad_id, 0, 1, page, 0})
+	 self.launchpad_faders = page
+	 -- kick off the momentary timer, initial state 0 (waiting for timer)
+	 self.launchpad_momentary = 0
+	 -- threshold for momentary changes
+	 self.launchpad_clock:delay(500)
+      else
+	 -- switch back to the previous non-fader page
+	 local l, p = self.launchpad_page and table.unpack(self.launchpad_page) or 0, 0
+	 self:outlet(1, "sysex", {0, 32, 41, 2, launchpad_id, 0, l, p, 0})
+	 self.launchpad_faders = -1
+	 -- kill off the timer if needed
+	 self:launchpad_fader_timer_off()
+      end
    end
 end
 
 function raptor:launchpad_ctl(atoms)
-   local val, num, ch = table.unpack(atoms)
-   if ch == 33 then
-      if num == 8 then
-	 if val > 0 then
-	    -- Stop Clip toggles drum mode
-	    self.launchpad_drums = not self.launchpad_drums
-	    local flag = self.launchpad_drums and 2 or 1
-	    self:outlet(1, "sysex", {0, 32, 41, 2, 14, 0, flag})
-	 end
-      elseif num >= 4 and num <= 7 then
-	 if val > 0 then
-	    -- switch to one of the four fader banks:
-	    -- volumes, pans, sends, devices
-	    local page = num-4
-	    local old_page = self.launchpad_faders and self.launchpad_faders or -1
-	    if page ~= old_page then
-	       -- switch to the new page
-	       self:launchpad_fader_page(page)
-	    else
-	       -- switch back to the previous non-fader page
+   if launchpad ~= 0 then
+      local val, num, ch = table.unpack(atoms)
+      if ch == 33 then
+	 if num == 8 then
+	    if val > 0 and launchpad_id ~= 13 then -- not available on the Mini
+	       -- toggles drum mode
+	       self.launchpad_drums = not self.launchpad_drums
+	       local flag = self.launchpad_drums and 2 or 1
+	       self:outlet(1, "sysex", {0, 32, 41, 2, launchpad_id, 0, flag})
+	    end
+	 elseif num >= 4 and num <= 7 then
+	    if val > 0 then
+	       -- switch to one of the four fader banks:
+	       -- volumes, pans, sends, devices
+	       local page = num-4
+	       local old_page = self.launchpad_faders and self.launchpad_faders or -1
+	       if page ~= old_page then
+		  -- switch to the new page
+		  self:launchpad_fader_page(page)
+	       else
+		  -- switch back to the previous non-fader page
+		  self:launchpad_fader_page()
+	       end
+	    elseif self.launchpad_momentary == 0 then
+	       -- still momentary, cancel the timer
+	       self:launchpad_fader_timer_off()
+	    elseif self.launchpad_momentary == 1 then
+	       -- timer has triggered already, so we're in long-press state where
+	       -- we switch back to the previous non-fader page as soon as the
+	       -- button is released (which we just detected)
 	       self:launchpad_fader_page()
 	    end
-	 elseif self.launchpad_momentary == 0 then
-	    -- still momentary, cancel the timer
-	    self:launchpad_fader_timer_off()
-	 elseif self.launchpad_momentary == 1 then
-	    -- timer has triggered already, so we're in long-press state where
-	    -- we switch back to the previous non-fader page as soon as the
-	    -- button is released (which we just detected)
-	    self:launchpad_fader_page()
+	 elseif num == 91 then
+	    if val > 0 then
+	       self:in_1_ccmaster_prev()
+	    end
+	 elseif num == 92 then
+	    if val > 0 then
+	       self:in_1_ccmaster_next()
+	    end
+	 elseif num == 80 then
+	    if val > 0 and self:check_ccmaster() then
+	       local i = self.presetno and self.presetno or 1
+	       i = i-1
+	       self:recall_preset(i)
+	    end
+	 elseif val > 0 and num == 70 then
+	    if self:check_ccmaster() then
+	       local i = self.presetno and self.presetno or 1
+	       i = i+1
+	       self:recall_preset(i)
+	    end
+	 elseif num >= 101 and num <= 108 then
+	    if val > 0 then
+	       self:in_1_ccmaster_set({num-100})
+	    end
+	 else
+	    return false
 	 end
-      elseif num == 91 then
-	 if val > 0 then
-	    self:in_1_ccmaster_prev()
-	 end
-      elseif num == 92 then
-	 if val > 0 then
-	    self:in_1_ccmaster_next()
-	 end
-      elseif num == 80 then
-	 if val > 0 and self:check_ccmaster() then
-	    local i = self.presetno and self.presetno or 1
-	    i = i-1
-	    self:recall_preset(i)
-	 end
-      elseif val > 0 and num == 70 then
-	 if self:check_ccmaster() then
-	    local i = self.presetno and self.presetno or 1
-	    i = i+1
-	    self:recall_preset(i)
-	 end
-      elseif num >= 101 and num <= 108 then
-	 if val > 0 then
-	    self:in_1_ccmaster_set({num-100})
-	 end
-      else
-	 return false
+	 return true
+      elseif ch == 37 then
+	 -- output from faders
+	 return atoms
       end
-      return true
-   elseif ch == 37 then
-      -- output from faders
-      return atoms
    end
    return false
 end
 
+-- XXXFIXME: The programmer's manuals of all current models (Mini, X, Pro MK3)
+-- claim that the corresponding id is 13h; this can't be right. I believe that
+-- among the current lineup of devices, the Launchpad X came before the Mini,
+-- so my guess is that the 13h value denotes a Launchpad X. My Launchpad Pro
+-- MK3 running the latest firmware identifies itself as id 23h. Otherwise we
+-- play it save and assume that it's a Launchpad Mini (which has no drum grid,
+-- otherwise most of the essential features should still be available). If we
+-- get it wrong, the worst that can happen is that the model number will be
+-- wrong and thus none of the sysexes we send will be recognized (and most
+-- features of this implementation will be unavailable).
+
 function raptor:launchpad_sysex(atoms)
-   -- check that this is a Launchpad Pro message
-   local lppro_id = {0, 32, 41, 2, 14}
-   for i = 1, 5 do
-      if atoms[i] ~= lppro_id[i] then
-	 -- not for us, pass
-	 return false
+   if launchpad ~= 0 then
+      -- identity reply, this is the critical number:
+      local id = atoms[8]
+      if not launchpad_id then
+	 -- check whether this is an identity reply message
+	 local idreq = {126, 0, 6, 2, 0, 32, 41, 0, 1}
+	 for i = 1, #idreq do
+	    if atoms[i] ~= idreq[i] and i~=2 and i~= 8 then
+	       -- not for us, pass
+	       goto skip
+	    end
+	 end
+	 if id == 0x23 then
+	    -- Launchpad Pro MK3
+	    launchpad_id = 14
+	 elseif id == 0x13 then
+	    -- Launchpad X??
+	    launchpad_id = 12
+	 else
+	    -- Launchpad Mini??
+	    launchpad_id = 13
+	 end
       end
-   end
-   --print("sysex", table.unpack(atoms))
-   if atoms[6] == 0 then
-      -- layout/page change, we want to record this unless it's a fader page
-      if atoms[7] ~= 1 then
-	 self.launchpad_page = {atoms[7], atoms[8]}
-	 self:launchpad_fader_timer_off()
+      ::skip::
+      -- check whether this is a Launchpad message
+      local lp_id = {0, 32, 41, 2, launchpad_id}
+      for i = 1, #lp_id do
+	 if atoms[i] ~= lp_id[i] then
+	    -- not for us, pass
+	    return false
+	 end
       end
+      --print("sysex", table.unpack(atoms))
+      if atoms[6] == 0 then
+	 -- layout/page change, we want to record this unless it's a fader page
+	 if atoms[7] ~= 1 then
+	    self.launchpad_page = {atoms[7], atoms[8]}
+	    self:launchpad_fader_timer_off()
+	 end
+      end
+      return true
+   else
+      return false
    end
-   return true
 end
 
 -- feedback
