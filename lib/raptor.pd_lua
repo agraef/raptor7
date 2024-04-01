@@ -2620,12 +2620,15 @@ end
 -- This doesn't touch any of the custom modes, it works entirely in DAW
 -- a.k.a. session mode.
 
+-- default color for unassigned and assigned buttons on the launch grid
+local blank, assigned = 0, 36
+
 function raptor:launchpad_init()
    if launchpad ~= 0 and self.master and self.id == self.master then
       -- switch the Launchpad into DAW/session mode
       self:outlet(1, "sysex", {0, 32, 41, 2, 14, 16, 1})
       -- light up all buttons
-      local color = {5, 3, 1, 1, 5, 9, 45, 45}
+      local color = {57, 3, 1, 1, 1, 1, 45, 45}
       for i = 1, 8 do
 	 -- left- and rightmost columns in white
 	 self:outlet(1, "note", {10*i, color[i], 33})
@@ -2642,9 +2645,21 @@ function raptor:launchpad_init()
       self:outlet(1, "note", {91, 45, 33})
       self:outlet(1, "note", {92, 45, 33})
       -- launch grid
+      -- initialize the launch grid from the midi map
+      local mapped = self:launchpad_map(self.midi_map)
       for i = 1, 8 do
+	 if i == 1 then
+	    color = {blank, blank, 3, 58, blank, 45, 45, 3}
+	 elseif i == 2 then
+	    color = {61, 21, 5, blank, blank, 33, 5, 57}
+	 else
+	    color = {blank, blank, blank, blank, blank, blank, blank, blank}
+	 end
 	 for j = 1, 8 do
-	    self:outlet(1, "note", {i*10+j, 36, 33})
+	    local num = i*10+j
+	    if not mapped[num] or color[j] ~= blank then
+	       self:outlet(1, "note", {num, color[j], 33})
+	    end
 	 end
       end
       -- drum grid
@@ -2652,6 +2667,7 @@ function raptor:launchpad_init()
 	 local color = 8*(i//16)+33
 	 self:outlet(1, "note", {i+36, color, 41})
       end
+      self.launchpad_drums = false
       -- set up the fader banks
       color = {60, 62, 64, 66}
       for b = 0, 3 do
@@ -2663,9 +2679,6 @@ function raptor:launchpad_init()
 	    self:outlet(1, "sysex", {0, 32, 41, 2, 14, 1, b, 0, i, b==1 and 1 or 0, j, color[b+1]})
 	 end
       end
-      -- switch to drums mode
-      self.launchpad_drums = true
-      self:outlet(1, "sysex", {0, 32, 41, 2, 14, 0, 2})
    end
 end
 
@@ -2698,10 +2711,13 @@ end
 
 function raptor:launchpad_note(atoms)
    local num, val, ch = table.unpack(atoms)
-   if ch == 33 then -- channel 1 on port #3
-      print("note", table.unpack(atoms))
-      return true
-   elseif ch == 41 then -- channel 9 on port #3 (drum mode)
+   if ch == 33 then -- channel 1 on port #3 (launch grid)
+      if val > 0 then
+	 -- handle like buttons
+	 atoms[2] = 127
+      end
+      return atoms
+   elseif ch == 41 then -- channel 9 on port #3 (drum grid)
       atoms[3] = 10
       return atoms
    end
@@ -2839,13 +2855,43 @@ end
 
 function raptor:launchpad_play(state)
    if launchpad ~= 0 then
+      self:outlet(1, "note", {18, 3+22*state, 33})
       self:outlet(1, "note", {20, 3+22*state, 33})
    end
 end
 
 function raptor:launchpad_loop(state)
    if launchpad ~= 0 then
-      self:outlet(1, "note", {10, 5+24*state, 33})
+      self:outlet(1, "note", {28, 57-8*state, 33})
+      self:outlet(1, "note", {10, 57-8*state, 33})
+   end
+end
+
+function raptor:launchpad_mapped(cc, ch, var, tgl)
+   if launchpad ~= 0 and ch == 33 and cc >= 128 then
+      local state = var ~= nil
+      local color = state and assigned or blank
+      self:outlet(1, "note", {cc-128, color, 33})
+   end
+end
+
+function raptor:launchpad_map(midi_map)
+   if launchpad ~= 0 then
+      local mapped = {}
+      for cc, map in pairs(midi_map) do
+	 if cc >= 128 then
+	    local num = cc-128
+	    for ch, v in pairs(map) do
+	       if ch == 33 then
+		  local state = v ~= nil
+		  local color = state and assigned or blank
+		  mapped[num] = state
+		  self:outlet(1, "note", {num, color, 33})
+	       end
+	    end
+	 end
+      end
+      return mapped
    end
 end
 
@@ -3845,6 +3891,8 @@ function raptor:map_set(cc, ch, var, tgl)
    else
       map[ch] = var
    end
+   -- launchpad tie-in: light up buttons on the grid when they're bound
+   self:launchpad_mapped(cc, ch, var, tgl)
 end
 
 function raptor:map_find(var)
