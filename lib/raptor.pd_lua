@@ -53,6 +53,13 @@ local launchpad = 1
 -- try to guess it with an identity inquiry sysex at startup.
 local launchpad_id = nil
 
+-- This sets the sensitivity of the pads on the launch grid. Smaller values >
+-- 0 mean lighter touches will trigger; a touch below the threshold will show
+-- the current binding in the console without triggering. A zero value
+-- completely disables the launch grid, so that none of the bound functions
+-- will be triggered, and none of the pads can be mapped using MIDI learn.
+local launchpad_trigger = 30
+
 -- launchcontrol: Special support for the Novation Launch Control XL. This
 -- requires that the Launch Control is switched to the first factory preset
 -- (which transmits on MIDI channel 9), and is connected to Pd's second MIDI
@@ -1873,6 +1880,8 @@ local hrm_scalepoints = { ["0.09 (minor 7th and 3rd)"] = 0.09, ["0.1 (major 2nd 
 -- exception of division, these controls aren't in the Ardour version, because
 -- they are maintained in the DAW)
 
+-- looper: looper controls
+
 local params = {
    { type = "input", name = "bypass", min = 0, max = 1, default = 0, toggled = true, noload = true, doc = "bypass the arpeggiator, pass through input notes" },
    { type = "input", name = "division", min = 1, max = 7, default = 1, integer = true, noload = true, time = true, doc = "number of subdivisions of the beat" },
@@ -1935,10 +1944,10 @@ local params = {
    { type = "input", name = "pos", min = -24, max = 24, default = 0, integer = true, noload = true, transport = true, doc = "anacrusis control" },
    { type = "input", name = "rewind", min = 0, max = 1, default = 0, toggled = true, noload = true, transport = true, doc = "rewind (relocate the playhead to the anacrusis)" },
    -- synthetic looper commands
-   { type = "input", name = "loop-load", min = 0, max = 1, default = 0, toggled = true, noload = true, doc = "load loop file" },
-   { type = "input", name = "loop-save", min = 0, max = 1, default = 0, toggled = true, noload = true, doc = "save loop file" },
-   { type = "input", name = "loop-prev", min = 0, max = 1, default = 0, toggled = true, noload = true, doc = "previous loop" },
-   { type = "input", name = "loop-next", min = 0, max = 1, default = 0, toggled = true, noload = true, doc = "next loop" },
+   { type = "input", name = "loop-load", min = 0, max = 1, default = 0, toggled = true, noload = true, looper = true, doc = "load loop file" },
+   { type = "input", name = "loop-save", min = 0, max = 1, default = 0, toggled = true, noload = true, looper = true, doc = "save loop file" },
+   { type = "input", name = "loop-prev", min = 0, max = 1, default = 0, toggled = true, noload = true, looper = true, doc = "previous loop" },
+   { type = "input", name = "loop-next", min = 0, max = 1, default = 0, toggled = true, noload = true, looper = true, doc = "next loop" },
 }
 
 local n_params = #params
@@ -2730,16 +2739,57 @@ end
 function raptor:launchpad_note(atoms)
    if launchpad ~= 0 then
       local num, val, ch = table.unpack(atoms)
-      if ch == 33 then -- channel 1 on port #3 (launch grid)
-	 if val > 0 then
-	    -- handle like buttons
-	    atoms[2] = 127
+      local cc = num+128
+      local var = self:map_get(cc, ch)
+      local i = var and param_i[var] or nil
+      local p = i and params[i] or nil
+      if ch == 33 and launchpad_trigger > 0 then
+	 -- channel 1 on port #3 (launch grid)
+	 if val >= launchpad_trigger then
+	    if not p or p.toggled then
+	       -- toggle-like behavior, "on" is at full velocity; otherwise
+	       -- send the velocity as is (momentary performance control)
+	       atoms[2] = 127
+	    end
+	    return atoms
+	 elseif val > 0 then
+	    -- touch below trigger threshold; print the current mapping and
+	    -- value, if any
+	    if var then
+	       local v = self.param_val[i]
+	       if p and (not p.transport or not p.toggled or var == "play") and not p.looper then
+		  if p.toggled then
+		     v = v~= 0 and "on" or "off"
+		  elseif p.integer then
+		     v = string.format("%d", v)
+		  else
+		     v = string.format("%g", v)
+		  end
+	       else
+		  v = nil
+	       end
+	       if v then
+		  v = string.format(" (%s)", v)
+	       else
+		  v = ""
+	       end
+	       print(string.format("%s is mapped to %s%s%s", self:cctostring(cc, ch), var, tgl and " [toggle]" or "", v))
+	    end
+	    return true
+	 else
+	    if p and not p.toggled and p.min == -p.max then
+	       -- bipolar control, make it latch to the 0 position (like a
+	       -- pitch bend wheel)
+	       atoms[2] = 64
+	    end
+	    return atoms
 	 end
-	 return atoms
-      elseif ch == 41 then -- channel 9 on port #3 (drum grid)
+      elseif ch == 41 then
+	 -- channel 9 on port #3 (drum grid)
 	 atoms[3] = 10
 	 return atoms
       end
+      return true
    end
    return false
 end
