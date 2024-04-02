@@ -2739,11 +2739,11 @@ end
 function raptor:launchpad_note(atoms)
    if launchpad ~= 0 then
       local num, val, ch = table.unpack(atoms)
-      local cc = num+128
-      local var = self:map_get(cc, ch)
-      local i = var and param_i[var] or nil
-      local p = i and params[i] or nil
       if ch == 33 and launchpad_trigger > 0 then
+	 local cc = num+128
+	 local var = self:map_get(cc, ch)
+	 local i = var and param_i[var] or nil
+	 local p = i and params[i] or nil
 	 -- channel 1 on port #3 (launch grid)
 	 if val >= launchpad_trigger then
 	    if not p or p.toggled then
@@ -2789,7 +2789,6 @@ function raptor:launchpad_note(atoms)
 	 atoms[3] = 10
 	 return atoms
       end
-      return true
    end
    return false
 end
