@@ -1,0 +1,149 @@
+-- -*- mode: lua -*-
+
+-- Launchpad map, Albert Gräf <agggraef@gmail.com>, 2 April 2024
+
+-- NOTE: This has only been tested on the Launchpad Pro MK3 so far, so the
+-- Launchpad Mini and X might still need some work, and you might have to
+-- remap some buttons. As far as I know, the fader and drumrack setups
+-- provided by the driver only work on the Launchpad Pro MK3. On the other
+-- devices, similar functionality is available through custom layouts, but
+-- you'll have to set these up using the Novation Components software.
+
+-- This fader setup largely mimics the Launch Control XL map, with the faders
+-- and knobs of the XL on the Launchpad's Volume and Pan/Sends/Device fader
+-- pages. The CC numbers have been chosen to be compatible (see the Lua table
+-- below for the actual numbers if you want to use these for a custom
+-- Launchpad layout).
+
+-- Volume (corresponding to the Launch Control XL faders): 1 = pitch hi,
+-- 2 = pitch lo, 3 = pattern mode (random, up, down, etc.), 4 = pos/anacrusis
+-- (the "scrubbing" control), 5 = tempo, 6 = meter numerator, 7 = meter
+-- denominator, 8 = division.
+
+-- The "knobs": Pan (Pan/Device on the XL) = bipolar mod controls,
+-- Sends/Device (Send A/B on the XL) = min/max controls.
+
+-- The resulting mapping of fader pages 1-4 of the Launchpad Pro MK3 is as
+-- follows:
+
+-- [hi]     [lo]   [mode] [pos]     [tempo] [num]     [denom] [divis]
+-- [velmod] [pmod] [gain] [gatemod] [hmod]  [prefmod] [smod]  [nmod]
+-- [minvel] [pmin] [wmin] [gate]    [hmin]  [pref]    [smin]  [uniq]
+-- [maxvel] [pmax] [wmax] [gate]    [hmax]  [pref]    [smax]  [nmax]
+
+-- Other functions are accessible using the launch grid in the session view
+-- (accessible using the Session button at the top). This should work on all
+-- variations of the Launchpad. The pre-assigned functions are color-coded and
+-- laid out in the two pad rows at the bottom (note the additional loop prev
+-- and next buttons in the bottom rows;on the XL these functions are on the
+-- Send Select buttons):
+
+--   - voice controls -                       - looper controls -
+-- [mute] [latch] [bypass]  [      ] [      ] [load] [save] [loop]
+--                [raptor]  [rewind]          [prev] [next] [play]
+
+-- NB: On the Launchpad Pro MK3, the mute, latch, and bypass toggles are also
+-- accessible using the Mute, Solo, and Record Arm hardware buttons at the
+-- bottom (see below).
+
+-- PAD CONTROLS: The pads on the launch grid have a sensitivity threshold; a
+-- medium touch will trigger them, while a light touch just displays the
+-- current binding and value (if any) in the console window.
+
+-- INTELLIGENT MAPPING: The pads can be mapped using MIDI learn, in which case
+-- they will light up to indicate that they are bound to a Raptor control. The
+-- exact behavior of each pad depends on the type of control it is mapped to.
+-- For toggled controls, it acts like a toggle button. Otherwise, it works
+-- like a latching fader which inputs a value depending on the velocity (if it
+-- is above the threshold) and snaps back to 0 (or the middle position, in the
+-- case of a bipolar control) as soon as the pad is released.
+
+-- HARDWARE BUTTONS: The Launchpad's hardware buttons positioned around the
+-- launch grid will also be lit up. Some of them can also be MIDI-mapped. The
+-- precise set of hardware buttons that you have depends on your type of
+-- device, though, so some functions may not be available. Here is a brief
+-- rundown of the available functions:
+
+-- The Play and Capture MIDI buttons, if available, are bound to Raptor's play
+-- and loop functions. If you don't have these then you can use the
+-- corresponding pads in the session view instead (see above).
+
+-- The left and right arrow buttons can be used to select the current Raptor
+-- instance, while the up and down arrow buttons change presets. These are
+-- only accessible in the session and drumrack views.
+
+-- On the Launchpad Pro MK3, instances can also be selected using the upper
+-- button row at the bottom, and the bottommost row has the following
+-- functions:
+
+-- Record Arm/Mute/Solo: These double as bypass/mute/latch toggles, which are
+-- also on the launch grid (see above).
+
+-- Volume/Pan/Sends/Device: Access the four fader pages (see above). A click
+-- of the button activates the corresponding fader page. Another click on the
+-- same button then returns you to the most previous (non-fader) vie. You can
+-- also press and *hold* the button to momentarily switch to the fader page,
+-- so that you can quickly change some faders, and revert to the previous view
+-- as soon as your release the button again.
+
+-- Stop Clip: Toggle between the standard note view and the drumrack view.
+
+{
+  -- alternative bindings for the mute/latch/bypass controls, uses the mute,
+  -- solo, and record arm hardware buttons in the bottom row
+  [1] = { [33] = { "bypass", true } },
+  [2] = { [33] = { "mute", true } },
+  [3] = { [33] = { "latch", true } },
+  -- send / send A (min value) faders
+  [13] = { [37] = "minvel" },
+  [14] = { [37] = "pmin" },
+  [15] = { [37] = "wmin" },
+  [16] = { [37] = "gate" },
+  [17] = { [37] = "hmin" },
+  [18] = { [37] = "pref" },
+  [19] = { [37] = "smin" },
+  [20] = { [37] = "uniq" },
+  -- device / send B (max value) faders
+  [29] = { [37] = "maxvel" },
+  [30] = { [37] = "pmax" },
+  [31] = { [37] = "wmax" },
+  [32] = { [37] = "gate" },
+  [33] = { [37] = "hmax" },
+  [34] = { [37] = "pref" },
+  [35] = { [37] = "smax" },
+  [36] = { [37] = "nmax" },
+  -- pan (bipolar mod) faders
+  [49] = { [37] = "velmod" },
+  [50] = { [37] = "pmod" },
+  [51] = { [37] = "gain" },
+  [52] = { [37] = "gatemod" },
+  [53] = { [37] = "hmod" },
+  [54] = { [37] = "prefmod" },
+  [55] = { [37] = "smod" },
+  [56] = { [37] = "nmod" },
+  -- volume faders
+  [77] = { [37] = "pitchhi" },
+  [78] = { [37] = "pitchlo" },
+  [79] = { [37] = "mode" },
+  [80] = { [37] = "pos" },
+  [81] = { [37] = "tempo" },
+  [82] = { [37] = "meter-num" },
+  [83] = { [37] = "meter-denom" },
+  [84] = { [37] = "division" },
+  -- predefined pads (session view)
+  -- 139, 140 unassigned
+  [141] = { [33] = { "raptor", true } },
+  [142] = { [33] = { "rewind", true } },
+  -- 143 unassigned
+  [144] = { [33] = { "loop-prev", true } },
+  [145] = { [33] = { "loop-next", true } },
+  [146] = { [33] = { "play", true } },
+  -- 2nd row
+  [149] = { [33] = { "mute", true } },
+  [150] = { [33] = { "latch", true } },
+  [151] = { [33] = { "bypass", true } },
+  -- 152, 153 unassigned
+  [154] = { [33] = { "loop-load", true } },
+  [155] = { [33] = { "loop-save", true } },
+  [156] = { [33] = { "loop", true } },
+}
