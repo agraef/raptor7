@@ -2,6 +2,9 @@
 
 -- Launchpad map, Albert Gräf <agggraef@gmail.com>, 2 April 2024
 
+-- IMPORTANT: In contrast to the other controllers, this device needs to be
+-- connected to its own MIDI port, port #3, on *both* input and output.
+
 -- NOTE: This has only been tested on the Launchpad Pro MK3 so far, so the
 -- Launchpad Mini and X might still need some work, and you might have to
 -- remap some buttons. As far as I know, the fader and drumrack setups

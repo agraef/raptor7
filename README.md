@@ -151,6 +151,16 @@ Amazingly, the special device support included in Raptor right now all works tog
 
 All devices that are supported right now come with corresponding MIDI maps, which you should load using the `load map` button described above, if you want the full experience. (Otherwise most device implementations only offer a few essential bindings, typically stuff that can't be mapped using MIDI learn.)
 
+#### Novation Launchpad
+
+The [Novation Launchpad][] is a popular grid controller, primarily for use with Ableton Live and similar DAWs. But Raptor has fairly good support for it as well, including support for the session view (mappable pads), drum view (an alternative to the standard note view for playing drums), and the fader views (with simulated faders offering access to the same kind of controls as the Launch Control XL, see below).
+
+You'll need a recent Launchpad version. The present implementation has been developed on, and tested with, the Launchpad Pro MK3. Raptor will try to detect which Launchpad model you have connected at startup. The Launchpad Mini MK3 and Launchpad X devices hopefully work (at least to some extent), but at present I can't test these, so try at your own risk.
+
+A custom MIDI map is included, see launchpad.map in the data subdirectory. Also check the comments in that file to find out more about Raptor's Launchpad implementation.
+
+**IMPORTANT:** In contrast to the other controllers, this device needs to be connected to its own MIDI port, port #3, on *both* input and output, as the communication protocol is rather complicated and involves a bunch of sysex messages going back and forth between Pd and the device.
+
 #### Novation Launch Control XL
 
 The [Novation Launch Control XL][] is a popular mixer-style controller with lots of knobs and faders, which makes for a nice Raptor control surface, so Raptor has special support for it. To make this work, the Launch Control XL must be set to the first factory preset, and you need to connect it to Pd's second MIDI input port.
@@ -213,6 +223,7 @@ Special support is already available for some devices, but it's always good to h
 [pd-lua]: https://agraef.github.io/pd-lua/
 [Deken]: https://github.com/pure-data/deken
 [Qsynth]: https://qsynth.sourceforge.io/
+[Novation Launchpad]: https://novationmusic.com/products/launchpad-pro-mk3
 [Novation Launch Control XL]: https://novationmusic.com/products/launch-control-xl
 [AKAI MIDIMIX]: https://www.akaipro.com/midimix
 [Nektar PACER]: https://nektartech.com/pacer-midi-daw-footswitch-controller/
