@@ -18,7 +18,7 @@
 -- mode (random, up, down, etc.), 4 = pos/anacrusis (the "scrubbing" control),
 -- 5 = tempo, 6 = meter numerator, 7 = meter denominator, 8 = division.
 
--- The resulting mapping of the knobs and faders is as follows:
+-- The resulting mapping of the KNOBS AND FADERS is as follows:
 
 -- [minvel] [pmin] [wmin] [gate]    [hmin]  [pref]    [smin]  [uniq]
 -- [maxvel] [pmax] [wmax] [gate]    [hmax]  [pref]    [smax]  [nmax]
@@ -26,17 +26,22 @@
 
 -- [hi]     [lo]   [mode] [pos]     [tempo] [num]     [denom] [divis]
 
--- The remaining functions are laid out exactly as in the MIDIMAX mapping in
--- the two button rows at the bottom:
+-- The remaining functions are laid out in the two BUTTON ROWS at the bottom:
 
 --   - voice controls -                       - looper controls -
 -- [mute] [latch] [bypass]  [      ] [      ] [load] [save] [loop]
---                [raptor]  [rewind]                        [play]
+-- [    ] [     ] [raptor]  [rewind] [      ] [prev] [next] [play]
 
--- As previously, the mute, solo, and record arm buttons on the right-hand
--- side are mapped to the mute, latch, and bypass toggles as well.
+-- In addition, some of the buttons on the right are available as alternative
+-- bindings for the looper and voice controls: up and down (loop next, prev);
+-- mute, solo, and record arm (mute, latch, and bypass).
+
+-- HARD-WRIRED BINDINGS (select a Raptor ccmaster instance): Device Select
+-- (DEVICE + left/right) cycles through the Raptor instances, Device Bank
+-- (DEVICE + 1-8) selects or deselects one of the first 8 instances.
 
 {
+  -- panel controls (Send A, Send B, Pan/Device)
   [13] = { [25] = "minvel" },
   [14] = { [25] = "pmin" },
   [15] = { [25] = "wmin" },
@@ -61,6 +66,7 @@
   [54] = { [25] = "prefmod" },
   [55] = { [25] = "smod" },
   [56] = { [25] = "nmod" },
+  -- faders
   [77] = { [25] = "pitchhi" },
   [78] = { [25] = "pitchlo" },
   [79] = { [25] = "mode" },
@@ -69,19 +75,24 @@
   [82] = { [25] = "meter-num" },
   [83] = { [25] = "meter-denom" },
   [84] = { [25] = "division" },
+  -- up, down buttons: alternative bindings for loop next and prev
   [104] = { [25] = { "loop-next", true } },
   [105] = { [25] = { "loop-prev", true } },
+  -- upper button row
   [169] = { [25] = { "mute", true } },
   [170] = { [25] = { "latch", true } },
   [171] = { [25] = { "bypass", true } },
   [186] = { [25] = { "loop-load", true } },
   [187] = { [25] = { "loop-save", true } },
   [188] = { [25] = { "loop", true } },
+  -- lower button row
   [203] = { [25] = { "raptor", true } },
   [204] = { [25] = { "rewind", true } },
+  [218] = { [25] = { "loop-prev", true } },
+  [219] = { [25] = { "loop-next", true } },
   [220] = { [25] = { "play", true } },
-  -- alternative bindings for the mute/latch/bypass controls, uses the mute,
-  -- solo, and record arm buttons on the right
+  -- mute, solo, record arm buttons on the right: alternative bindings for
+  -- mute/latch/bypass
   [234] = { [25] = { "mute",true } },
   [235] = { [25] = { "latch",true } },
   [236] = { [25] = { "bypass",true } }
