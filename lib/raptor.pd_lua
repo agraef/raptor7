@@ -60,6 +60,12 @@ local launchpad_id = nil
 -- will be triggered, and none of the pads can be mapped using MIDI learn.
 local launchpad_trigger = 30
 
+-- Maximum number of most salient steps per bar to flash the Novation logo for
+-- the rhythm display. Just set this to 0 if you hate the blinkenlights. Works
+-- the same as djcontrol_n_pulses below (which see for a more elaborate
+-- explanation of this parameter).
+local launchpad_n_pulses = 7
+
 -- launchcontrol: Special support for the Novation Launch Control XL. This
 -- requires that the Launch Control is switched to the first factory preset
 -- (which transmits on MIDI channel 9), and is connected to Pd's second MIDI
@@ -2312,6 +2318,8 @@ function raptor:in_1_bang()
    self:outlet(2, "list", { p, n })
    -- djcontrol tie-in, flashes the "energy" led on the encoder
    self:djcontrol_pulse(w, vel)
+   -- launchpad tie-in, flashes the Novation logo
+   self:launchpad_pulse(w, vel)
    -- check if we're bypassed or muted
    if self.bypass ~= 0 or self.mute ~= 0 then
       return
@@ -3123,6 +3131,17 @@ function raptor:launchpad_sysex(atoms)
 end
 
 -- feedback
+
+function raptor:launchpad_pulse(w, val)
+   -- w is the weight, val the velocity, n the number of beats per bar to
+   -- trigger, b the total number of beats.
+   if self.master and self.id == self.master then
+      -- we only do this on the time master
+      local n, b = launchpad_n_pulses, self.arp.beats
+      local state = w >= b-n and 1 or 0
+      self:outlet(1, "ctl", {val*state, 99, 33})
+   end
+end
 
 function raptor:launchpad_ccmaster(state)
    if launchpad ~= 0 then
