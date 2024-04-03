@@ -7,7 +7,7 @@
 
 -- NOTE: This has only been tested on the Launchpad Pro MK3 so far, so the
 -- Launchpad Mini and X might still need some work. Note that the Launchpad
--- Mini doesn't have a customizable drum rack, thus you'll have to use its
+-- Mini doesn't have a programmable drum rack, thus you'll have to use its
 -- custom drum layout instead. Other than that, all three devices should work
 -- the same with the driver. Of course, the Mini and the X have less buttons,
 -- which is why we provide lots of alternative bindings so that all the
@@ -90,7 +90,7 @@
 
 -- Volume/Pan/Sends/Device: Access the four fader pages (see above). A click
 -- of the button activates the corresponding fader page. Another click on the
--- same button then returns you to the most previous (non-fader) vie. You can
+-- same button then returns you to the most previous (non-fader) view. You can
 -- also press and *hold* the button to momentarily switch to the fader page,
 -- so that you can quickly change some faders, and revert to the previous view
 -- as soon as your release the button again.
