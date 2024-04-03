@@ -3565,18 +3565,10 @@ function raptor:djcontrol_note(atoms)
       -- pass through
       return false
    elseif deck == 0 then
-      -- tie-in with the MIDI mapper to skip the ccmaster check if we already
-      -- filtered by deck number (here we also check for the shift status,
-      -- since we still want to do the check for global controls if shift is
-      -- pressed -- same as with the BROWSER encoder)
-      self.assert_master = not shift
       -- Kludge: This is a global control, so the actual channel must be 1 or
       -- 4 (+16), where the latter just determines the shift status. Make sure
       -- that we reset the channel to 1 (+16) so that any MIDI mapping to the
-      -- button will work as intended. (In case you're wondering, the global
-      -- CC controls don't work that way, they just stick to their original
-      -- channel even with shift pressed. Which is exactly the behavior that
-      -- we want for note messages as well. Oh, the joys of MIDI.)
+      -- button will work as intended.
       atoms[#atoms] = 17
       -- pass through
       return false
