@@ -2685,11 +2685,17 @@ function raptor:launchpad_fader_bank_setup(b, color)
    -- Control XL factory preset 1: b = 0 = Volume, 1 = Pan
    -- (bipolar), 2 = Send A (Send), 3 = Send B (Device)
    local j0 = (b==0 and 76 or b==1 and 48 or b==2 and 12 or 28) + 1
-   local p = b==1 and 1 or 0 -- 0 = unipolar, 1 = bipolar
    local v = color[b+1]
    for i = 0, 7 do
+      -- there are some controls on the volume bank (hi, lo, and pos) which
+      -- are actually bipolar in nature, we deal with those on the spot; maybe
+      -- we should tie in with the params table to auto-configure this, but
+      -- that seems overkill right now
+      local p = b==1 or b==0 and (i <= 1 or i == 3)
+      local p = p and 1 or 0 -- 0 = unipolar, 1 = bipolar
       local j = j0 + i
-      -- b is the bank index, i the fader index, j the CC number, v the color
+      -- b is the bank index, i the fader index, p the polarity type, j the CC
+      -- number, v the color
       self:outlet(1, "sysex", {0, 32, 41, 2, launchpad_id, 1, launchpad_id==14 and not lpmini_test and b or 0, 0, i, p, j, v})
    end
 end
