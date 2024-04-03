@@ -2403,6 +2403,15 @@ function raptor:set_pos(p)
    self.arp:set_idx(p % self.arp.beats)
    if p ~= self.pos then
       self.pos = p
+      -- We need to update the internal state manually here, without going
+      -- through raptor:param() and raptor:set() which would announce the
+      -- change to all Raptor instances.
+      -- Update the internal param storage...
+      local i = param_i["pos"]
+      self.param_val[i] = p
+      -- ... and the Launchpad fader bank ...
+      self:launchpad_fader_val("pos", p)
+      -- ... and the GUI
       if self.id then
 	 pd.send(string.format("%s-%s", self.id, "pos"), "set", {p})
 	 pd.send(string.format("%s-%s", self.id, "posvar"), "float", {p})
@@ -2672,14 +2681,16 @@ local lpmini_test = false
 
 function raptor:launchpad_fader_bank_setup(b, color)
    -- sets up a single fader bank
+   -- map out the controls in a way that is compatible with the Launch
+   -- Control XL factory preset 1: b = 0 = Volume, 1 = Pan
+   -- (bipolar), 2 = Send A (Send), 3 = Send B (Device)
+   local j0 = (b==0 and 76 or b==1 and 48 or b==2 and 12 or 28) + 1
+   local p = b==1 and 1 or 0 -- 0 = unipolar, 1 = bipolar
+   local v = color[b+1]
    for i = 0, 7 do
-      -- map out the controls in a way that is compatible with the Launch
-      -- Control XL factory preset 1: b = 0 = Volume, 1 = Pan
-      -- (bipolar), 2 = Send A (Send), 3 = Send B (Device)
-      local j = (b==0 and 76 or b==1 and 48 or b==2 and 12 or 28) + i + 1
-      local p = b==1 and 1 or 0 -- 0 = unipolar, 1 = bipolar
-      -- b is the bank index, i the fader index, j the CC number
-      self:outlet(1, "sysex", {0, 32, 41, 2, launchpad_id, 1, launchpad_id==14 and not lpmini_test and b or 0, 0, i, p, j, color[b+1]})
+      local j = j0 + i
+      -- b is the bank index, i the fader index, j the CC number, v the color
+      self:outlet(1, "sysex", {0, 32, 41, 2, launchpad_id, 1, launchpad_id==14 and not lpmini_test and b or 0, 0, i, p, j, v})
    end
 end
 
@@ -2875,8 +2886,41 @@ function raptor:launchpad_fader_timer_off()
    end
 end
 
+local launchpad_master = nil
+
+function raptor:launchpad_master()
+   -- select the Raptor instance that gets to send all feedback
+   if launchpad_master then
+      -- already selected, move along
+   elseif self.ccmaster then
+      -- otherwise, if we have a ccmaster then use that instance
+      launchpad_master = self.ccmaster
+   elseif self.master then
+      -- otherwise, if we have a time master then use that instance
+      launchpad_master = self.master
+   else
+      -- otherwise, just grab the baton (we shouldn't really come here once a
+      -- time master has been set)
+      launchpad_master = self.id
+   end
+   -- check that we are the golden one
+   return launchpad_master == self.id
+end
+
+local launchpad_last_page = nil
+
+function raptor:launchpad_fader_page_change(old_id, new_id)
+   -- this gets invoked when the time master or ccmaster changes
+   if (not old_id or old_id == launchpad_master) and self.id == new_id and launchpad_id then
+      -- hand over to the new instance which holds the baton
+      launchpad_master = self.id
+      self:launchpad_fader_page(launchpad_last_page)
+   end
+end
+
 function raptor:launchpad_fader_page(page)
-   if launchpad ~= 0 then
+   if launchpad ~= 0 and self:launchpad_master() then
+      --print("fader page", tostring(page), "on id", self.id)
       if page then
 	 -- switch to the new page
 	 if launchpad_id == 14 then
@@ -2897,7 +2941,11 @@ function raptor:launchpad_fader_page(page)
 	    self:launchpad_fader_bank_setup(page, lpmini_colors)
 	    self:outlet(1, "sysex", {0, 32, 41, 2, launchpad_id, 0, 13})
 	 end
+	 -- initialize the fader values via MIDI feedback
+	 self:launchpad_fader_bank(page)
 	 self.launchpad_faders = page
+	 self.lp_fader_map = nil
+	 launchpad_last_page = page
 	 -- kick off the momentary timer, initial state 0 (waiting for timer)
 	 self.launchpad_momentary = 0
 	 -- threshold for momentary changes
@@ -2911,6 +2959,9 @@ function raptor:launchpad_fader_page(page)
 	 end
 	 self:outlet(1, "sysex", {0, 32, 41, 2, launchpad_id, 0, table.unpack(page)})
 	 self.launchpad_faders = -1
+	 self.lp_fader_map = nil
+	 launchpad_master = nil
+	 launchpad_last_page = nil
 	 -- kill off the timer if needed
 	 self:launchpad_fader_timer_off()
       end
@@ -3115,6 +3166,81 @@ function raptor:launchpad_map(midi_map)
 	 end
       end
       return mapped
+   end
+end
+
+function raptor:launchpad_fader_tomidi(var, val)
+   local i = param_i[var]
+   if i and self.param_val[i] then
+      local param = params[i]
+      -- Use the given value if any. This is intended for out-of-band data
+      -- which is being passed directly instead of the usual raptor:param()
+      -- call sequence (specifically, djcontrol feedback). Otherwise we fetch
+      -- the current value from the parameter storage.
+      if not val then
+	 val = self.param_val[i]
+      end
+      -- map back to MIDI
+      if param.toggled then
+	 val = val>0 and 127 or 0
+      else
+	 local min, max = param.min, param.max
+	 if var == "pos" then
+	    -- this one is special, it has a nominal range of -24..24, but
+	    -- we also want to clamp it to the actual number of beats
+	    max = math.min(max, self.arp.beats)
+	    min = -max
+	 end
+	 val = max>min and (val-min)/(max-min)*128 or 0
+	 -- round down to integer
+	 val = math.floor(val)
+	 -- clamp to MIDI data byte
+	 val = math.max(0, math.min(127, val))
+      end
+   end
+   return val
+end
+
+function raptor:launchpad_fader_val(var, val)
+   local b = self.launchpad_faders
+   if launchpad ~= 0 and b and b >= 0 and var and self:launchpad_master() then
+      local ch = 37
+      if not self.lp_fader_map then
+	 -- need to reinitialize our map for the current fader bank
+	 self.lp_fader_map = {}
+	 local cc0 = (b==0 and 76 or b==1 and 48 or b==2 and 12 or 28) + 1
+	 for i = 0, 7 do
+	    local cc = cc0 + i
+	    local var = self:map_get(cc, ch)
+	    self.lp_fader_map[var] = cc
+	 end
+      end
+      if self.lp_fader_map then
+	 local cc = self.lp_fader_map[var]
+	 if cc then
+	    local val = self:launchpad_fader_tomidi(var, val)
+	    if val then
+	       self:outlet(1, "ctl", {val, cc, 37})
+	    end
+	 end
+      end
+   end
+end
+
+function raptor:launchpad_fader_bank(b)
+   -- single fader bank feedback
+   -- b = 0 = Volume, 1 = Pan, 2 = Send A (Send), 3 = Send B (Device)
+   local cc0 = (b==0 and 76 or b==1 and 48 or b==2 and 12 or 28) + 1
+   local ch = 37
+   for i = 0, 7 do
+      local cc = cc0 + i
+      local var = self:map_get(cc, ch)
+      if var then
+	 local val = self:launchpad_fader_tomidi(var)
+	 if val then
+	    self:outlet(1, "ctl", {val, cc, 37})
+	 end
+      end
    end
 end
 
@@ -3961,13 +4087,11 @@ function raptor:in_1_meter(atoms)
 	 -- update the meter
 	 self:update_meter()
       end
-      if self.id then
-	 -- make sure to update the panel as well
-	 local id = self.id
-	 pd.send(string.format("%s-%s", id, "meter-num"), "set", {self.n})
-	 pd.send(string.format("%s-%s", id, "meter-denom"), "set", {self.m})
-	 pd.send(string.format("%s-%s", id, "division"), "set", {self.division})
-      end
+      -- make sure to update the internal state as well, this will also
+      -- update the panel
+      self:param("meter-num", self.n)
+      self:param("meter-denom", self.m)
+      self:param("division", self.division)
    end
 end
 
@@ -4342,6 +4466,8 @@ function raptor:in_1_ccmaster(atoms)
 	 self:djcontrol_ccmaster(0)
 	 self:launchpad_ccmaster(0)
       else
+	 -- launchpad fader page tie-in
+	 self:launchpad_fader_page_change(self.ccmaster, id)
 	 -- only the given raptor is receiving
 	 self.ccmaster = id
 	 -- give feedback on the panel
@@ -4483,6 +4609,8 @@ function raptor:in_1_master(atoms)
    elseif type(id) ~= "string" then
       return
    end
+   -- launchpad fader page tie-in
+   self:launchpad_fader_page_change(self.master, id)
    self.master = id
 end
 
@@ -4543,20 +4671,15 @@ function raptor:looper(name, cmd)
 		  -- update the meter
 		  self.arp:set_meter(self.n*self.division)
 	       end
-	       if self.id then
-		  local id = self.id
-		  pd.send(string.format("%s-%s", id, "meter-num"), "set", {self.n})
-		  pd.send(string.format("%s-%s", id, "meter-denom"), "set", {self.m})
-		  pd.send(string.format("%s-%s", id, "division"), "set", {self.division})
-	       end
+	       self:param("meter-num", self.n)
+	       self:param("meter-denom", self.m)
+	       self:param("division", self.division)
 	    end
 	    if self.arp.loop.tempo and type(self.arp.loop.tempo) == "number" then
 	       local tempo = math.max(1, self.arp.loop.tempo)
 	       if tempo ~= self.tempo then
 		  self.tempo = tempo
-		  if self.id then
-		     pd.send(string.format("%s-%s", self.id, "tempo"), "set", {self.tempo})
-		  end
+		  self:param("tempo", self.tempo)
 	       end
 	    end
 	 end
@@ -4622,6 +4745,8 @@ function raptor:param(var, val)
 	       self:djcontrol_loop(self.arp.loopstate)
 	       self:launchpad_loop(self.arp.loopstate)
 	    end
+	    -- launchpad fader bank feedback
+	    self:launchpad_fader_val(var)
 	 end
       end
    end
