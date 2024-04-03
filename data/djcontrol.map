@@ -62,13 +62,12 @@
    HARD-WIRED CONTROLS:
 
    These are implemented in Raptor and thus can't be changed using MIDI
-   learn. True to the nature of these controllers, the DJ Control
-   implementation in Raptor has a lot of fancy performance controls that are
-   not readily available in the Raptor GUI or on the other supported control
-   surfaces. Here is what's currently on offer:
+   learn. In contrast to the supported other control surfaces, the DJ Control
+   implementation in Raptor has a lot of these. It also has a lot of fancy
+   performance controls that are not readily available in the Raptor GUI or on
+   the other control surfaces. Here is what's currently on offer:
 
-   - BROWSER encoder for preset selection (use SHIFT to restrict to the
-     currently selected instance)
+   - BROWSER encoder for preset selection
    - volume fader and filter knob (mapped to CC7 = volume and CC8 = balance)
    - cross fade control, implemented by tying into the volume control
    - jog wheels for scrubbing (pos/anacrusis)
@@ -207,9 +206,9 @@
    - TEMPO faders (tempo controls, panel)
    - mode 4 (SAMPLER) pads (mute/latch/bypass toggles, panel)
 
-   Note that the global controls (MASTER and BROWSER buttons) send to all
-   Raptor instances by default. As with the BROWSER encoder, you can use SHIFT
-   to restrict them to the currently selected instance.
+   Note that the global controls (MASTER and BROWSER buttons), like the
+   BROWSER encoder, send to all Raptor instances by default, or to the
+   currently selected instance, if any.
 
    In addition to the global MASTER mute button, the PFL buttons (those with
    the headphone symbols on them) can be used to mute the Raptor instances for

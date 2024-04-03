@@ -5,7 +5,7 @@
 -- To use this, load this map in Raptor, connect the PACER to Pd's second
 -- MIDI input, and you should be set.
 
--- This assumes the D3 KBDTL factor preset of the PACER. The mapping is very
+-- This assumes the D3 KBDTL factory preset of the PACER. The mapping is very
 -- basic, as I wanted to provide something that doesn't require any custom
 -- preset and is simple but convenient. The PACER offers fairly advanced
 -- features, so you may want to edit the factory preset to beef it up a little
