@@ -2690,6 +2690,12 @@ function raptor:launchpad_fader_bank_setup(b, color)
    -- (bipolar), 2 = Send A (Send), 3 = Send B (Device)
    local j0 = (b==0 and 76 or b==1 and 48 or b==2 and 12 or 28) + 1
    local v = color[b+1]
+   -- sysex header: identification, command 1 (fader bank setup), bank index
+   -- (always zero on Mini/X), orientation (0 means vertical)
+   local b0 = launchpad_id==14 and b or 0
+   local syx = { 0, 32, 41, 2, launchpad_id, 1, b0, 0 }
+   -- It seems tidier (and is likely faster) if we assemble a sysex with all
+   -- faders in memory, rather than sending a sysex for each individual fader.
    for i = 0, 7 do
       -- there are some controls on the volume bank (hi, lo, and pos) which
       -- are actually bipolar in nature, we deal with those on the spot; maybe
@@ -2698,11 +2704,12 @@ function raptor:launchpad_fader_bank_setup(b, color)
       local p = b==1 or b==0 and (i <= 1 or i == 3)
       local p = p and 1 or 0 -- 0 = unipolar, 1 = bipolar
       local j = j0 + i
-      -- b is the bank index, i the fader index, p the polarity type, j the CC
-      -- number, v the color
-      local b = launchpad_id==14 and b or 0 -- always zero on Mini/X
-      self:outlet(1, "sysex", {0, 32, 41, 2, launchpad_id, 1, b, 0, i, p, j, v})
+      -- i is the fader index, p the polarity, j the CC number, v the color
+      local fader = { i, p, j, v }
+      -- concatenate the fader to the sysex
+      table.move(fader, 1, 4, #syx+1, syx)
    end
+   self:outlet(1, "sysex", syx)
 end
 
 function raptor:launchpad_init()
