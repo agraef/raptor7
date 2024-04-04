@@ -5,21 +5,24 @@
 -- IMPORTANT: In contrast to the other controllers, this device needs to be
 -- connected to its own MIDI port, port #3, on *both* input and output.
 
--- NOTE: This has only been tested on the Launchpad Pro MK3 so far, so the
--- Launchpad Mini and X might still need some work. Note that the Launchpad
--- Mini doesn't have a programmable drum rack, thus you'll have to use its
--- custom drum layout instead. Other than that, all three devices should work
--- pretty much the same. Of course, the Mini and the X have less buttons,
--- which is why we provide lots of alternative bindings so that all the
--- available functionality is accessible on all devices.
+-- You'll need a recent Launchpad version, either the Launchpad X, the
+-- Launchpad Mini MK3, or the Launchpad Pro MK3. The latter two have been
+-- tested and are known to work. The Launchpad X is still WIP which I'll
+-- finish as soon as I can get my hands on it, but I hope that it's already
+-- usable. Apart from the hardware differences, all three devices should work
+-- pretty much the same in Raptor. Obviously, the Mini and the X have less
+-- buttons, which is why we provide lots of alternative bindings so that all
+-- the available functionality is accessible on all devices. Also note that
+-- the Launchpad Mini doesn't have a programmable drum rack, thus you'll have
+-- to use its custom drum layout instead.
 
--- The fader setup largely mimics the Launch Control XL map (which see), with
--- the faders and knobs of the XL on the Launchpad's Volume, Pan, and Send A/B
--- fader pages. The CC numbers have been chosen to be compatible (see the Lua
--- table below for the actual numbers if you want to use these for a custom
--- Launchpad layout).
+-- FADER SETUP: The fader setup largely mimics the Launch Control XL map
+-- (which see), with the faders and knobs of the XL on the Launchpad's Volume,
+-- Pan, and Send A/B fader pages. The CC numbers have been chosen to be
+-- compatible (see the Lua table below for the actual numbers if you want to
+-- use these for a custom Launchpad layout).
 
--- LAUNCHPAD FADER BANKS 1-4: These can be accessed using either the
+-- The Launchpad fader banks 1-4 can be accessed using either the
 -- corresponding Volume/Pan/Sends/Device buttons in the bottom row of the
 -- Launchpad Pro MK3, or with the topmost four scene launch buttons in session
 -- mode (labeled Volume, Pan, Send A, and Send B on the Launchpad X, which are
@@ -103,12 +106,9 @@
 -- Record Arm/Mute/Solo: These are mapped to the bypass/mute/latch toggles,
 -- which are also on the launch grid, albeit in a different order (see above).
 
--- Volume/Pan/Sends/Device: Access the four fader pages (see above).
+-- Volume/Pan/Sends/Device: Access to the four fader pages (see above).
 
 -- Stop Clip: Toggle between the standard note view and the drumrack view.
--- (As already mentioned, the drum rack isn't available on the Launchpad Mini,
--- so this button will have no function. But the Mini ships with a custom drum
--- layout which can be used instead.)
 
 -- On all Launchpad versions, the same functionality is replicated on the
 -- scene launch buttons in session mode, in a different order and labeled
