@@ -2712,6 +2712,9 @@ function raptor:launchpad_init()
    if launchpad ~= 0 and self.master and self.id == self.master then
       -- switch the Launchpad into DAW/session mode
       self:outlet(1, "sysex", {0, 32, 41, 2, launchpad_id, 16, 1})
+      -- request the current layout, so that we get a sane default for
+      -- self.launchpad_page
+      self:outlet(1, "sysex", {0, 32, 41, 2, launchpad_id, 0})
       -- light up all buttons
       local color = {accent_loop, 3, 1, 1, 1, 1, accent_arrows, accent_arrows}
       for i = 1, 8 do
@@ -2965,8 +2968,10 @@ function raptor:launchpad_fader_page(page)
 	 -- threshold for momentary changes
 	 self.launchpad_clock:delay(500)
       else
-	 -- switch back to the previous non-fader page
-	 page = self.launchpad_page and self.launchpad_page or launchpad_id==14 and {0, 0} or {0}
+	 -- Switch back to the previous non-fader page. Use mode 4 by default,
+	 -- which seems to be the default mode on the LP Pro at least, not
+	 -- sure about the other devices.
+	 page = self.launchpad_page and self.launchpad_page or launchpad_id==14 and {4, 0} or {4}
 	 if launchpad_id == 14 then
 	    -- on the Pro, layout and page is followed by another zero
 	    table.insert(page, 0)
