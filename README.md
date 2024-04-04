@@ -149,23 +149,21 @@ Beyond MIDI learn, Raptor also offers special support for some widespread contro
 
 It is generally assumed that these devices are in their factory state and are connected to a *secondary* input port (usually Pd's second MIDI input port, but see the table below for the actual port numbers), so that they don't interfere with MIDI data from your primary input device on the first MIDI input, where you'd typically connect your MIDI keyboard, pad controller, etc.
 
-Most controller implementations also provide *feedback*, which needs a connection between the controller and Pd's corresponding MIDI *output* port (using the same port number as for the input). For some controllers, such as the Launch Control XL and the MIDIMIX, the feedback is rather minimal and entirely optional, in which case you can just go without the output connection. For others (DJ Control), the feedback is rather useful, but still optional. For some devices (the Launchpad, in particular) the feedback connection is mandatory, as the device can't function properly without it.
+Most controller implementations also provide device *feedback*, which needs a connection between the controller and Pd's corresponding MIDI *output* port (using the same port number as for the input). For some controllers, such as the Launch Control XL and the MIDIMIX, the feedback is rather minimal and entirely optional, in which case you can just go without the output connection. For others (DJ Control), the feedback is rather useful, but still optional. For some devices (the Launchpad, specifically) the feedback connection is mandatory, as the device can't function properly without it.
 
 For now, the special device drivers included in Raptor all work nicely together, so we have them all enabled by default. But if the bindings interfere with your own controllers or if you're worried about the overhead for devices that you don't have, you can easily turn them off using the corresponding variables at the beginning of the raptor.pd_lua source file in the lib subdirectory.
 
-All devices that are supported right now come with corresponding MIDI maps, which you should load using the `load map` button described above, if you want the full experience. (Otherwise most device implementations only offer a few essential bindings, typically stuff that can't be mapped using MIDI learn.)
+All devices that are supported right now come with corresponding MIDI maps, which you should load using the "load map" feature described above, if you want the full experience. (Otherwise most drivers only offer a few essential bindings, typically stuff that can't be mapped using MIDI learn.)
 
-We currently offer drivers for the following controllers:
+Here is a quick rundown of the supported controllers at the time of this writing. More details about each of the controllers can be found in the subsections below.
 
-| Device                     | Input Port # | Output Port # | Feedback                                               |
-| -------------------------- | ------------ | ------------- | ------------------------------------------------------ |
-| Novation Launchpad         | **3**        | **3**         | needs separate port<br />feedback port mandatory       |
-| Novation Launch Control XL | 2            | 2             | optional feedback                                      |
-| AKAI Professional MIDIMIX  | 2            | 2             | optional feedback                                      |
-| Nektar PACER               | 2            |               | no feedback                                            |
-| Hercules DJ Control        | 2            | 2             | lots of useful feedback<br />feedback port recommended |
-
-More details about each of the controllers can be found below.
+| Device                     | Input Port # | Output Port # | Feedback                |
+| -------------------------- | ------------ | ------------- | ----------------------- |
+| Novation Launchpad         | **3**        | **3**         | required, separate port |
+| Novation Launch Control XL | 2            | 2             | optional                |
+| AKAI Professional MIDIMIX  | 2            | 2             | optional                |
+| Nektar PACER               | 2            |               | none                    |
+| Hercules DJ Control        | 2            | 2             | recommended             |
 
 #### Novation Launchpad
 
@@ -203,9 +201,9 @@ Our current mapping is pretty basic by design, so that it doesn't require any cu
 
 #### Hercules DJ Control
 
-[Hercules](https://www.hercules.com) offers an entire series of DJ controllers which can be used with Raptor. True to the nature of this very interesting class of devices, the Raptor implementation supports two decks and offers some fancy performance controls that are not available on the other control surfaces. This is the most comprehensive device support to date, which ties in deeply with Raptor's internal interfaces, and also includes device feedback (flashing blinkenlights galore) if you connect the controller to Pd's second MIDI output port.
+[Hercules](https://www.hercules.com) offers an entire series of DJ controllers which can be used with Raptor. The driver has been tested with the Inpulse 200 MK2 and Inpulse 500, but as there are so many variants of these devices, it is still considered a bit experimental at this time. True to the nature of this very interesting class of devices, the Raptor implementation supports two separate decks and offers some fancy performance controls that are not available on the other control surfaces. It also sports a lot of useful device feedback if you connect the controller to Pd's second MIDI output port.
 
-I only have the Inpulse 200 MK2 and Inpulse 500 to test right now, thus support for these devices is still considered a bit experimental. Also, proper documentation of the many features of the Raptor implementation still needs to be written. There's a fairly comprehensive overview in the comment section at the beginning of the MIDI map in data/djcontrol.map, however, so please check that file for details if you want to give it a go.
+Note that you need to assign *deck numbers* to each Raptor instance to enable the 2-deck functionality. A working example can be found in the raptors2.pd patch included in the distribution. There's a fairly comprehensive overview in the comment section at the beginning of the accompanying MIDI map in data/djcontrol.map, so please make sure to read those notes for further setup and usage instructions.
 
 ## Quirks and Limitations
 

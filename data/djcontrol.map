@@ -53,16 +53,15 @@
 
    The Raptor implementation should hopefully work with all Hercules DJ
    controllers out there. I tested it with the Inpulse 200 MK2 and 500
-   devices, which are the only Hercules controllers that I own. Please report
-   any bugs or incompatibilites that you find with these or other variations
-   of the Hercules controllers. At this time, there are no plans to add
-   support for other DJ controllers, but feel free to send me a pull request
-   if you do!
+   devices. Please report any bugs or incompatibilites that you find with
+   these or other variations of the Hercules controllers. At this time, there
+   are no plans to add support for other DJ controllers, but feel free to send
+   me a pull request if you do!
 
    HARD-WIRED CONTROLS:
 
    These are implemented in Raptor and thus can't be changed using MIDI
-   learn. In contrast to the supported other control surfaces, the DJ Control
+   learn. In contrast to the other supported control surfaces, the DJ Control
    implementation in Raptor has a lot of these. It also has a lot of fancy
    performance controls that are not readily available in the Raptor GUI or on
    the other control surfaces. Here is what's currently on offer:
