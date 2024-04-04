@@ -3273,7 +3273,8 @@ end
 
 -- This assumes factory preset #1 on MIDI channel 9. It uses the device hold
 -- button as a shift button, and binds the device select and bank buttons to
--- ccmaster_next, ccmaster_prev, and ccmaster_set.
+-- ccmaster_next, ccmaster_prev, and ccmaster_set. Also includes feedback for
+-- ccmaster changes on the 1-8 button row.
 
 function raptor:launchcontrol_note(atoms)
    local num, val, ch = table.unpack(atoms)
@@ -3281,15 +3282,22 @@ function raptor:launchcontrol_note(atoms)
       if num == 105 then
 	 -- device hold status
 	 self.shift = val > 0
+	 -- update the buttons NOW
+	 self:launchcontrol_ccmaster_update()
       elseif not self.shift then
 	 return false
       elseif val == 0 then
 	 -- no-op
       elseif num > 72 and num <= 76 and self.shift then
 	 -- 73-76 = buttons 1-4
+	 -- update the buttons LATER (this needs to be deferred, see
+	 -- launchcontrol_ccmaster below for details)
+	 self.launchcontrol_ccmaster_wait = true
 	 self:in_1_ccmaster_set({num-72})
       elseif num > 88 and num <= 92 and self.shift then
 	 -- 89-92 = buttons 5-8
+	 -- update the buttons LATER
+	 self.launchcontrol_ccmaster_wait = true
 	 self:in_1_ccmaster_set({num-84})
       end
       return true
@@ -3304,14 +3312,50 @@ function raptor:launchcontrol_ctl(atoms)
 	 local id = self.id
 	 -- 106, 107 = left, right (ccmaster select)
 	 if num == 106 then
+	    -- update the buttons LATER
+	    self.launchcontrol_ccmaster_wait = true
 	    self:in_1_ccmaster_prev()
 	 elseif num == 107 then
+	    -- update the buttons LATER
+	    self.launchcontrol_ccmaster_wait = true
 	    self:in_1_ccmaster_next()
 	 end
       end
       return true
    end
    return false
+end
+
+-- ccmaster feedback
+
+function raptor:launchcontrol_ccmaster(state)
+   if launchcontrol ~= 0 then
+      local i = self:get_instance()
+      if i > 0 and i <= 8 then
+	 self.launchcontrol_ccmaster_state = {i, state}
+      else
+	 self.launchcontrol_ccmaster_state = nil
+      end
+      if self.launchcontrol_ccmaster_wait then
+	 -- Update pending, do it now. NOTE: The button updates need to be
+	 -- deferred until the new ccmaster state is actually available.
+	 -- That's because the ccmaster update runs through Pd's messaging
+	 -- system, which isn't instantaneous.
+	 self:launchcontrol_ccmaster_update()
+	 self.launchcontrol_ccmaster_wait = false
+      end
+   end
+end
+
+function raptor:launchcontrol_ccmaster_update()
+   if launchcontrol ~= 0 then
+      if self.launchcontrol_ccmaster_state then
+	 local i, state = table.unpack(self.launchcontrol_ccmaster_state)
+	 local num = i>4 and 84+i-4 or 72+i
+	 local val = self.shift and 1 or 0
+	 self:outlet(1, "note", {num, 48*val*state, 25})
+      end
+   end
 end
 
 -- AKAI Professional MIDIMIX
@@ -3322,6 +3366,8 @@ function raptor:midimix_note(atoms)
       if num == 27 then
 	 -- SOLO status (used as a shift key)
 	 self.shift = val > 0
+	 -- update the buttons NOW
+	 self:midimix_ccmaster_update()
       elseif not self.shift then
 	 return false
       elseif num == 25 or num == 26 or num <= 24 and num % 3 == 0 then
@@ -3331,10 +3377,13 @@ function raptor:midimix_note(atoms)
 	 if val == 0 then
 	    -- no-op
 	 elseif num <= 24 then
+	    self.midimix_ccmaster_wait = true
 	    self:in_1_ccmaster_set({num // 3})
 	 elseif num == 25 then
+	    self.midimix_ccmaster_wait = true
 	    self:in_1_ccmaster_prev()
 	 elseif num == 26 then
+	    self.midimix_ccmaster_wait = true
 	    self:in_1_ccmaster_next()
 	 end
       else
@@ -3350,6 +3399,45 @@ end
 function raptor:midimix_ctl(atoms)
    -- pass
    return false
+end
+
+-- ccmaster feedback
+
+function raptor:midimix_ccmaster(state)
+   if midimix ~= 0 then
+      local i = self:get_instance()
+      if i > 0 and i <= 8 then
+	 self.midimix_ccmaster_state = {i, state}
+      else
+	 self.midimix_ccmaster_state = nil
+      end
+      if self.midimix_ccmaster_wait then
+	 -- Update pending, do it now. NOTE: The button updates need to be
+	 -- deferred until the new ccmaster state is actually available.
+	 -- That's because the ccmaster update runs through Pd's messaging
+	 -- system, which isn't instantaneous.
+	 self:midimix_ccmaster_update()
+	 self.midimix_ccmaster_wait = false
+      end
+   end
+end
+
+function raptor:midimix_ccmaster_update()
+   if midimix ~= 0 then
+      if self.midimix_ccmaster_state then
+	 local i, state = table.unpack(self.midimix_ccmaster_state)
+	 local num = i*3
+	 local val = self.shift and 1 or 0
+	 -- I *think* that we should be safe here. The DJ Control has some
+	 -- global controls on channel 1, but none of the numbers we use here.
+	 -- Conversely, the DJ Control sends out pulse messages for its
+	 -- rhythmn display as note 5 on channel 1. That's the second button
+	 -- on the SOLO row for us, so you should be able to watch a rough
+	 -- facsimile of the blinkenlights on that button if you press SOLO.
+	 -- Give it a try. ;-)
+	 self:outlet(1, "note", {num, 127*val*state, 17})
+      end
+   end
 end
 
 -- Nektar PACER
@@ -4482,6 +4570,8 @@ function raptor:in_1_ccmaster(atoms)
 	 -- ccmaster feedback
 	 self:djcontrol_ccmaster(0)
 	 self:launchpad_ccmaster(0)
+	 self:launchcontrol_ccmaster(0)
+	 self:midimix_ccmaster(0)
       else
 	 -- launchpad fader page tie-in
 	 self:launchpad_fader_page_change(self.ccmaster, id)
@@ -4493,6 +4583,8 @@ function raptor:in_1_ccmaster(atoms)
 	 -- ccmaster feedback
 	 self:djcontrol_ccmaster(flag)
 	 self:launchpad_ccmaster(flag)
+	 self:launchcontrol_ccmaster(flag)
+	 self:midimix_ccmaster(flag)
       end
    else
       -- no ids, assume omni
