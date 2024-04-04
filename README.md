@@ -223,9 +223,13 @@ Overdubbing and more advanced loop editing capabilities would be nice to have; b
 
 ### MIDI Learn
 
-In a similar vein, Raptor's MIDI learn facility is also fairly basic. It's only possible to map MIDI CC and note messages at present. Having support for other kinds of messages such as aftertouch could be useful; we might add this in a future update. Also, there's no support for macro controls. That's unlikely to change in the near future, as it would complicate usage and require some GUI integration in order to adjust the macro value mapping.
+In a similar vein, Raptor's MIDI learn facility is also fairly basic. It's only possible to map MIDI CC and note messages at present. Having support for other kinds of messages such as aftertouch would be nice. Also, there's no support for macro controls yet.
 
-Special support is already available for some devices, but it's always good to have more. There is an abundance of awesome MIDI devices on the market these days which make for good Raptor controllers. Obviously, I can't support more than a tiny fraction of them myself. Thus, please share your MIDI maps or special support for other devices (or alternative bindings for the existing ones) and let me know (or, preferably, please submit a [pull request][])!
+### Controller Support
+
+Special support is already available for some popular MIDI controllers, but it's always good to have more. Thus, please share your MIDI maps or controller implementations and let me know, or submit a [pull request][].
+
+Device management is one area where Raptor still needs to improve. Ideally, we'd like the MIDI input and output ports to be configurable by the user. Right now the port numbers are all fixed, so you may have to employ a MIDI patchbay program such as MidiPipe on the Mac or QjackCtl on Linux if you have a complex studio setup. Even then, it's currently impossible to use different types of Launchpad devices at the same time, since Raptor will only detect the first one which happens to reply, and stick to it for the entire session.
 
 
 [ICMC 2006 paper]: https://github.com/agraef/raptor7/blob/main/scale.pdf
