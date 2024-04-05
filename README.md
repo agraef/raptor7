@@ -11,7 +11,7 @@ In memory of Clarence Barlow (27 December 1945 – 29 June 2023).
 
 This is version 7 of the Raptor patch, an experimental arpeggiator program based on the mathematical music theories of the composer and computer music pioneer Clarence Barlow. This version is a backport of the [Ardour plugin](https://github.com/agraef/ardour-lua) included in [Ardour version 8](https://ardour.org/news/8.1.html) and later, which in turn was based on the original Lua version of Raptor (version 6). The present version is compatible with the Ardour plugin in terms of the underlying arpeggiator core (written in Lua), as well as the parameters and factory presets. While it is ultimately based on [Raptor 6](https://github.com/agraef/ardour-lua), the patch was completely rewritten to provide an improved and simplified interface, and also offers some important new features, such as latch mode, improved transport and looper subpatches, a built-in MIDI learn facility, and much improved built-in support for a bunch of popular MIDI controllers. Here's Raptor running in [Purr Data][]:
 
-<img src="pic/raptor7.png" alt="raptor7"  />
+<img src="doc/raptor7.png" alt="raptor7"  />
 
 Raptor is quite advanced as arpeggiators go, it's really a full-blown algorithmic composition tool, although it offers the usual run-of-the-mill deterministic and random arpeggios as well. But the real magic starts when you turn on `raptor` mode and start playing around with the parameters in the panel. The algorithm behind Raptor is briefly sketched out in my [ICMC 2006 paper][] (cf. Section 8), and you'll find some practical information to get you started below. But if you'd like to get a deeper understanding of how the algorithm actually works, you'll have to dive into the source code and read Barlow's article in the [Ratio book][].
 
@@ -127,21 +127,36 @@ The loop files themselves are just Lua tables, so you can also edit them in any 
 
 Raptor has a lot of parameters which you might want to work with during live performances. Fortunately, it's possible to map most of these using the built-in MIDI learn facility. You can assign MIDI control changes and note messages to any of the controls in the panel, as well as some of the controls in the time and looper subpatches, as follows:
 
-- Click the `learn` message in the main patch. The background of the "MIDI Learn" label in the main patch will turn a light green to indicate that you're in MIDI mapping mode.
-- Click or move the control on the MIDI device. This can be any knob, fader, or button, but only controls generating MIDI CC or note messages are supported at this time.
-- Click or wiggle the control in the time patch or panel that you want to bind the MIDI message to.
+- Step 1: Click the `learn` message in the main patch. The background of the "MIDI Learn" label in the main patch will turn a light green to indicate that you're in MIDI mapping mode.
+- Step 2: Click or move the control on the MIDI device. This can be any knob, fader, or button, but only controls generating MIDI CC or note messages are supported at this time.
+- Step 3: Click or wiggle the control in the time patch or panel that you want to bind the MIDI message to.
 
-You can also first operate the control in the patch and then the MIDI control, if you prefer. And you can abort the process at any time by clicking `learn` again. It's also possible to delete an existing binding by clicking `unlearn` after choosing the MIDI or Raptor control. Raptor will provide feedback and guide you through the process with some messages in the Pd console. In particular, it will tell you if there is an existing binding for the same MIDI control or parameter value, so that you can get rid of it if needed.
+You can also reverse Step 2 and 3 if you prefer to choose the control in the patch first, then the MIDI control. That is, Step 2 and 3 become:
 
-The learned MIDI binding will be in effect immediately, in *all* running Raptor instances. It will also be stored in the midi.map file in the data directory, from where all bindings will be reloaded next time you fire up Raptor. Note that while it's possible to map different MIDI controls to the same Raptor parameter, at present you can't have a MIDI control affect multiple parameters at once (no macro controls, sorry!).
+- Step 2': Click or wiggle the control in the time patch or panel.
+- Step 3': Click or move the control on the MIDI device that you want to bind the control to.
 
-Also note that if you're running multiple Raptor instances, normally MIDI controls will affect them all, so their parameters will change in lockstep. If you want to operate a single Raptor instance instead, you can click the unlabeled button in the top left corner of the panel. The button will turn blue to indicate that the instance was selected and is now receiving the control data. At most one instance can be selected at any one time, but you can switch instances at any time, and clicking the blue button in the selected instance again will return the Raptor controls to "omni" mode, in which all instances receive the control data.
+#### Mapping Types
+
+The direction into which the MIDI or Raptor control in Step 2 or Step2' moves is important. Moving the control *up*, to *larger* values, configures a  normal mapping where the Raptor control goes up or down if the MIDI control does. Moving the control *down*, to *smaller* values, on the other hand, creates an *inverted* mapping where the Raptor control moves *down* if the MIDI control moves *up*, and vice versa. You can change direction while still in Step 2 or 2', but the direction that you last moved when finishing the mapping in Step 3 or 3' determines what mapping of control you get. (If you get it wrong, you can just start over. Move the Raptor control into the direction that you want it to move, up or down, and then just wiggle the MIDI control you want to map.)
+
+MIDI learn also detects the usual kind of MIDI buttons that only have two states (off = 0 and on = 127) or even just an on state, and configures them as triggers, toggles, or momentary switches, depending on the type of Raptor control (push buttons, toggles, or numboxes/faders) they are mapped to, ignoring the off state except in the latter case. So the usual kinds of buttons and transport controls available on many MIDI controllers should all just work as expected without any further ado. Otherwise it's also possible to edit the midi.map file to remove or add toggle and inverted mapping flags as needed. For instance, you might want to do this if you mapped a sustain pedal to Raptor's "mute" toggle, but you want it to function as a momentary switch instead. In that case you'd go into the midi.map file, search for the function that the pedal was bound to ("mute" in this case), and remove the `true` value in the binding which makes the control function as a toggle.
+
+#### MIDI Learn Interactions
+
+You can abort the process at any time by clicking `learn` again. It's also possible to delete an existing binding by clicking `unlearn` after choosing the MIDI or Raptor control. Raptor will provide feedback and guide you through the process with some messages in the Pd console. In particular, it will tell you if there is an existing binding for the same MIDI control or parameter value, so that you can get rid of it if needed.
+
+Otherwise, MIDI learn exits regularly as soon as you specify the mapped control in Step 3/3'. The learned MIDI binding will be in effect immediately, in *all* running Raptor instances. It will also be stored in the midi.map file in the data directory, from where all bindings will be reloaded next time you fire up Raptor. Note that while it's possible to map different MIDI controls to the same Raptor parameter, at present you can't have a MIDI control affect multiple parameters at once (no macro controls, sorry!).
+
+#### Selected Raptor Instance
+
+If you're running multiple Raptor instances, normally MIDI controls will affect them all, so their parameters will change in lockstep. If you want to operate a single Raptor instance instead, you can click the unlabeled button in the top left corner of the panel. The button will turn blue to indicate that the instance was selected and is now receiving the control data. At most one instance can be selected at any one time, but you can switch instances at any time, and clicking the blue button in the selected instance again will return the Raptor controls to "omni" mode, in which all instances receive the control data.
 
 #### Saving and Loading MIDI Maps
 
 Raptor needs no special operation for *saving* the MIDI map after changes, since this happens automatically. However, once you're done with a specific set of mappings, you may want to store away the midi.map file in the data directory. There's no special operation for this task, but you can accomplish this quite easily with your file manager by copying the data/midi.map file to a new name or location. By these means, you have a backup copy in case you lose your current map, which can also be shared with others if wanted.
 
-Raptor has an operation for *loading* MIDI map files, however, so that you can merge existing map files from your own backup copies or MIDI maps shared by other people into your current MIDI map. Just click the `load map` button beneath the "MIDI Learn" label in the main patch. This opens a file dialog in the data subdirectory, from where you can navigate to any location on your hard disk and open any .map file that you have there. The operation will provide some feedback in the console window about how many bindings were added, and if there were any conflicts where an existing binding had to be modified.
+Raptor has an operation for *loading* MIDI map files, however, so that you can merge existing map files shared by other people or your own maps into your current MIDI map. Just click the `load map` button beneath the "MIDI Learn" label in the main patch. This opens a file dialog in the data subdirectory, from where you can navigate to any location on your hard disk and open any .map file that you have there. The operation will provide some feedback in the console window about how many bindings were added, and if there were any conflicts where an existing binding had to be modified.
 
 ### Special Device Support
 
