@@ -2194,6 +2194,8 @@ function raptor:initialize(sel, atoms)
    self.midi_learn_cc = nil
    self.midi_learn_ch = nil
    self.midi_learn_var = nil
+   self.midi_learn_val = nil
+   self.midi_learn_pol = nil
    self.midi_learn_tgl = nil
    self:load_map()
 
@@ -2827,13 +2829,22 @@ function raptor:launchpad_note(atoms)
    if launchpad ~= 0 then
       local num, val, ch = table.unpack(atoms)
       if ch == 33 and launchpad_trigger > 0 then
+	 -- channel 1 on port #3 (launch grid)
 	 local cc = num+128
-	 local var = self:map_get(cc, ch)
+	 local var
+	 if self.midi_learn ~= 0 then
+	    -- We need to tie in with the MIDI learn system here so that we
+	    -- can decide whether we want to be a toggle on the basis of the
+	    -- parameter that is to be mapped, not the one that we're
+	    -- currently mapped to (if any).
+	    var = self.midi_learn_var
+	 else
+	    var = self:map_get(cc, ch)
+	 end
 	 local i = var and param_i[var] or nil
 	 local p = i and params[i] or nil
-	 -- channel 1 on port #3 (launch grid)
 	 if val >= launchpad_trigger then
-	    if not p or p.toggled then
+	    if p and p.toggled then
 	       -- toggle-like behavior, "on" is at full velocity; otherwise
 	       -- send the velocity as is (momentary performance control)
 	       atoms[2] = 127
@@ -2860,7 +2871,7 @@ function raptor:launchpad_note(atoms)
 	       else
 		  v = ""
 	       end
-	       print(string.format("%s is mapped to %s%s%s", self:cctostring(cc, ch), var, tgl and " [toggle]" or "", v))
+	       print(string.format("%s is mapped to %s%s%s", self:cctostring(cc, ch), var, self:opttostring(opt), v))
 	    end
 	    return true
 	 else
@@ -3211,7 +3222,7 @@ function raptor:launchpad_loop(state)
    end
 end
 
-function raptor:launchpad_mapped(cc, ch, var, tgl)
+function raptor:launchpad_mapped(cc, ch, var)
    if launchpad ~= 0 and ch == 33 and cc >= 128 then
       local state = var ~= nil
       local color = state and assigned or blank
@@ -3239,7 +3250,7 @@ function raptor:launchpad_map(midi_map)
    end
 end
 
-function raptor:launchpad_fader_tomidi(var, val)
+function raptor:launchpad_fader_tomidi(var, val, opt)
    local i = param_i[var]
    if i and self.param_val[i] then
       local param = params[i]
@@ -3250,7 +3261,9 @@ function raptor:launchpad_fader_tomidi(var, val)
       if not val then
 	 val = self.param_val[i]
       end
-      -- map back to MIDI
+      -- map back to MIDI; we ignore tgl (opt == true) here since we only care
+      -- about the parameter config itself, but we heed the polarity
+      local pol = type(opt) == "number" and opt or 1
       if param.toggled then
 	 val = val>0 and 127 or 0
       else
@@ -3261,7 +3274,15 @@ function raptor:launchpad_fader_tomidi(var, val)
 	    max = math.min(max, self.arp.beats)
 	    min = -max
 	 end
-	 val = max>min and (val-min)/(max-min)*128 or 0
+	 if max <= min then
+	    -- this can't happen?
+	    val = 0
+	 elseif pol < 0 then
+	    -- inverse polarity
+	    val = (max-val)/(max-min)*128
+	 else
+	    val = (val-min)/(max-min)*128
+	 end
 	 -- round down to integer
 	 val = math.floor(val)
 	 -- clamp to MIDI data byte
@@ -3281,14 +3302,15 @@ function raptor:launchpad_fader_val(var, val)
 	 local cc0 = (b==0 and 76 or b==1 and 48 or b==2 and 12 or 28) + 1
 	 for i = 0, 7 do
 	    local cc = cc0 + i
-	    local var = self:map_get(cc, ch)
-	    self.lp_fader_map[var] = cc
+	    local var, opt = self:map_get(cc, ch)
+	    self.lp_fader_map[var] = {cc, opt}
 	 end
       end
       if self.lp_fader_map then
 	 local cc = self.lp_fader_map[var]
 	 if cc then
-	    local val = self:launchpad_fader_tomidi(var, val)
+	    cc, opt = table.unpack(cc)
+	    local val = self:launchpad_fader_tomidi(var, val, opt)
 	    -- I think that this is a firmware bug. Looks like the Mini has
 	    -- the channels for the fader position and color sets (5 and 6)
 	    -- the wrong way around. XXXCHECK: Launchpad X
@@ -3308,9 +3330,9 @@ function raptor:launchpad_fader_bank(b)
    local ch = 37
    for i = 0, 7 do
       local cc = cc0 + i
-      local var = self:map_get(cc, ch)
+      local var, opt = self:map_get(cc, ch)
       if var then
-	 local val = self:launchpad_fader_tomidi(var)
+	 local val = self:launchpad_fader_tomidi(var, nil, opt)
 	 -- Fader pos/col channel bug, see above. XXXCHECK: Launchpad X
 	 local ch = launchpad_id==13 and 38 or 37
 	 if val then
@@ -4303,6 +4325,16 @@ function raptor:cctostring(cc, ch)
    end
 end
 
+function raptor:opttostring(opt)
+   if opt == true then
+      return " [toggle]"
+   elseif type(opt) == "number" and opt < 0 then
+      return " [inverted]"
+   else
+      return ""
+   end
+end
+
 function raptor:load_map(fname2)
    local fname = fname2 and fname2 or self._canvaspath .. "data/" .. midimap_name
    local fp = io.open(fname, "r")
@@ -4383,19 +4415,19 @@ function raptor:map_get(cc, ch)
    end
 end
 
-function raptor:map_set(cc, ch, var, tgl)
+function raptor:map_set(cc, ch, var, opt)
    local map = self.midi_map[cc]
    if not map then
       map = {}
       self.midi_map[cc] = map
    end
-   if tgl then
-      map[ch] = {var, tgl}
+   if opt then
+      map[ch] = {var, opt}
    else
       map[ch] = var
    end
    -- launchpad tie-in: light up buttons on the grid when they're bound
-   self:launchpad_mapped(cc, ch, var, tgl)
+   self:launchpad_mapped(cc, ch, var)
 end
 
 function raptor:map_find(var)
@@ -4418,30 +4450,36 @@ function raptor:map_mode(status)
    end
 end
 
-function raptor:learn()
+function raptor:learn(show)
    if self.midi_learn_cc and self.midi_learn_var then
       local i = param_i[self.midi_learn_var]
       local tgl = i and params[i].toggled and self.midi_learn_tgl or false
+      local function sgn(x)
+	 if x then return x>=0 and 1 or -1 else return nil end
+      end
+      local pol = i and not tgl and sgn(self.midi_learn_pol) or nil
       local var = self:map_get(self.midi_learn_cc, self.midi_learn_ch)
-      self:map_set(self.midi_learn_cc, self.midi_learn_ch, self.midi_learn_var, tgl)
+      self:map_set(self.midi_learn_cc, self.midi_learn_ch, self.midi_learn_var, tgl or pol)
       self:map_mode(0)
-      print(string.format("%s %smapped to %s%s", self:cctostring(), var and "re" or "", self.midi_learn_var, tgl and " [toggle]" or ""))
+      print(string.format("%s %smapped to %s%s", self:cctostring(), var and "re" or "", self.midi_learn_var, self:opttostring(tgl or pol)))
       self:save_map()
    elseif self.midi_learn_cc then
       local var = self:map_get(self.midi_learn_cc, self.midi_learn_ch)
-      if var then
-	 print(string.format("remapping %s currently mapped to %s, wiggle a control", self:cctostring(), var))
+      local tgl, pol = self.midi_learn_tgl, self.midi_learn_pol
+      if var and show then
+	 print(string.format("remapping %s%s currently mapped to %s, wiggle a control", self:cctostring(), self:opttostring(tgl or pol), var))
 	 print("press learn again to abort, or press unlearn to unmap")
-      else
-	 print(string.format("mapping %s, wiggle a control", self:cctostring()))
+      elseif show then
+	 print(string.format("mapping %s%s, wiggle a control", self:cctostring(), self:opttostring(tgl or pol)))
       end
    elseif self.midi_learn_var then
       local cc, ch = self:map_find(self.midi_learn_var)
-      if cc then
-	 print(string.format("mapping param %s already mapped to %s, send MIDI", self.midi_learn_var, self:cctostring(cc, ch)))
+      local tgl, pol = self.midi_learn_tgl, self.midi_learn_pol
+      if cc and show then
+	 print(string.format("mapping param %s%s already mapped to %s, send MIDI", self.midi_learn_var, self:opttostring(tgl or pol), self:cctostring(cc, ch)))
 	 print("press learn again to abort, or press unlearn to unmap")
-      else
-	 print(string.format("mapping param %s, send MIDI", self.midi_learn_var))
+      elseif show then
+	 print(string.format("mapping param %s%s, send MIDI", self.midi_learn_var, self:opttostring(tgl or pol)))
       end
    end
 end
@@ -4449,19 +4487,33 @@ end
 function raptor:check_midi_learn(val, cc, ch)
    if self.midi_learn == 1 then
       -- midi learn for CC
-      if val > 0 and
-	 (not self.midi_learn_cc or
-	  self.midi_learn_cc ~= cc or
-	  self.midi_learn_ch ~= ch) then
+      local changed = self.midi_learn_cc ~= cc or self.midi_learn_ch ~= ch
+      -- if pol_set is true then we don't touch the pol value any more, since
+      -- it has been set already (or overridden with the tgl flag)
+      local pol_set = self.midi_learn_var
+      if not pol_set and changed then
+	 -- need to reset the polarity state
+	 self.midi_learn_val = nil
+	 self.midi_learn_pol = nil
+	 -- tgl needs to be reset as well
+	 self.midi_learn_tgl = nil
+      end
+      if val > 0 and (changed or self.midi_learn_val ~= val) then
+	 local function sgn(x) return x>=0 and 1 or -1 end
+	 local pol = not pol_set and not self.midi_learn_tgl and self.midi_learn_val and val ~= self.midi_learn_val and sgn(val - self.midi_learn_val) or nil
 	 self.midi_learn_cc = cc
 	 self.midi_learn_ch = ch
+	 self.midi_learn_val = val
 	 if val == 127 then
 	    -- switch to special toggle mode (in this case, rather than
 	    -- controlling the value directly, the controller's off value is
 	    -- ignored, and the on value toggles the existing value)
 	    self.midi_learn_tgl = true
+	 elseif pol and self.midi_learn_pol ~= pol then
+	    changed = changed or self.midi_learn_pol or pol < 0
+	    self.midi_learn_pol = pol
 	 end
-	 self:learn()
+	 self:learn(changed)
 	 return true
       end
    end
@@ -4469,7 +4521,9 @@ function raptor:check_midi_learn(val, cc, ch)
 end
 
 function raptor:check_midi_map(val, cc, ch)
-   local var, tgl = self:map_get(cc, ch)
+   local var, opt = self:map_get(cc, ch)
+   local tgl = opt==true
+   local pol = not tgl and type(opt) == "number" and opt or 1
    if var and (self.assert_master or self:check_ccmaster(var)) then
       -- apply existing mapping
       local i = param_i[var]
@@ -4493,7 +4547,12 @@ function raptor:check_midi_map(val, cc, ch)
 	       max = math.min(max, self.arp.beats)
 	       min = -max
 	    end
-	    val = val==127 and max or val/128*(max-min)+min
+	    if pol < 0 then
+	       -- inverted
+	       val = val==127 and min or val/128*(min-max)+max
+	    else
+	       val = val==127 and max or val/128*(max-min)+min
+	    end
 	    if params[i].integer then
 	       val = math.floor(val+0.5)
 	    end
@@ -4513,6 +4572,8 @@ function raptor:in_1_learn()
       self.midi_learn_cc = nil
       self.midi_learn_ch = nil
       self.midi_learn_var = nil
+      self.midi_learn_val = nil
+      self.midi_learn_pol = nil
       self.midi_learn_tgl = nil
       self:map_mode(1)
       print("MIDI learn mode, send MIDI or wiggle a control")
@@ -4548,6 +4609,8 @@ function raptor:in_1_unlearn()
       self.midi_learn_cc = nil
       self.midi_learn_ch = nil
       self.midi_learn_var = nil
+      self.midi_learn_val = nil
+      self.midi_learn_pol = nil
       self.midi_learn_tgl = nil
       self:map_mode(1)
       print("MIDI learn mode, send MIDI or wiggle a control")
@@ -4572,23 +4635,23 @@ function raptor:in_1_merge_map(atoms)
 	    for cc, map in pairs(mmap) do
 	       for ch, v in pairs(map) do
 		  k = k+1
-		  local var, tgl
+		  local var, opt
 		  if type(v) == "table" then
-		     var, tgl = table.unpack(v)
+		     var, opt = table.unpack(v)
 		  else
-		     var, tgl = v, nil
+		     var, opt = v, nil
 		  end
-		  local var2, tgl2 = self:map_get(cc, ch)
+		  local var2, opt2 = self:map_get(cc, ch)
 		  if var2 then
-		     if var2 ~= var or tgl2 ~= tgl then
+		     if var2 ~= var or opt2 ~= opt then
 			p = p+1
 			q = q+1
-			print(string.format("%s remapped from %s%s to %s%s", self:cctostring(cc, ch), var2, tgl2 and " [toggle]" or "", var, tgl and " [toggle]" or ""))
-			self:map_set(cc, ch, var, tgl)
+			print(string.format("%s remapped from %s%s to %s%s", self:cctostring(cc, ch), var2, self:opttostring(opt2), var, self:opttostring(opt)))
+			self:map_set(cc, ch, var, opt)
 		     end
 		  else
 		     p = p+1
-		     self:map_set(cc, ch, var, tgl)
+		     self:map_set(cc, ch, var, opt)
 		  end
 	       end
 	    end
@@ -4924,7 +4987,9 @@ function raptor:in_1(sel, atoms)
       if self.midi_learn == 1 and sel and
 	 self.midi_learn_var ~= sel and param_i[sel] then
 	 self.midi_learn_var = sel
-	 self:learn()
+	 self.midi_learn_val = nil
+	 self.midi_learn_pol = nil
+	 self:learn(true)
       end
       local res, val = self:looper(name, cmd)
       if res then
@@ -4936,10 +5001,32 @@ function raptor:in_1(sel, atoms)
 	 self:launchpad_loop(self.arp.loopstate)
       end
    else
-      if self.midi_learn == 1 and
-	 self.midi_learn_var ~= sel and param_i[sel] then
-	 self.midi_learn_var = sel
-	 self:learn()
+      local i = param_i[sel]
+      if self.midi_learn == 1 and atoms[1] and i then
+	 local changed = self.midi_learn_var ~= sel
+	 -- if pol_set is true then we don't touch the pol value any more,
+	 -- since it has been set already; otherwise, if the parameter has
+	 -- changed, we need to initialize the last value from the parameter
+	 -- store
+	 local pol_set = self.midi_learn_cc
+	 if not pol_set and changed then
+	    -- need to reset the polarity state
+	    self.midi_learn_val = self.param_val[i]
+	    self.midi_learn_pol = nil
+	 end
+	 if changed then
+	    self.midi_learn_var = sel
+	 end
+	 if not pol_set and self.midi_learn_val and self.midi_learn_val ~= atoms[1] then
+	    local function sgn(x) return x>=0 and 1 or -1 end
+	    local pol = sgn(atoms[1] - self.midi_learn_val)
+	    if self.midi_learn_pol ~= pol then
+	       self.midi_learn_pol = pol
+	       changed = true
+	    end
+	 end
+	 self.midi_learn_val = atoms[1]
+	 self:learn(changed)
       end
       self:param(sel, atoms[1])
    end
