@@ -171,7 +171,7 @@ The [Novation Launchpad][] is a popular grid controller, primarily for use with 
 
 You'll need a recent Launchpad version. The present implementation has been developed on, and tested with, the Launchpad Pro MK3. Raptor will try to detect which Launchpad model you have connected at startup, however, and the Launchpad Mini MK3 and Launchpad X devices should also work. But at present I can't test these, so try at your own risk.
 
-A custom MIDI map is included, see launchpad.map in the data subdirectory. Also check the comments in that file to find out more about Raptor's Launchpad implementation.
+A custom MIDI map is included, see launchpad.map in the data subdirectory. Please check the comments in that file to find out more about Raptor's Launchpad implementation. Also, there's a little cheat sheet to help you get familiar with the most important fader and pad assignments, see raptor7-cheatsheet.pdf in the doc subdirectory.
 
 **IMPORTANT:** In contrast to the other controllers, this device needs to be connected to its own MIDI port, port #3, on *both* input and output, as the communication protocol is rather complicated and involves a lot of messages going back and forth between Pd and the device.
 
@@ -232,7 +232,7 @@ Special support is already available for some popular MIDI controllers, but it's
 Device management is one area where Raptor still needs to improve. Ideally, we'd like the MIDI input and output ports to be configurable by the user. Right now the port numbers are all fixed, so you may have to employ a MIDI patchbay program such as MidiPipe on the Mac or QjackCtl on Linux if you have a complex studio setup. Even then, it's currently impossible to use different types of Launchpad devices at the same time, since Raptor will only detect the first one which happens to reply, and stick to it for the entire session.
 
 
-[ICMC 2006 paper]: https://github.com/agraef/raptor7/blob/main/scale.pdf
+[ICMC 2006 paper]: https://github.com/agraef/raptor7/blob/main/doc/scale.pdf
 [Ratio book]: http://clarlow.org/wp-content/uploads/2016/10/THE-RATIO-BOOK.pdf
 [Autobusk]: http://www.musikinformatik.uni-mainz.de/Autobusk/
 [Purr Data]: https://agraef.github.io/purr-data/
