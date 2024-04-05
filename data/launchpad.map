@@ -5,117 +5,182 @@
 -- IMPORTANT: In contrast to the other controllers, this device needs to be
 -- connected to its own MIDI port, port #3, on *both* input and output.
 
--- You'll need a recent Launchpad version, either the Launchpad X, the
--- Launchpad Mini MK3, or the Launchpad Pro MK3. The latter two have been
--- tested and are known to work. The Launchpad X is still WIP which I'll
--- finish as soon as I can get my hands on it, but I hope that it's already
--- usable. Apart from the hardware differences, all three devices should work
--- pretty much the same in Raptor. Obviously, the Mini and the X have less
--- buttons, which is why we provide lots of alternative bindings so that all
--- the available functionality is accessible on all devices. Also note that
--- the Launchpad Mini doesn't have a programmable drum rack, thus you'll have
--- to use its custom drum layout instead.
+--[[
 
--- FADER SETUP: The fader setup largely mimics the Launch Control XL map
--- (which see), with the faders and knobs of the XL on the Launchpad's Volume,
--- Pan, and Send A/B fader pages. The CC numbers have been chosen to be
--- compatible (see the Lua table below for the actual numbers if you want to
--- use these for a custom Launchpad layout).
+   Here are some notes about the Raptor Launchpad implementation which should
+   hopefully help you get started. This assumes that you're already familiar
+   with the Launchpad. If not, it's probably a good idea to skim the user
+   guide for your device first.
 
--- The Launchpad fader banks 1-4 can be accessed using either the
--- corresponding Volume/Pan/Sends/Device buttons in the bottom row of the
--- Launchpad Pro MK3, or with the topmost four scene launch buttons in session
--- mode (labeled Volume, Pan, Send A, and Send B on the Launchpad X, which are
--- also the labels we use in the following, since they nicely match up with
--- the labeling on the Launch Control XL). The latter binding works on all
--- devices, but is only active in session mode.
+   HARDWARE:
 
--- A click of the button activates the corresponding fader page. Another click
--- of the same button then returns you to the most previous (non-fader) view.
--- You can also press and *hold* the button to momentarily switch to the fader
--- page, so that you can quickly change some faders, and revert to the
--- previous view as soon as your release the button again.
+   You'll need a recent Launchpad version, either the Launchpad X, the
+   Launchpad Mini MK3, or the Launchpad Pro MK3. The latter two have been
+   tested and are known to work. The Launchpad X is still WIP which I'll
+   finish as soon as I can get my hands on it. But I hope that it's already
+   in a usable state.
 
--- The available fader pages are as follows:
+   Apart from the hardware differences, all three devices should work pretty
+   much the same in Raptor. Obviously, the Mini and the X have less buttons,
+   which is why we provide lots of alternative bindings so that all the
+   available functionality is accessible on all devices.
 
--- 1: Volume: 1 = pitch hi, 2 = pitch lo, 3 = pattern mode (random, up, down,
--- etc.), 4 = pos/anacrusis (the "scrubbing" control), 5 = tempo, 6 = meter
--- numerator, 7 = meter denominator, 8 = division.
+   Also note that the Launchpad Mini has some additional limitations:
 
--- 2: Pan = bipolar mod controls
+   - It doesn't have a programmable drum rack, thus you'll have to use its
+     custom drum layout instead.
 
--- 3/4: Send A/B = unipolar min/max controls.
+   - The pads on the launch grid aren't velocity-sensitive, so there are no
+     "mapping tooltips", and the "latching faders" are two-valued, either on
+     (127) or off (0), and thus function more like a momentary toggle.
 
--- The detailed map of all fader pages:
+   MAPPING:
 
--- 1: [hi]     [lo]   [mode] [pos]     [tempo] [num]     [denom] [divis]
--- 2: [velmod] [pmod] [gain] [gatemod] [hmod]  [prefmod] [smod]  [nmod]
--- 3: [minvel] [pmin] [wmin] [gate]    [hmin]  [pref]    [smin]  [uniq]
--- 4: [maxvel] [pmax] [wmax] [gate]    [hmax]  [pref]    [smax]  [nmax]
+   Raptor's Launchpad implementation makes good use of all the nifty features
+   that the Launchpad has on offer:
 
--- LAUNCH GRID:
+   - A session view with the launch grid, where each pad can be mapped using
+     MIDI learn and function either as a toggle or as a "latching fader",
+     depending on the Raptor control it is mapped to. Also, the two bottom
+     rows of the launch grid work in the same way as the two button rows of
+     the Launch Control XL mapping.
 
--- Other functions are accessible using the launch grid in session view. The
--- pre-assigned functions are color-coded and laid out in the two pad rows at
--- the bottom, following the same layout as the two button rows on the Launch
--- Control XL:
+   - Four fader banks which function like the Volume faders and the Pan, Send
+     A, and Send B rotary encoders of the Launch Control. In this mode each
+     bank consists of 8 vertical faders which can be operated in the same way
+     as the track and mixer controls described in the Launchpad X and Pro MK3
+     user guides. (The Launchpad Mini MK3 works the same, although it doesn't
+     offer the velocity-sensitive fader operation of its two siblings.)
 
---   - voice controls -                       - looper controls -
--- [mute] [latch] [bypass]  [      ] [      ] [load] [save] [loop]
---                [raptor]  [rewind]          [prev] [next] [play]
+   - The hardware buttons surrounding the launch grid which are used for
+     switching fader banks, selecting Raptor instances and presets, and for
+     other MIDI-mapped Raptor functions, while retaining full integration with
+     Launchpad's built-in functionality such as the note and drum views.
 
--- NB: The mute, latch, and bypass toggles are also accessible using hardware
--- buttons, see below.
+   Some of the hardware buttons work differently than what you might be used
+   to from Ableton Live, however. In particular, the Mute, Solo, and Record
+   Arm buttons are bound to Raptor's mute, latch, and bypass "voice" controls,
+   while the Stop Clip button toggles between Launchpad's note and drum views.
 
--- PAD CONTROLS: The pads on the launch grid have a sensitivity threshold; a
--- medium touch will trigger them, while a light touch just displays the
--- current binding and value (if any) in the console window. Note that this
--- only works on the Launchpad X and Pro MK3, as the pads on the Launchpad
--- Mini MK3 are not velocity-sensitive.
+   In the following we discuss each of the elements of the Raptor mapping in
+   more detail.
 
--- INTELLIGENT MAPPING: The pads can all be mapped using MIDI learn, in which
--- case they light up to indicate that they are bound to a Raptor control.
--- The exact behavior of each pad depends on the type of control it is mapped
--- to. For toggled controls, it acts like a toggle button. Otherwise, it
--- works like a latching fader which inputs a value depending on the velocity
--- (if it is above the threshold) and snaps back to 0 (or the middle position,
--- in the case of a bipolar control) as soon as the pad is released.
+   FADER BANKS: The fader setup largely mimics the Launch Control XL map
+   (which see), with the faders and knobs of the XL on the Launchpad's Volume,
+   Pan, and Send A/B fader banks. The CC numbers have been chosen to be
+   compatible (see the Lua table below for the actual numbers if you want to
+   use these for a custom Launchpad layout).
 
--- HARDWARE BUTTONS: The Launchpad's hardware buttons positioned around the
--- launch grid will also be lit up. Some of them can also be MIDI-mapped. The
--- precise set of hardware buttons that you have depends on your type of
--- device, so the button assignments may vary. (However, we try to ensure that
--- all available functionality is available on *all* devices in some way.)
+   The fader banks 1-4 can be accessed using either the corresponding
+   Volume/Pan/Sends/Device buttons in the bottom row of the Launchpad Pro MK3,
+   or with the topmost four scene launch buttons in session mode, labeled
+   Volume, Pan, Send A, and Send B on the Launchpad X (which are also the
+   labels we use in the following, since they nicely match up with the
+   labeling on the Launch Control XL). The latter binding works on all
+   devices, but is only active in session mode. (Which is incovenient, but
+   Novation made it so that these buttons only function in that mode.)
 
--- Here is a brief rundown of the available functions:
+   A click of the button activates the corresponding fader bank. Another click
+   of the same button then returns you to the most recent (non-fader) view.
+   You can also press and *hold* the button to momentarily switch to the fader
+   page, so that you can quickly change some faders, and revert to the
+   previous view as soon as you release the button again. (Note that on the
+   Launchpad X and Mini that previous view will *always* be the session view,
+   because that is the only way to invoke the fader banks. On the Launchpad
+   Pro, however, you can switch to the fader banks from any of the session,
+   note, drum, and chord views, using the mixer buttons at the bottom.)
 
--- The "Play" and "Capture MIDI" buttons on the Launchpad Pro are bound to
--- Raptor's play and loop functions. If you don't have these then you can use
--- the corresponding pads in the session view instead (see above).
+   The available fader banks are mapped as follows:
 
--- The left and right arrow buttons can be used to select the current Raptor
--- instance, while the up and down arrow buttons change presets. Note that
--- these buttons are in slightly different locations depending on the
--- Launchpad version. Also note that the arrow keys are only accessible in the
--- session and drum rack views, in other modes they may have a predefined
--- meaning (note mode) or are just unavailable because Novation made it so.
+   1: Volume: 1 = pitch hi, 2 = pitch lo, 3 = pattern mode (random, up, down,
+   etc.), 4 = pos/anacrusis (the "scrubbing" control), 5 = tempo, 6 = meter
+   numerator, 7 = meter denominator, 8 = division. Note that these are all
+   arpeggiator controls in the panel, except #4 pos/anacrusis which is in the
+   time subpatch.
 
--- On the Launchpad Pro, instances can also be selected using the upper button
--- row at the bottom, and the bottommost row has the following functions:
+   2: Pan = bipolar mod controls (panel).
 
--- Record Arm/Mute/Solo: These are mapped to the bypass/mute/latch toggles,
--- which are also on the launch grid, albeit in a different order (see above).
+   3/4: Send A/B = unipolar min/max controls (panel).
 
--- Volume/Pan/Sends/Device: Access to the four fader pages (see above).
+   Here's the detailed map of all fader pages, with some of the labels
+   abbreviated so that each bank fits on a single line:
 
--- Stop Clip: Toggle between the standard note view and the drumrack view.
+   1  [hi*]    [lo*]  [mode] [pos*]    [tempo] [num]     [denom] [divis]
+   2* [velmod] [pmod] [gain] [gatemod] [hmod]  [prefmod] [smod]  [nmod]
+   3  [minvel] [pmin] [wmin] [gate]    [hmin]  [pref]    [smin]  [uniq]
+   4  [maxvel] [pmax] [wmax] [gate]    [hmax]  [pref]    [smax]  [nmax]
 
--- On all Launchpad versions, the same functionality is replicated on the
--- scene launch buttons in session mode, in a different order and labeled
--- slightly differently, but using the same button colors: Volume, Pan, Send
--- A, Send B, Stop Clip, Mute, Solo, Record Arm. (Note that these precise
--- labels are only on the Launchpad X, but the buttons will work the same also
--- on the Mini and the Pro.)
+   NOTE: The three faders on bank 1 (Volume) that are marked with an asterisk
+   are bipolar, as are *all* the faders on bank 2 (Pan). The other faders are
+   all unipolar.
+
+   NB: This table and the following one are also included in the distribution
+   as a nicely formatted pdf document, see doc/raptor7-cheatsheet.pdf. You
+   might want to print this and stick it to your Launchpad for reference. :)
+
+   LAUNCH GRID: Other functions are accessible using the launch grid in
+   session view. The pre-assigned functions are color-coded and laid out in
+   the two pad rows at the bottom, following the same layout as the two button
+   rows on the Launch Control XL:
+
+     - voice controls -                       - looper controls -
+   [mute] [latch] [bypass]  [      ] [      ] [load] [save] [loop]
+                  [raptor]  [rewind]          [prev] [next] [play]
+
+   NB: The mute, latch, and bypass toggles are also accessible using hardware
+   buttons, see below.
+
+   PAD CONTROLS: The pads on the launch grid have a sensitivity threshold; a
+   medium touch will trigger them, while a light touch just displays the
+   current mapping and value (if any) as a "tooltip" in the console window.
+   Note that this only works on the Launchpad X and Pro MK3, as the pads on
+   the Launchpad Mini MK3 are not velocity-sensitive.
+
+   INTELLIGENT MAPPING: The pads can all be mapped using MIDI learn, in which
+   case they light up to indicate that they are bound to a Raptor control.
+   The exact behavior of each pad depends on the type of control it is mapped
+   to. For toggled controls, it acts like a toggle button. Otherwise, it
+   works like a latching fader which inputs a value depending on the velocity
+   (if it is above the threshold) and snaps back to 0 (or the middle position,
+   in the case of a bipolar control) as soon as the pad is released.
+
+   HARDWARE BUTTONS: The Launchpad's hardware buttons positioned around the
+   launch grid will also be lit up. Some of them can also be MIDI-mapped. The
+   precise set of hardware buttons that you have depends on your type of
+   device, so the button assignments may vary. (However, we try to ensure that
+   all available functionality is available on *all* devices in some way.)
+
+   Here is a brief rundown of the available functions:
+
+   The "Play" and "Capture MIDI" buttons on the Launchpad Pro are bound to
+   Raptor's play and loop functions. If you don't have these then you can use
+   the corresponding pads in the session view instead (see above).
+
+   The left and right arrow buttons can be used to select the current Raptor
+   instance, while the up and down arrow buttons change presets. Note that
+   these buttons are in slightly different locations depending on the
+   Launchpad version. Also note that the arrow keys are only accessible in the
+   session and drum rack views, in other modes they may have a predefined
+   meaning (note mode) or are just unavailable because Novation made it so.
+
+   On the Launchpad Pro, instances can also be selected using the upper button
+   row at the bottom, and the bottommost row has the following functions:
+
+   Record Arm/Mute/Solo: These are mapped to the bypass/mute/latch toggles,
+   which are also on the launch grid, albeit in a different order (see above).
+
+   Volume/Pan/Sends/Device: Access to the four fader pages (see above).
+
+   Stop Clip: Toggle between the standard note view and the drumrack view.
+
+   On all Launchpad versions, the same functionality is replicated on the
+   scene launch buttons in session mode, in a different order and labeled
+   slightly differently, but using the same button colors: Volume, Pan, Send
+   A, Send B, Stop Clip, Mute, Solo, Record Arm. (Note that these precise
+   labels are only on the Launchpad X, but the buttons will work the same also
+   on the Mini and the Pro.)
+
+]]
 
 {
   -- alternative bindings for the mute/latch/bypass controls, uses the mute,
