@@ -48,9 +48,12 @@ local debug_level = 0
 -- needs its own MIDI port. Please connect input and output to port #3.
 local launchpad = 1
 
--- If you know the id (12 = X, 13 = Mini MK3, 14 = Pro MK3) of your Launchpad,
--- which will make it recognize sysex messages, put it below, otherwise we'll
--- try to guess it with an identity inquiry sysex at startup.
+-- If you know the ids (12 = X, 13 = Mini MK3, 14 = Pro MK3) of your
+-- Launchpads, you can put them below, otherwise we'll try to guess them with
+-- an identity inquiry sysex at startup. NOTE: If you set this, make it a
+-- table indexed by port numbers (only 3 an 4 will work at present). E.g. (Pro
+-- MK3 on port 3, X on port 4):
+--local launchpad_id = { [3] = 14, [4] = 12 }
 local launchpad_id = nil
 
 -- This sets the sensitivity of the pads on the launch grid. Smaller values >
@@ -58,7 +61,7 @@ local launchpad_id = nil
 -- the current binding in the console without triggering. A zero value
 -- completely disables the launch grid, so that none of the bound functions
 -- will be triggered, and none of the pads can be mapped using MIDI learn.
-local launchpad_trigger = 30
+local launchpad_trigger = 20
 
 -- Maximum number of most salient steps per bar to flash the Novation logo for
 -- the rhythm display. Just set this to 0 if you hate the blinkenlights. Works
@@ -2046,7 +2049,7 @@ function raptor:set(param, x)
       -- we want to update the delay time immediately if it has changed, so
       -- that we don't get stuck waiting for the next pulse if the previous
       -- delay time was very large or even infinite (tempo = 0)
-      self:outlet(3, "float", { delay })
+      self:outlet(4, "float", { delay })
    end
    if self.inchan ~= last_inchan and self.inchan > 0 then
       -- change of input channel, kill off chord memory and stop notes
@@ -2125,8 +2128,8 @@ end
 function raptor:initialize(sel, atoms)
    pdx.reload(self)
 
-   self.inlets = 1
-   self.outlets = 3
+   self.inlets = 2
+   self.outlets = 4
 
    -- initialize param values
    self.param_val = {}
@@ -2181,12 +2184,17 @@ function raptor:initialize(sel, atoms)
    self.backup_chan = 1
    self.transp = 0
 
-   -- state of auxiliary control surfaces (input port #2)
+   -- state of auxiliary control surfaces
    self.shift = false
    self.thru = midi_thru
    -- djcontrol state
    self.stopped = false
    self:djcontrol_init()
+   -- launchpad
+   self.lp_fader_map = {}
+   self.launchpad_faders = {}
+   self.launchpad_page = {}
+   self.launchpad_drums = {}
 
    -- midi learn
    self.midi_map = {}
@@ -2231,7 +2239,8 @@ function raptor:initialize(sel, atoms)
    -- initialize the launchpad fader timer
    self.launchpad_clock = pd.Clock:new():register(self, "launchpad_fader_timer_cb")
 
-   -- this one only fires once, some time *after* the launchpad/djcontrol initialization timer
+   -- this one only fires once, some time *after* the launchpad/djcontrol
+   -- initialization timer
    self.launchpad_idreq_clock = pd.Clock:new():register(self, "launchpad_idreq_timer_cb")
 
    -- initialize and kick off the launchpad/djcontrol initialization timer
@@ -2247,7 +2256,16 @@ function raptor:late_init()
       self:launchpad_init()
    else
       -- device inquiry message (we'll pick up the result later)
-      self:outlet(1, "sysex", {126, 127, 6, 1})
+      -- NOTE: It's essential that we send these out on ports 3+4, which
+      -- should be connected to the *DAW ports* of different Launchpad
+      -- devices, so that we can pick up the replies under the same port
+      -- numbers and know which kind of device is connected to which port.
+      for portno = 3, 4 do
+	 self:outlet(2, "float", {portno})
+	 self:outlet(1, "sysex", {126, 127, 6, 1})
+      end
+      -- initialize launchpad_id
+      launchpad_id = {}
       self.launchpad_idreq_clock:delay(500)
    end
    -- djcontrol initialization
@@ -2319,9 +2337,9 @@ function raptor:in_1_bang()
    local delay = 60000/self.tempo * 4/self.m/self.division
    self.last_delay = delay
    -- output the delay time until the next pulse is due on outlet #3
-   self:outlet(3, "float", { delay })
+   self:outlet(4, "float", { delay })
    -- output the current pulse number and number of beats on outlet #2
-   self:outlet(2, "list", { p, n })
+   self:outlet(3, "list", { p, n })
    -- djcontrol tie-in, flashes the "energy" led on the encoder
    self:djcontrol_pulse(w, vel)
    -- launchpad tie-in, flashes the Novation logo
@@ -2689,8 +2707,9 @@ local lpmini_fader_pages = {}
 for k, i in ipairs(lppro_fader_buttons) do lppro_fader_pages[i] = k-1 end
 for k, i in ipairs(lpmini_fader_buttons) do lpmini_fader_pages[i] = k-1 end
 
-function raptor:launchpad_fader_bank_setup(b, color)
-   -- sets up a single fader bank
+function raptor:launchpad_fader_bank_setup(portno, b, color)
+   local id = launchpad_id[portno]
+   -- sets up a single fader bank on the given (launchpad) port
    -- map out the controls in a way that is compatible with the Launch
    -- Control XL factory preset 1: b = 0 = Volume, 1 = Pan
    -- (bipolar), 2 = Send A (Send), 3 = Send B (Device)
@@ -2698,8 +2717,8 @@ function raptor:launchpad_fader_bank_setup(b, color)
    local v = color[b+1]
    -- sysex header: identification, command 1 (fader bank setup), bank index
    -- (always zero on Mini/X), orientation (0 means vertical)
-   local b0 = launchpad_id==14 and b or 0
-   local syx = { 0, 32, 41, 2, launchpad_id, 1, b0, 0 }
+   local b0 = id==14 and b or 0
+   local syx = { 0, 32, 41, 2, id, 1, b0, 0 }
    -- It seems tidier (and is likely faster) if we assemble a sysex with all
    -- faders in memory, rather than sending a sysex for each individual fader.
    for i = 0, 7 do
@@ -2720,118 +2739,145 @@ end
 
 function raptor:launchpad_init()
    if launchpad ~= 0 and self.master and self.id == self.master then
-      -- switch the Launchpad into DAW/session mode
-      self:outlet(1, "sysex", {0, 32, 41, 2, launchpad_id, 16, 1})
-      -- request the current layout, so that we get a sane default for
-      -- self.launchpad_page
-      self:outlet(1, "sysex", {0, 32, 41, 2, launchpad_id, 0})
-      -- light up all buttons
-      local color = {accent_loop, 3, 1, 1, 1, 1, accent_arrows, accent_arrows}
-      for i = 1, 8 do
-	 -- left- and rightmost columns (the former is only on the LPPro)
-	 if launchpad_id == 14 then
-	    self:outlet(1, "ctl", {color[i], 10*i, 33})
-	    --[[ white only
-	    self:outlet(1, "ctl", {1, 10*i+9, 33}) ]]
-	    -- LP X/Mini-alike (these run from top to bottom, so we need to
-	    -- reverse the table on the fly)
-	    self:outlet(1, "ctl", {lpmini_colors[9-i], 10*i+9, 33})
-	 else
-	    self:outlet(1, "ctl", {lpmini_colors[9-i], 10*i+9, 33})
-	 end
-      end
-      if launchpad_id == 14 then -- LPPro only
+      -- iterate over all connected launchpads
+      for portno, id in pairs(launchpad_id) do
+	 local ch = portno==3 and 33 or portno==4 and 49
+	 -- assert ch, but to be on the safe side...
+	 if not ch then goto skip end
+	 local drumch = ch+8
+	 -- switch the Launchpad into DAW/session mode
+	 self:outlet(2, "float", {portno})
+	 self:outlet(1, "sysex", {0, 32, 41, 2, id, 16, 1})
+	 -- request the current layout, so that we get a sane default for
+	 -- self.launchpad_page
+	 self:outlet(1, "sysex", {0, 32, 41, 2, id, 0})
+	 -- light up all buttons
+	 local color = {accent_loop, 3, 1, 1, 1, 1, accent_arrows, accent_arrows}
 	 for i = 1, 8 do
-	    -- lower bottom row
-	    self:outlet(1, "ctl", {lppro_colors[i], i, 33})
-	    -- upper bottom row
-	    self:outlet(1, "ctl", {accent_arrows, i+100, 33})
-	 end
-      end
-      -- arrow buttons
-      local lp_arrow_buttons = launchpad_id==14 and lppro_arrow_buttons or lpmini_arrow_buttons
-      for _, i in ipairs(lp_arrow_buttons) do
-	 self:outlet(1, "ctl", {accent_arrows, i, 33})
-      end
-      -- initialize the launch grid from the midi map
-      local mapped = self:launchpad_map(self.midi_map)
-      -- populate the preset buttons
-      for i = 1, 8 do
-	 if i == 1 then
-	    color = {blank, blank, 3, 58, blank, accent_arrows, accent_arrows, 3}
-	 elseif i == 2 then
-	    color = {61, 21, 5, blank, blank, 33, 5, accent_loop}
-	 else
-	    color = {blank, blank, blank, blank, blank, blank, blank, blank}
-	 end
-	 for j = 1, 8 do
-	    local num = i*10+j
-	    if not mapped[num] or color[j] ~= blank then
-	       self:outlet(1, "note", {num, color[j], 33})
+	    -- left- and rightmost columns (the former is only on the LPPro)
+	    if id == 14 then
+	       self:outlet(1, "ctl", {color[i], 10*i, ch})
+	       self:outlet(1, "ctl", {lpmini_colors[9-i], 10*i+9, ch})
+	    else
+	       -- LP X/Mini (these run from top to bottom, so we need to
+	       -- reverse the table on the fly)
+	       self:outlet(1, "ctl", {lpmini_colors[9-i], 10*i+9, ch})
 	    end
 	 end
-      end
-      -- drum grid
-      if launchpad_id ~= 13 then -- not available on the Mini
-	 for i = 0, 63 do
-	    local color = 8*(i//16)+33
-	    self:outlet(1, "note", {i+36, color, 41})
+	 if id == 12 then
+	    -- Capture MIDI button on the Launchpad X
+	    self:outlet(1, "ctl", {accent_loop, 98, ch})
 	 end
-      end
-      self.launchpad_drums = false
-      if launchpad_id == 14 then
-	 -- LP Pro: Set up the four fader banks in advance. On the LP Mini/X
-	 -- this is done on the fly, because AFAICT there's only a single
-	 -- fader bank on these devices.
-	 for b = 0, 3 do
-	    self:launchpad_fader_bank_setup(b, lpmini_colors)
+	 if id == 14 then -- LPPro only
+	    for i = 1, 8 do
+	       -- lower bottom row
+	       self:outlet(1, "ctl", {lppro_colors[i], i, ch})
+	       -- upper bottom row
+	       self:outlet(1, "ctl", {accent_arrows, i+100, ch})
+	    end
 	 end
+	 -- arrow buttons
+	 local lp_arrow_buttons = id==14 and lppro_arrow_buttons or lpmini_arrow_buttons
+	 for _, i in ipairs(lp_arrow_buttons) do
+	    self:outlet(1, "ctl", {accent_arrows, i, ch})
+	 end
+	 -- initialize the launch grid from the midi map
+	 local mapped = self:launchpad_map(self.midi_map, ch)
+	 -- populate the preset buttons
+	 for i = 1, 8 do
+	    if i == 1 then
+	       color = {blank, blank, 3, 58, blank, accent_arrows, accent_arrows, 3}
+	    elseif i == 2 then
+	       color = {61, 21, 5, blank, blank, 33, 5, accent_loop}
+	    else
+	       color = {blank, blank, blank, blank, blank, blank, blank, blank}
+	    end
+	    for j = 1, 8 do
+	       local num = i*10+j
+	       if not mapped[num] or color[j] ~= blank then
+		  self:outlet(1, "note", {num, color[j], ch})
+	       end
+	    end
+	 end
+	 -- drum grid
+	 if id ~= 13 then -- not available on the Mini
+	    for i = 0, 63 do
+	       local color = 8*(i//16)+33
+	       self:outlet(1, "note", {i+36, color, drumch})
+	    end
+	 end
+	 self.launchpad_drums[portno] = false
+	 if id == 14 then
+	    -- LP Pro: Set up the four fader banks in advance. On the LP Mini/X
+	    -- this is done on the fly, because AFAICT there's only a single
+	    -- fader bank on these devices.
+	    for b = 0, 3 do
+	       self:launchpad_fader_bank_setup(portno, b, lpmini_colors)
+	    end
+	 end
+	 ::skip::
       end
    end
 end
 
 function raptor:launchpad_fini()
    if launchpad ~= 0 and self.master and self.id == self.master then
-      -- turn off all buttons
-      for i = 1, 8 do
-	 -- left- and rightmost columns (the former is only on the LPPro)
-	 if launchpad_id == 14 then
-	    self:outlet(1, "ctl", {0, 10*i, 33})
-	 end
-	 self:outlet(1, "ctl", {0, 10*i+9, 33})
-      end
-      if launchpad_id == 14 then -- LPPro only
+      -- iterate over all connected launchpads
+      for portno, id in pairs(launchpad_id) do
+	 local ch = portno==3 and 33 or portno==4 and 49
+	 -- assert ch, but to be on the safe side...
+	 if not ch then goto skip end
+	 local drumch = ch+8
+	 self:outlet(2, "float", {portno})
+	 -- turn off all buttons
 	 for i = 1, 8 do
-	    -- lower bottom row
-	    self:outlet(1, "ctl", {0, i, 33})
-	    -- upper bottom row
-	    self:outlet(1, "ctl", {0, i+100, 33})
+	    -- left- and rightmost columns (the former is only on the LPPro)
+	    if id == 14 then
+	       self:outlet(1, "ctl", {0, 10*i, ch})
+	    end
+	    self:outlet(1, "ctl", {0, 10*i+9, ch})
 	 end
-      end
-      -- arrow buttons
-      local lp_arrow_buttons = launchpad_id==14 and lppro_arrow_buttons or lpmini_arrow_buttons
-      for _, i in ipairs(lp_arrow_buttons) do
-	 self:outlet(1, "ctl", {0, i, 33})
-      end
-      -- launch grid will be turned off automatically with the sysex
-      -- drum grid
-      if launchpad_id ~= 13 then -- not available on the Mini
-	 for i = 0, 63 do
-	    self:outlet(1, "note", {i+36, 0, 41})
+	 if id == 12 then
+	    -- Capture MIDI button on the Launchpad X
+	    self:outlet(1, "ctl", {0, 98, ch})
 	 end
+	 if id == 14 then -- LPPro only
+	    for i = 1, 8 do
+	       -- lower bottom row
+	       self:outlet(1, "ctl", {0, i, ch})
+	       -- upper bottom row
+	       self:outlet(1, "ctl", {0, i+100, ch})
+	    end
+	 end
+	 -- arrow buttons
+	 local lp_arrow_buttons = id==14 and lppro_arrow_buttons or lpmini_arrow_buttons
+	 for _, i in ipairs(lp_arrow_buttons) do
+	    self:outlet(1, "ctl", {0, i, ch})
+	 end
+	 -- launch grid will be turned off automatically with the sysex
+	 -- drum grid
+	 if id ~= 13 then -- not available on the Mini
+	    for i = 0, 63 do
+	       self:outlet(1, "note", {i+36, 0, drumch})
+	    end
+	 end
+	 -- switch the Launchpad back into standalone mode
+	 self:outlet(1, "sysex", {0, 32, 41, 2, id, 16, 0})
+	 ::skip::
       end
-      -- switch the Launchpad back into standalone mode
-      self:outlet(1, "sysex", {0, 32, 41, 2, launchpad_id, 16, 0})
    end
 end
 
 function raptor:launchpad_note(atoms)
    if launchpad ~= 0 then
       local num, val, ch = table.unpack(atoms)
-      if ch == 33 and launchpad_trigger > 0 then
-	 -- channel 1 on port #3 (launch grid)
+      if (ch == 33 or ch == 49) and launchpad_trigger > 0 then
+	 -- channel 1 on port #3 or #4 (launch grid)
 	 local cc = num+128
 	 local var
+	 -- pretend that we are on port #3, to simplify MIDI mapping
+	 ch = 33
+	 atoms[3] = 33
 	 if self.midi_learn ~= 0 then
 	    -- We need to tie in with the MIDI learn system here so that we
 	    -- can decide whether we want to be a toggle on the basis of the
@@ -2882,18 +2928,13 @@ function raptor:launchpad_note(atoms)
 	    end
 	    return atoms
 	 end
-      elseif ch == 41 then
-	 -- channel 9 on port #3 (drum grid)
-	 atoms[3] = 10
+      elseif ch == 41 or ch == 57 then
+	 -- channel 9 on port #3 or port #4 (drum grid)
+	 atoms[3] = 10 -- GM drum channel on port 1
 	 return atoms
       end
    end
    return false
-end
-
-function raptor:launchpad_fader_timer_cb()
-   -- switch to long-press state
-   self.launchpad_momentary = 1
 end
 
 local launchpad_check
@@ -2902,10 +2943,12 @@ function raptor:launchpad_idreq_timer_cb()
    -- disable the Launchpad driver if we didn't get the expected reply
    -- this will be checked by whatever instance gets here first
    if launchpad ~= 0 and not launchpad_check then
-      if launchpad_id then
+      if launchpad_id and next(launchpad_id) then
 	 local names = { [12] = "X", [13] = "Mini MK3", [14] = "Pro MK3" }
-	 local name = names[launchpad_id] and names[launchpad_id] or "??"
-	 print(string.format("Launchpad %s detected, driver enabled", name))
+	 for portno, id in pairs(launchpad_id) do
+	    local name = names[id] and names[id] or "??"
+	    print(string.format("Launchpad %s detected on port #%d", name, portno))
+	 end
 	 self:launchpad_init()
       else
 	 print("No known Launchpad device detected, driver disabled")
@@ -2915,11 +2958,23 @@ function raptor:launchpad_idreq_timer_cb()
    end
 end
 
+function raptor:launchpad_fader_timer_on()
+   -- kick off the momentary timer, initial state 0 (waiting for timer)
+   self.launchpad_momentary = 0
+   -- threshold for momentary changes
+   self.launchpad_clock:delay(500)
+end
+
 function raptor:launchpad_fader_timer_off()
    if self.launchpad_momentary == 0 then
       self.launchpad_clock:unset()
       self.launchpad_momentary = nil
    end
+end
+
+function raptor:launchpad_fader_timer_cb()
+   -- switch to long-press state
+   self.launchpad_momentary = 1
 end
 
 local launchpad_master = nil
@@ -2943,68 +2998,77 @@ function raptor:launchpad_master()
    return launchpad_master == self.id
 end
 
-local launchpad_last_page = nil
+local launchpad_last_page = {}
 
 function raptor:launchpad_fader_page_change(old_id, new_id)
    -- this gets invoked when the time master or ccmaster changes
    if (not old_id or old_id == launchpad_master) and self.id == new_id and launchpad_id then
       -- hand over to the new instance which holds the baton
+      self:launchpad_fader_timer_off()
       launchpad_master = self.id
-      self:launchpad_fader_page(launchpad_last_page)
+      for portno, id in pairs(launchpad_id) do
+	 self:launchpad_fader_page(portno, launchpad_last_page[portno], true)
+      end
    end
 end
 
-function raptor:launchpad_fader_set_page(page)
+function raptor:launchpad_fader_set_page(portno, page)
+   local id = launchpad_id[portno]
    if page then
-      self:launchpad_fader_bank(page)
-      self.launchpad_faders = page
-      self.lp_fader_map = nil
-      launchpad_last_page = page
+      self:launchpad_fader_bank(portno, page)
+      self.launchpad_faders[portno] = page
+      self.lp_fader_map[portno] = nil
+      launchpad_last_page[portno] = page
    else
-      self.launchpad_faders = -1
-      self.lp_fader_map = nil
+      self.launchpad_faders[portno] = -1
+      self.lp_fader_map[portno] = nil
       launchpad_master = nil
-      launchpad_last_page = nil
+      launchpad_last_page[portno] = nil
    end
 end
 
-function raptor:launchpad_fader_page(page)
+function raptor:launchpad_fader_page(portno, page, retriggered)
    if launchpad ~= 0 and self:launchpad_master() then
       --print("fader page", tostring(page), "on id", self.id)
+      local id = launchpad_id[portno]
+      -- assert id
+      self:outlet(2, "float", {portno})
       if page then
 	 -- switch to the new page
 	 -- initialize the fader values via MIDI feedback
-	 if launchpad_id == 14 then
+	 if id == 14 then
 	    -- LP Pro: The four fader banks are available as separate pages on
 	    -- the fader layour (#1).
-	    self:outlet(1, "sysex", {0, 32, 41, 2, launchpad_id, 0, 1, page, 0})
+	    self:outlet(1, "sysex", {0, 32, 41, 2, id, 0, 1, page, 0})
 	 else
 	    -- LP Mini/X: We need to set up the fader page here on the fly,
 	    -- since there's just a single bank of these and a single fader
 	    -- layout (#13).
-	    self:launchpad_fader_bank_setup(page, lpmini_colors)
-	    self:outlet(1, "sysex", {0, 32, 41, 2, launchpad_id, 0, 13})
+	    self:launchpad_fader_bank_setup(portno, page, lpmini_colors)
+	    self:outlet(1, "sysex", {0, 32, 41, 2, id, 0, 13})
 	 end
 	 -- update the internal state
-	 self:launchpad_fader_set_page(page)
-	 -- kick off the momentary timer, initial state 0 (waiting for timer)
-	 self.launchpad_momentary = 0
-	 -- threshold for momentary changes
-	 self.launchpad_clock:delay(500)
+	 self:launchpad_fader_set_page(portno, page)
+	 if not retriggered then
+	    -- kick off the momentary timer
+	    self:launchpad_fader_timer_on()
+	 end
       else
 	 -- Switch back to the previous non-fader page. Use mode 4 by default,
 	 -- which seems to be the default mode on the LP Pro at least, not
 	 -- sure about the other devices.
-	 page = self.launchpad_page and self.launchpad_page or launchpad_id==14 and {4, 0} or {4}
-	 if launchpad_id == 14 then
+	 page = self.launchpad_page[portno] and self.launchpad_page[portno] or id==14 and {4, 0} or {4}
+	 if id == 14 then
 	    -- on the Pro, layout and page is followed by another zero
 	    table.insert(page, 0)
 	 end
-	 self:outlet(1, "sysex", {0, 32, 41, 2, launchpad_id, 0, table.unpack(page)})
+	 self:outlet(1, "sysex", {0, 32, 41, 2, id, 0, table.unpack(page)})
 	 -- update the internal state
-	 self:launchpad_fader_set_page()
-	 -- kill off the timer if needed
-	 self:launchpad_fader_timer_off()
+	 self:launchpad_fader_set_page(portno)
+	 if not retriggered then
+	    -- kill off the timer if needed
+	    self:launchpad_fader_timer_off()
+	 end
       end
    end
 end
@@ -3012,31 +3076,67 @@ end
 function raptor:launchpad_ctl(atoms)
    if launchpad ~= 0 then
       local val, num, ch = table.unpack(atoms)
-      if ch == 33 then
-	 if num == 8 or num == 49 then
-	    if val > 0 then
-	       -- toggles drum mode
-	       self.launchpad_drums = not self.launchpad_drums
-	       local flag = self.launchpad_drums and 1 or 0
-	       if launchpad_id == 14 then
-		  -- Launchpad Pro MK3. This isn't what the prog manual says;
-		  -- the message given there is identical to the Launchpad X
-		  -- (see below), which won't work on the Pro. This one works,
-		  -- though, I gleaned it from the output of Bitwig Studio.
-		  self:outlet(1, "sysex", {0, 32, 41, 2, launchpad_id, 0, flag+1})
-	       elseif launchpad_id == 13 then
-		  -- There's no drum rack on the Mini, but we can emulate that
-		  -- functionality (kind of) by switching to custom mode 1
-		  -- (drums) or 2 (keys), a.k.a. layout 4 and 5.
-		  self:outlet(1, "sysex", {0, 32, 41, 2, launchpad_id, 0, 5-flag})
-		  -- update the fader page status, just in case
-		  self:launchpad_fader_set_page()
-	       else
-		  -- Launchpad X. At least that's what the prog manual says. I
-		  -- don't have the X to test, so I keep my fingers crossed...
-		  -- XXXCHECK: Launchpad X
-		  self:outlet(1, "sysex", {0, 32, 41, 2, launchpad_id, 15, flag})
+      if ch == 33 or ch == 49 then
+	 -- channel 1 on port 3 or 4
+	 local portno = ch == 33 and 3 or 4
+	 local id = launchpad_id[portno]
+	 if not id then
+	    -- not a known device, bail out
+	    return false
+	 end
+	 -- pretend that we are on port #3, to simplify MIDI mapping
+	 atoms[3] = 33
+	 local function layout_request(num)
+	    local function is_layout_button(num)
+	       -- The Pro doesn't have any detectable layout buttons at all, the
+	       -- X three, the Mini four.
+	       local first = id==14 and 99 or 95
+	       local last = id==12 and 97 or 98
+	       return num >= first and num <= last
+	    end
+	    if is_layout_button(num) then
+	       if id ~= 14 and self:launchpad_master() then
+		  -- On the Launchpad Mini and X, we don't get any automatic
+		  -- layout change messages from the device, so we request
+		  -- one; the result will be processed by launchpad_sysex.
+		  self:outlet(2, "float", {portno})
+		  self:outlet(1, "sysex", {0, 32, 41, 2, id, 0})
 	       end
+	       return true
+	    else
+	       return false
+	    end
+	 end
+	 -- Notes layout button on the Launchpad X, do some magic with the
+	 -- button to switch between notes and drum view.
+	 local last_page = self.launchpad_page[portno] and self.launchpad_page[portno][1]
+	 local notes_num = id==12 and last_page == 1 and 96
+	 if num == 8 or num == 49 or num == notes_num then
+	    if val > 0 and self:launchpad_master() then
+	       -- toggles drum mode
+	       self.launchpad_drums[portno] = not self.launchpad_drums[portno]
+	       local flag = self.launchpad_drums[portno] and 1 or 0
+	       self:outlet(2, "float", {portno})
+	       if id == 14 then
+		  -- Launchpad Pro MK3. This isn't what the prog manual
+		  -- says; the message given there is identical to the
+		  -- Launchpad X (see below), which won't work on the
+		  -- Pro. This one works, though, I gleaned it from the
+		  -- output of Bitwig Studio.
+		  self:outlet(1, "sysex", {0, 32, 41, 2, id, 0, flag+1})
+	       elseif id == 13 then
+		  -- There's no drum rack on the Mini, but we can emulate
+		  -- that functionality (kind of) by switching to custom
+		  -- mode 1 (drums) or 2 (keys), a.k.a. layout 4 and 5.
+		  self:outlet(1, "sysex", {0, 32, 41, 2, id, 0, 5-flag})
+		  -- update the fader page status, just in case
+		  self:launchpad_fader_set_page(portno)
+	       elseif id == 12 then
+		  -- Launchpad X. Works pretty much like the Pro, but uses a
+		  -- different sysex message.
+		  self:outlet(1, "sysex", {0, 32, 41, 2, id, 15, flag})
+	       end
+	       layout_request(num)
 	    end
 	    return true
 	 end
@@ -3045,22 +3145,23 @@ function raptor:launchpad_ctl(atoms)
 	    if val > 0 then
 	       -- switch to one of the four fader banks:
 	       -- volumes, pans, sends, devices
-	       local old_page = self.launchpad_faders and self.launchpad_faders or -1
+	       local old_page = self.launchpad_faders[portno] and self.launchpad_faders[portno] or -1
+	       --print("fader page, old:", tostring(old_page), "new:", tostring(page))
 	       if page ~= old_page then
 		  -- switch to the new page
-		  self:launchpad_fader_page(page)
+		  self:launchpad_fader_page(portno, page)
 	       else
 		  -- switch back to the previous non-fader page
-		  self:launchpad_fader_page()
+		  self:launchpad_fader_page(portno)
 	       end
 	    elseif self.launchpad_momentary == 0 then
 	       -- still momentary, cancel the timer
 	       self:launchpad_fader_timer_off()
 	    elseif self.launchpad_momentary == 1 then
-	       -- timer has triggered already, so we're in long-press state where
-	       -- we switch back to the previous non-fader page as soon as the
-	       -- button is released (which we just detected)
-	       self:launchpad_fader_page()
+	       -- timer has triggered already, so we're in long-press state
+	       -- where we switch back to the previous non-fader page as soon
+	       -- as the button is released (which we just detected)
+	       self:launchpad_fader_page(portno)
 	    end
 	 elseif num >= 101 and num <= 108 then
 	    if val > 0 then
@@ -3068,7 +3169,7 @@ function raptor:launchpad_ctl(atoms)
 	    end
 	 else
 	    -- arrow buttons: up, down, left, right
-	    local lp_arrow_buttons = launchpad_id==14 and lppro_arrow_buttons or lpmini_arrow_buttons
+	    local lp_arrow_buttons = id==14 and lppro_arrow_buttons or lpmini_arrow_buttons
 	    local up, down, left, right = table.unpack(lp_arrow_buttons)
 	    if num == left then
 	       if val > 0 then
@@ -3090,19 +3191,18 @@ function raptor:launchpad_ctl(atoms)
 		  i = i+1
 		  self:recall_preset(i)
 	       end
-	    elseif num > right and num < 99 and launchpad_id ~= 14 then
-	       -- On the Launchpad Mini at least, we don't get any automatic
-	       -- layout change messages from the device, so we request one;
-	       -- the result will be processed by launchpad_sysex.
-	       -- XXXCHECK: Launchpad X
-	       self:outlet(1, "sysex", {0, 32, 41, 2, launchpad_id, 0})
-	    else
+	    elseif num == 98 and id ==12 then
+	       -- make the "Capture MIDI" button on the X MIDI-mappable
+	       return false
+	    elseif not layout_request(num) then
 	       return false
 	    end
 	 end
 	 return true
-      elseif ch == 37 then
-	 -- output from faders
+      elseif ch == 37 or ch == 53 then
+	 -- output from faders; we just pretend that these all come from port
+	 -- 3, to simplify the MIDI mapping
+	 atoms[3] = 37
 	 return atoms
       end
    end
@@ -3110,32 +3210,15 @@ function raptor:launchpad_ctl(atoms)
 end
 
 -- DEVICE INQUIRY: At startup, we first send out a device inquiry sysex on
--- port #3, so that we can find the right launchpad_id for the device. (If we
--- get this wrong, you can also set launchpad_id manually; see above, near the
--- beginning of this file.)
+-- port #3+4, so that we can determine the launchpad ids for the devices on
+-- those ports. (If we get this wrong, you can also manually set the
+-- launchpad_id table near the beginning of the source.)
 
--- The problem is that the programmer manuals of all current models claim that
--- the subdevice id in the reply is 13h. Obviously, they can't all be right at
--- the same time. ;-) But I know from the devices that I own myself that the
--- Launchpad Pro MK3 and the Launchpad Mini MK3 identify themselves as id 23h
--- and 13h, respectively.
-
--- CAVEAT: I don't know the id for the Launchpad X, so at present we just fall
--- back to the Launchpad X in all other cases (as long as the other parts of
--- the id reply match up). So don't try connecting one of your older
--- Launchpads! We don't support those anyway. I *think* that nothing bad will
--- happen (apart from the device not working), but I haven't tested this, so
--- better be safe than sorry.
-
--- If someone with a Launchpad X can tell me the identity reply of that
--- device, please do! Then I can add the proper check below and make the
--- device detection code more robust.
-
-function raptor:launchpad_sysex(atoms)
+function raptor:launchpad_sysex(atoms, portno)
    if launchpad ~= 0 then
       -- identity reply, this is the critical number:
       local id = atoms[8]
-      if not launchpad_id then
+      if not launchpad_id[portno] then
 	 -- check whether this is an identity reply message
 	 local idreq = {126, 0, 6, 2, 0, 32, 41, 0, 1}
 	 for i = 1, #idreq do
@@ -3146,34 +3229,38 @@ function raptor:launchpad_sysex(atoms)
 	 end
 	 if id == 0x23 then
 	    -- Launchpad Pro MK3
-	    launchpad_id = 14
+	    launchpad_id[portno] = 14
 	 elseif id == 0x13 then
 	    -- Launchpad Mini
-	    launchpad_id = 13
-	 else
-	    -- XXXCHECK: Launchpad X
-	    launchpad_id = 12
+	    launchpad_id[portno] = 13
+	 elseif id == 0x03 then
+	    -- Launchpad X
+	    launchpad_id[portno] = 12
 	 end
       end
       ::skip::
       -- check whether this is a Launchpad message
-      local lp_id = {0, 32, 41, 2, launchpad_id}
+      local lp_id = {0, 32, 41, 2}
       for i = 1, #lp_id do
 	 if atoms[i] ~= lp_id[i] then
 	    -- not for us, pass
 	    return false
 	 end
       end
+      if atoms[5] < 12 or atoms[5] > 14 then
+	 -- unknown model, bail out
+	 return false
+      end
       --print("sysex", table.unpack(atoms))
       if atoms[6] == 0 then
 	 -- layout/page change, we want to record this unless it's a fader
 	 -- page; this message is different on the Pro, as it has many more
 	 -- layouts and different pages per layout
-	 local fader_mode = launchpad_id == 14 and 1 or 13
+	 local fader_mode = atoms[5] == 14 and 1 or 13
 	 if atoms[7] ~= fader_mode then
+	    self:launchpad_fader_set_page(portno)
 	    -- atoms[8] will only be set on the Pro
-	    self:launchpad_fader_set_page()
-	    self.launchpad_page = {atoms[7], atoms[8]}
+	    self.launchpad_page[portno] = {atoms[7], atoms[8]}
 	    self:launchpad_fader_timer_off()
 	 end
       end
@@ -3185,6 +3272,19 @@ end
 
 -- feedback
 
+function raptor:launchpad_iter(fun)
+   if launchpad ~= 0 and launchpad_id then
+      -- iterate over all Launchpad ports
+      for portno, id in pairs(launchpad_id) do
+	 local ch = portno==3 and 33 or portno==4 and 49
+	 -- assert ch, but to be on the safe side...
+	 if ch then
+	    fun(ch, portno, id)
+	 end
+      end
+   end
+end
+
 function raptor:launchpad_pulse(w, val)
    -- w is the weight, val the velocity, n the number of beats per bar to
    -- trigger, b the total number of beats.
@@ -3192,33 +3292,47 @@ function raptor:launchpad_pulse(w, val)
       -- we only do this on the time master
       local n, b = launchpad_n_pulses, self.arp.beats
       local state = w >= b-n and 1 or 0
-      self:outlet(1, "ctl", {val*state, 99, 33})
+      self:launchpad_iter(function(ch)
+	    self:outlet(1, "ctl", {val*state, 99, ch})
+      end)
    end
 end
 
 function raptor:launchpad_ccmaster(state)
    if launchpad ~= 0 then
       local i = self:get_instance()
-      if i > 0 and i <= 8 and launchpad_id == 14 then
-	 -- LP Pro only. Neither the Mini nor the X have these button rows at
-	 -- the bottom, and I found that at least on the Mini things
-	 -- go haywire when it receives those CCs in the 101-108 range.
-	 self:outlet(1, "note", {i+100, accent_arrows+8*state, 33})
-      end
+      self:launchpad_iter(function(ch, portno, id)
+	    if i > 0 and i <= 8 and id == 14 then
+	       -- LP Pro only. Neither the Mini nor the X have these button
+	       -- rows, and I found that at least on the Mini things go
+	       -- haywire when it receives CCs in the 101-108 range.
+	       self:outlet(1, "note", {i+100, accent_arrows+8*state, ch})
+	    end
+      end)
    end
 end
 
 function raptor:launchpad_play(state)
    if launchpad ~= 0 then
-      self:outlet(1, "note", {18, 3+22*state, 33})
-      self:outlet(1, "note", {20, 3+22*state, 33})
+      self:launchpad_iter(function(ch, portno, id)
+	    self:outlet(1, "note", {18, 3+22*state, ch})
+	    if id == 14 then
+	       self:outlet(1, "ctl", {3+22*state, 20, ch})
+	    end
+      end)
    end
 end
 
 function raptor:launchpad_loop(state)
    if launchpad ~= 0 then
-      self:outlet(1, "note", {28, accent_loop-8*state, 33})
-      self:outlet(1, "note", {10, accent_loop-8*state, 33})
+      self:launchpad_iter(function(ch, portno, id)
+	    self:outlet(1, "note", {28, accent_loop-8*state, ch})
+	    if id == 14 then
+	       self:outlet(1, "ctl", {accent_loop-8*state, 10, ch})
+	    elseif id == 12 then
+	       self:outlet(1, "ctl", {accent_loop-8*state, 98, ch})
+	    end
+      end)
    end
 end
 
@@ -3226,11 +3340,13 @@ function raptor:launchpad_mapped(cc, ch, var)
    if launchpad ~= 0 and ch == 33 and cc >= 128 then
       local state = var ~= nil
       local color = state and assigned or blank
-      self:outlet(1, "note", {cc-128, color, 33})
+      self:launchpad_iter(function(ch)
+	    self:outlet(1, "note", {cc-128, color, ch})
+      end)
    end
 end
 
-function raptor:launchpad_map(midi_map)
+function raptor:launchpad_map(midi_map, ch0)
    if launchpad ~= 0 then
       local mapped = {}
       for cc, map in pairs(midi_map) do
@@ -3241,7 +3357,7 @@ function raptor:launchpad_map(midi_map)
 		  local state = v ~= nil
 		  local color = state and assigned or blank
 		  mapped[num] = state
-		  self:outlet(1, "note", {num, color, 33})
+		  self:outlet(1, "note", {num, color, ch0})
 	       end
 	    end
 	 end
@@ -3293,37 +3409,46 @@ function raptor:launchpad_fader_tomidi(var, val, opt)
 end
 
 function raptor:launchpad_fader_val(var, val)
-   local b = self.launchpad_faders
-   if launchpad ~= 0 and b and b >= 0 and var and self:launchpad_master() then
-      local ch = 37
-      if not self.lp_fader_map then
-	 -- need to reinitialize our map for the current fader bank
-	 self.lp_fader_map = {}
-	 local cc0 = (b==0 and 76 or b==1 and 48 or b==2 and 12 or 28) + 1
-	 for i = 0, 7 do
-	    local cc = cc0 + i
-	    local var, opt = self:map_get(cc, ch)
-	    self.lp_fader_map[var] = {cc, opt}
-	 end
-      end
-      if self.lp_fader_map then
-	 local cc = self.lp_fader_map[var]
-	 if cc then
-	    cc, opt = table.unpack(cc)
-	    local val = self:launchpad_fader_tomidi(var, val, opt)
-	    -- I think that this is a firmware bug. Looks like the Mini has
-	    -- the channels for the fader position and color sets (5 and 6)
-	    -- the wrong way around. XXXCHECK: Launchpad X
-	    local ch = launchpad_id==13 and 38 or 37
-	    if val then
-	       self:outlet(1, "ctl", {val, cc, ch})
+   if launchpad ~= 0 and var and launchpad_id and self:launchpad_master() then
+      for portno, id in pairs(launchpad_id) do
+	 local b = self.launchpad_faders[portno]
+	 if b and b >= 0 then
+	    local ch = 37
+	    if not self.lp_fader_map[portno] then
+	       -- need to reinitialize our map for the current fader bank
+	       self.lp_fader_map[portno] = {}
+	       local cc0 = (b==0 and 76 or b==1 and 48 or b==2 and 12 or 28) + 1
+	       for i = 0, 7 do
+		  local cc = cc0 + i
+		  local var, opt = self:map_get(cc, ch)
+		  self.lp_fader_map[portno][var] = {cc, opt}
+	       end
+	    end
+	    if self.lp_fader_map[portno] then
+	       local cc = self.lp_fader_map[portno][var]
+	       if cc then
+		  cc, opt = table.unpack(cc)
+		  local val = self:launchpad_fader_tomidi(var, val, opt)
+		  -- I think that there's a firmware bug on the Mini MK3,
+		  -- which even with the latest firmware has the channels for
+		  -- the fader position and color sets (5 and 6) the wrong way
+		  -- around.
+		  local ch = id==13 and 38 or 37
+		  if portno > 3 then
+		     ch = ch+16
+		  end
+		  if val then
+		     self:outlet(1, "ctl", {val, cc, ch})
+		  end
+	       end
 	    end
 	 end
       end
    end
 end
 
-function raptor:launchpad_fader_bank(b)
+function raptor:launchpad_fader_bank(portno, b)
+   local id = launchpad_id[portno] -- assert id
    -- single fader bank feedback
    -- b = 0 = Volume, 1 = Pan, 2 = Send A (Send), 3 = Send B (Device)
    local cc0 = (b==0 and 76 or b==1 and 48 or b==2 and 12 or 28) + 1
@@ -3333,8 +3458,11 @@ function raptor:launchpad_fader_bank(b)
       local var, opt = self:map_get(cc, ch)
       if var then
 	 local val = self:launchpad_fader_tomidi(var, nil, opt)
-	 -- Fader pos/col channel bug, see above. XXXCHECK: Launchpad X
-	 local ch = launchpad_id==13 and 38 or 37
+	 -- Work around the LP Mini MK3 fader pos/col channel bug, see above.
+	 local ch = id==13 and 38 or 37
+	 if portno > 3 then
+	    ch = ch+16
+	 end
 	 if val then
 	    self:outlet(1, "ctl", {val, cc, ch})
 	 end
@@ -4036,9 +4164,9 @@ function raptor:process_ctl(atoms)
    return false
 end
 
-function raptor:process_sysex(atoms)
+function raptor:process_sysex(atoms, portno)
    -- only the Launchpad processes sysex at this time
-   local res = launchpad ~= 0 and self:launchpad_sysex(atoms)
+   local res = launchpad ~= 0 and self:launchpad_sysex(atoms, portno)
    if res then
       return res
    end
@@ -4223,9 +4351,13 @@ function raptor:in_1_polytouch(atoms)
 end
 
 function raptor:in_1_sysex(atoms)
-   local res = self:process_sysex(atoms)
-   -- no pass-through here, this seems dangerous
-   --self:outlet(1, "sysex", atoms)
+   local res = self:process_sysex(atoms, self.portno)
+   -- no pass-through here
+end
+
+function raptor:in_2_float(p)
+   -- port number for sysex messages
+   self.portno = math.floor(p)
 end
 
 -- instance parameters (these need special treatment)

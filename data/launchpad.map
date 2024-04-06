@@ -194,6 +194,11 @@
   [39] = { [33] = { "mute", true } },
   [29] = { [33] = { "latch", true } },
   [19] = { [33] = { "bypass", true } },
+  -- Play and Capture MIDI buttons (LP Pro)
+  [20] = { [33] = { "play", true } },
+  [10] = { [33] = { "loop", true } },
+  -- Capture MIDI button (LP X)
+  [98] = { [33] = { "loop", true } },
   -- send A (min value) faders
   [13] = { [37] = "minvel" },
   [14] = { [37] = "pmin" },
