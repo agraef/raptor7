@@ -15,20 +15,18 @@
    HARDWARE:
 
    You'll need a recent Launchpad version, either the Launchpad X, the
-   Launchpad Mini MK3, or the Launchpad Pro MK3. The latter two have been
-   tested and are known to work. The Launchpad X is still WIP which I'll
-   finish as soon as I can get my hands on it. But I hope that it's already
-   in a usable state.
-
-   Apart from the hardware differences, all three devices should work pretty
-   much the same in Raptor. Obviously, the Mini and the X have less buttons,
-   which is why we provide lots of alternative bindings so that all the
-   available functionality is accessible on all devices.
+   Launchpad Mini MK3, or the Launchpad Pro MK3. All three have been tested
+   and are known to work. Apart from the hardware differences, all three
+   devices should work pretty much the same in Raptor. Obviously, the Mini and
+   the X have less buttons, which is why we provide lots of alternative
+   bindings so that all the available functionality is accessible on all
+   devices.
 
    Also note that the Launchpad Mini has some additional limitations:
 
-   - It doesn't have a programmable drum rack, thus you'll have to use its
-     custom drum layout instead.
+   - It doesn't have a real note mode with switchable drum rack like the Pro
+     and the X do, thus you'll have to use its custom drum and key layouts
+     instead.
 
    - The pads on the launch grid aren't velocity-sensitive, so there are no
      "mapping tooltips", and the "latching faders" are two-valued, either on
@@ -59,8 +57,12 @@
 
    Some of the hardware buttons work differently than what you might be used
    to from Ableton Live, however. In particular, the Mute, Solo, and Record
-   Arm buttons are bound to Raptor's mute, latch, and bypass "voice" controls,
-   while the Stop Clip button toggles between Launchpad's note and drum views.
+   Arm buttons are bound to Raptor's mute, latch, and bypass "voice" controls.
+
+   On the Launchpad Pro, the Stop Clip button toggles between Launchpad's note
+   and drum views. On the Launchpad X, you can just press the Notes button
+   instead, while the Mini lets you switch between the two custom layouts by
+   pressing the Keys and Drums buttons.
 
    In the following we discuss each of the elements of the Raptor mapping in
    more detail.
@@ -152,16 +154,18 @@
 
    Here is a brief rundown of the available functions:
 
-   The "Play" and "Capture MIDI" buttons on the Launchpad Pro are bound to
-   Raptor's play and loop functions. If you don't have these then you can use
-   the corresponding pads in the session view instead (see above).
+   The "Play" and "Capture MIDI" buttons on the Launchpad Pro, as well as the
+   "Capture MIDI" button on the Launchpad X, are bound to Raptor's play and
+   loop functions, respectively. If you don't have these then you can use the
+   corresponding pads in the session view instead (see above).
 
    The left and right arrow buttons can be used to select the current Raptor
    instance, while the up and down arrow buttons change presets. Note that
    these buttons are in slightly different locations depending on the
-   Launchpad version. Also note that the arrow keys are only accessible in the
-   session and drum rack views, in other modes they may have a predefined
-   meaning (note mode) or are just unavailable because Novation made it so.
+   Launchpad version. Also note that these functions can only be accessed in
+   the session and drum rack views, in other modes the buttons may have a
+   different meaning (i.e., transposition in note mode), or are just
+   unavailable because Novation made it so.
 
    On the Launchpad Pro, instances can also be selected using the upper button
    row at the bottom, and the bottommost row has the following functions:
