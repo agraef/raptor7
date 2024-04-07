@@ -155,9 +155,10 @@
    relative to the *end* of the bar or loop (-1 denotes the last beat, -2 the
    second-last, etc.).
 
-   A final note: You can change the responsiveness of the jog wheels with the
-   djcontrol_scrub_factor variable in raptor.pd_lua if needed. Please check
-   the source for further details.
+   A final note: You can change the responsiveness of the jog wheels in the
+   driver config patch (you can find this in Raptor's init subpatch). Please
+   check the description of the djcontrol_scrub_factor variable in the Raptor
+   source for further details.
 
    FEEDBACK:
 
@@ -181,9 +182,8 @@
    we'd simply trigger all pulses, so we only do the n most salient pulses, as
    determined by the pulse weights, where the value n is currently hard-coded.
    I found that a value of 7 seems to work best with most common meters. YMMV,
-   so you can change that value with the djcontrol_n_pulses variable near the
-   beginning of raptor.pd_lua. Again, please check the source for further
-   details.
+   so you can change that value with the config subpatch. Please check the
+   djcontrol_n_pulses variable in the source for further details.
 
    MAPPED CONTROLS:
 
