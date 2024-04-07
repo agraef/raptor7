@@ -10,9 +10,11 @@
 -- This maps the encoders in each column to the controls of the corresponding
 -- row in the panel. This works quite well, since the pan pots are mapped to
 -- the mod controls in the third column of the panel, which are mostly
--- bipolar. The Send A and B controls are mostly mapped to ranges, so that A
--- controls the lower, B the upper value. Some rows only have a single value
--- (besides the mod value), in which case I mapped both A and B to that value.
+-- bipolar. The Send A and B controls are mapped to ranges for the most part,
+-- so that Send A will control the lower, Send B the upper value. Some rows
+-- only have a single value (besides the mod value on the pan pot), in which
+-- case I mapped both Send A and B to that value, so that you don't have to
+-- guess which knob is the right one; you can just use any of the two.
 
 -- The faders are mapped as follows: 1 = pitch hi, 2 = pitch lo, 3 = pattern
 -- mode (random, up, down, etc.), 4 = pos/anacrusis (the "scrubbing" control),
@@ -36,9 +38,15 @@
 -- bindings for the looper and voice controls: up and down (loop next, prev);
 -- mute, solo, and record arm (mute, latch, and bypass).
 
--- HARD-WRIRED BINDINGS (select a Raptor ccmaster instance): Device Select
--- (DEVICE + left/right) cycles through the Raptor instances, Device Bank
--- (DEVICE + 1-8) selects or deselects one of the first 8 instances.
+-- HARD-WRIRED BINDINGS: These are only active as long as you hold the DEVICE
+-- key which is used as a kind of shift key.
+
+-- - Send Select (DEVICE + up/down) switches presets (up = previous, down =
+--   next preset).
+
+-- - Device Select (DEVICE + left/right) cycles through the Raptor instances,
+--   while Device Bank (DEVICE + 1-8) selects or deselects one of the first 8
+--   instances.
 
 {
   -- panel controls (Send A, Send B, Pan/Device)

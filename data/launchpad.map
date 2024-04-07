@@ -3,7 +3,7 @@
 -- Launchpad map, Albert Gräf <agggraef@gmail.com>, 2 April 2024
 
 -- IMPORTANT: In contrast to the other controllers, this device needs to be
--- connected to its own MIDI port, port #3, on *both* input and output.
+-- connected to its own MIDI port, port #3 or #4, on *both* input and output.
 
 --[[
 
@@ -20,9 +20,7 @@
    devices should work pretty much the same in Raptor. Obviously, the Mini and
    the X have less buttons, which is why we provide lots of alternative
    bindings so that all the available functionality is accessible on all
-   devices.
-
-   Also note that the Launchpad Mini has some additional limitations:
+   devices. The Launchpad Mini has some additional limitations:
 
    - It doesn't have a real note mode with switchable drum rack like the Pro
      and the X do, thus you'll have to use its custom drum and key layouts
@@ -34,8 +32,8 @@
 
    MAPPING:
 
-   Raptor's Launchpad implementation makes good use of all the nifty features
-   that the Launchpad has on offer:
+   The Launchpad driver makes good use of all the nifty features that the
+   Launchpad has on offer:
 
    - A session view with the launch grid, where each pad can be mapped using
      MIDI learn and function either as a toggle or as a "latching fader",
@@ -44,7 +42,7 @@
      the Launch Control XL mapping.
 
    - Four fader banks which function like the Volume faders and the Pan, Send
-     A, and Send B rotary encoders of the Launch Control. In this mode each
+     A, and Send B rotary encoders of the Launch Control XL. In this mode each
      bank consists of 8 vertical faders which can be operated in the same way
      as the track and mixer controls described in the Launchpad X and Pro MK3
      user guides. (The Launchpad Mini MK3 works the same, although it doesn't
@@ -162,10 +160,10 @@
    The left and right arrow buttons can be used to select the current Raptor
    instance, while the up and down arrow buttons change presets. Note that
    these buttons are in slightly different locations depending on the
-   Launchpad version. Also note that these functions can only be accessed in
-   the session and drum rack views, in other modes the buttons may have a
-   different meaning (i.e., transposition in note mode), or are just
-   unavailable because Novation made it so.
+   Launchpad model. Also note that these functions can only be accessed in the
+   session view, in other modes the buttons may have a different meaning
+   (i.e., transposition in note mode), or are just unavailable because
+   Novation made it so.
 
    On the Launchpad Pro, instances can also be selected using the upper button
    row at the bottom, and the bottommost row has the following functions:
