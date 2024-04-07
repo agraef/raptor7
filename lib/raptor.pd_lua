@@ -150,6 +150,44 @@ end
 
 -- -------------------------------------------------------------------------
 
+-- tie-in with data from the config patch
+
+local first_config = {}
+
+local function controller_setup(data)
+   local id, config_launchpad, config_launchcontrol, config_midimix, config_pacer, config_djcontrol = table.unpack(data)
+   if not first_config[id] then
+      launchpad = launchpad*config_launchpad ~= 0 and 1 or 0
+      launchcontrol = launchcontrol*config_launchcontrol ~= 0 and 1 or 0
+      midimix = midimix*config_midimix ~= 0 and 1 or 0
+      pacer = pacer*config_pacer ~= 0 and 1 or 0
+      djcontrol = djcontrol*config_djcontrol ~= 0 and 1 or 0
+      first_config[id] = true
+   else
+      launchpad = config_launchpad ~= 0 and 1 or 0
+      launchcontrol = config_launchcontrol ~= 0 and 1 or 0
+      midimix = config_midimix ~= 0 and 1 or 0
+      pacer = config_pacer ~= 0 and 1 or 0
+      djcontrol = config_djcontrol ~= 0 and 1 or 0
+   end
+   have_control = launchpad ~= 0 or launchcontrol ~= 0 or midimix ~= 0 or
+   pacer ~= 0 or djcontrol ~= 0
+end
+
+local function launchpad_setup(data)
+   local id, config_launchpad_trigger, config_launchpad_n_pulses = table.unpack(data)
+   launchpad_trigger = math.floor(config_launchpad_trigger)
+   launchpad_n_pulses = math.floor(config_launchpad_n_pulses)
+end
+
+local function djcontrol_setup(data)
+   local id, config_djcontrol_scrub_factor, config_djcontrol_n_pulses = table.unpack(data)
+   djcontrol_scrub_factor = math.floor(config_djcontrol_scrub_factor)
+   djcontrol_n_pulses = math.floor(config_djcontrol_n_pulses)
+end
+
+-- -------------------------------------------------------------------------
+
 -- Helper functions: ASA note names
 
 -- We use the most likely spellings here, but of course this will depend
@@ -2281,6 +2319,29 @@ function raptor:finalize()
    end
 end
 
+-- controller setup
+
+function raptor:in_1_config(data)
+   local last_launchpad = launchpad
+   controller_setup(data)
+   if last_launchpad ~= launchpad then
+      -- process launchpad status change
+      if launchpad == 0 then
+	 self:launchpad_fini(true)
+      else
+	 self:launchpad_init()
+      end
+   end
+end
+
+function raptor:in_1_lpconfig(data)
+   launchpad_setup(data)
+end
+
+function raptor:in_1_djconfig(data)
+   djcontrol_setup(data)
+end
+
 -- pulses
 
 function raptor:notes_off()
@@ -2794,8 +2855,8 @@ function raptor:launchpad_init()
    end
 end
 
-function raptor:launchpad_fini()
-   if launchpad ~= 0 and self.master and self.id == self.master then
+function raptor:launchpad_fini(force)
+   if (force or launchpad ~= 0) and self.master and self.id == self.master then
       -- iterate over all connected launchpads
       for portno, id in pairs(launchpad_id) do
 	 local ch = portno==3 and 33 or portno==4 and 49
@@ -4107,49 +4168,74 @@ end
 -- preprocessing of note and control data using the enabled control surfaces
 
 function raptor:process_note(atoms)
-   local res = launchpad ~= 0 and self:launchpad_note(atoms)
-   if res then
-      return res
-   end
-   local res = launchcontrol ~= 0 and self:launchcontrol_note(atoms)
-   if res then
-      return res
-   end
-   res = midimix ~= 0 and self:midimix_note(atoms)
-   if res then
-      return res
-   end
-   res = pacer ~= 0 and self:pacer_note(atoms)
-   if res then
-      return res
-   end
-   -- always put djcontrol last since it also filters out messages, which
-   -- might interfere with the other controllers
-   res = djcontrol ~= 0 and self:djcontrol_note(atoms)
-   if res then
-      return res
+   local ch = atoms[3] or 1
+   local portno = (ch-1)//16+1
+   -- The device drivers always listen on ports 2-4 only, so we can bypass the
+   -- entire chain for all other port numbers.
+   if portno >= 2 and portno <= 4 then
+      -- Launchpad only listens on ports 3+4.
+      if portno == 3 or portno == 4 then
+	 local res = launchpad ~= 0 and self:launchpad_note(atoms)
+	 if res then
+	    return res
+	 end
+      end
+      -- Only port 2 gets processed from here on.
+      if portno == 2 then
+	 local res = launchcontrol ~= 0 and self:launchcontrol_note(atoms)
+	 if res then
+	    return res
+	 end
+	 res = midimix ~= 0 and self:midimix_note(atoms)
+	 if res then
+	    return res
+	 end
+	 res = pacer ~= 0 and self:pacer_note(atoms)
+	 if res then
+	    return res
+	 end
+	 -- always put djcontrol last since it also filters out messages, which
+	 -- might interfere with the other controllers
+	 res = djcontrol ~= 0 and self:djcontrol_note(atoms)
+	 if res then
+	    return res
+	 end
+      end
    end
    return false
 end
 
 function raptor:process_ctl(atoms)
-   local res = launchpad ~= 0 and self:launchpad_ctl(atoms)
-   if res then
-      return res
+   local ch = atoms[3] or 1
+   local portno = (ch-1)//16+1
+   -- The device drivers always listen on ports 2-4 only, so we can bypass the
+   -- entire chain for all other port numbers.
+   if portno >= 2 and portno <= 4 then
+      -- Launchpad only listens on ports 3+4.
+      if portno == 3 or portno == 4 then
+	 local res = launchpad ~= 0 and self:launchpad_ctl(atoms)
+	 if res then
+	    return res
+	 end
+      end
+      -- Only port 2 gets processed from here on.
+      if portno == 2 then
+	 local res = launchcontrol ~= 0 and self:launchcontrol_ctl(atoms)
+	 if res then
+	    return res
+	 end
+	 res = midimix ~= 0 and self:midimix_ctl(atoms)
+	 if res then
+	    return res
+	 end
+	 res = pacer ~= 0 and self:pacer_ctl(atoms)
+	 if res then
+	    return res
+	 end
+	 -- djcontrol is handled separately since it needs a different output
+	 -- handling
+      end
    end
-   local res = launchcontrol ~= 0 and self:launchcontrol_ctl(atoms)
-   if res then
-      return res
-   end
-   res = midimix ~= 0 and self:midimix_ctl(atoms)
-   if res then
-      return res
-   end
-   res = pacer ~= 0 and self:pacer_ctl(atoms)
-   if res then
-      return res
-   end
-   -- we do the djcontrol separately since it needs a different output handling
    return false
 end
 
@@ -4247,6 +4333,8 @@ end
 -- other incoming MIDI messages (CC, pitch bend, etc.)
 
 function raptor:in_1_ctl(atoms)
+   local ch = atoms[3] or 1
+   local portno = (ch-1)//16+1
    local res = self:process_ctl(atoms)
    if res and type(res) ~= "table" then
       return
@@ -4254,16 +4342,18 @@ function raptor:in_1_ctl(atoms)
       -- launchpad: mapped CC gets processed as if it was on input
       goto skip
    end
-   res = djcontrol ~= 0 and self:djcontrol_ctl(atoms)
-   if type(res) == "table" and #res==3 then
-      -- djcontrol: mapped CC, passed through as if it was on input
-      if self.assert_master or self:check_ccmaster() then
-	 self:outlet(1, "ctl", self:rechan(res))
+   if portno == 2 then
+      res = djcontrol ~= 0 and self:djcontrol_ctl(atoms)
+      if type(res) == "table" and #res==3 then
+	 -- djcontrol: mapped CC, passed through as if it was on input
+	 if self.assert_master or self:check_ccmaster() then
+	    self:outlet(1, "ctl", self:rechan(res))
+	 end
+	 self.assert_master = false
+	 return
+      elseif res then
+	 return
       end
-      self.assert_master = false
-      return
-   elseif res then
-      return
    end
    ::skip::
    if self:check_midi_learn(atoms[1], atoms[2], atoms[3]) or

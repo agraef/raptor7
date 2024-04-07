@@ -1,6 +1,6 @@
 #N canvas 746 371 608 409 10;
 #X declare -path lib;
-#N canvas 312 484 494 281 init 0;
+#N canvas 312 484 494 301 init 0;
 #X obj 310 46 pd-remote;
 #X msg 310 20 pdluax reload;
 #N canvas 857 77 450 300 preset 0;
@@ -62,8 +62,10 @@ changes will be passed through to MIDI output instead), f 51;
 #X restore 240 100 pd arg;
 #X text 40 200 You can enable pgmset mode by default by connecting
 the loadbang with the toggle above., f 51;
-#X obj 110 240 patchbay;
-#X text 180 240 <-- click here for the built-in port routing;
+#X obj 40 240 patchbay;
+#X text 110 240 <-- click here for the built-in port routing;
+#X text 40 270 click here for the controller setup -->;
+#X obj 300 270 config \$0;
 #X connect 1 0 0 0;
 #X connect 3 0 2 0;
 #X connect 5 0 2 1;
