@@ -3487,8 +3487,8 @@ end
 
 function raptor:launchcontrol_ctl(atoms)
    local val, num, ch = table.unpack(atoms)
-   if ch == 25 and self.shift then
-      if val > 0 then
+   if ch == 25 then
+      if val > 0 and self.shift then
 	 local id = self.id
 	 -- 106, 107 = left, right (ccmaster select)
 	 if num == 106 then
@@ -3499,7 +3499,17 @@ function raptor:launchcontrol_ctl(atoms)
 	    -- update the buttons LATER
 	    self.launchcontrol_ccmaster_wait = true
 	    self:in_1_ccmaster_next()
+	 elseif num == 104 and self:check_ccmaster() then
+	    local i = self.presetno and self.presetno or 1
+	    i = i-1
+	    self:recall_preset(i)
+	 elseif num == 105 and self:check_ccmaster() then
+	    local i = self.presetno and self.presetno or 1
+	    i = i+1
+	    self:recall_preset(i)
 	 end
+      elseif not self.shift then
+	 return false
       end
       return true
    end
