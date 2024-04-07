@@ -92,11 +92,11 @@ local have_control = launchpad ~= 0 or launchcontrol ~= 0 or midimix ~= 0 or
 -- -------------------------------------------------------------------------
 
 -- For MIDI pass-through, we filter out MIDI data from port #2 by default, if
--- any of the control surfaces is enabled, and also from port #3, if the
--- Launchpad is enabled, since it uses that port. This prevents control
--- surface data from slipping through and triggering spurious notes and
--- control changes in the arpeggiator or connected synthesizers. (You know the
--- drill if you ever hooked up a DAW controller to a synthesizer.)
+-- any of the control surfaces is enabled, and also from port #3 and #4, if
+-- the Launchpad is enabled, since it uses these ports. This prevents control
+-- surface data from "leaking" and triggering spurious notes and control
+-- changes in the arpeggiator or connected synthesizers. (You know the drill
+-- if you ever hooked up a DAW controller to a synthesizer.)
 
 -- The following value is a MIDI input port number and can be changed here if
 -- needed, or you can set it at runtime by sending raptor a 'thru' message.
@@ -106,9 +106,9 @@ local have_control = launchpad ~= 0 or launchcontrol ~= 0 or midimix ~= 0 or
 -- n = 0 or 1 effectively disables the filter, while n >= N (where N is the
 -- total number of MIDI input ports) filters out data from all ports > 1.
 
--- A reasonable default is 2 if any control surface is connected, and 3, if
--- the Launchpad is, which is what we do here.
-local midi_thru = not have_control and 1 or not launchpad and 2 or 3
+-- A reasonable default is 2 if any control surface is connected, and 4, if
+-- the Launchpad is, which is what we use here.
+local midi_thru = not have_control and 1 or launchpad == 0 and 2 or 4
 
 -- midimap_name: The name of the file in the data directory in which MIDI
 -- bindings are stored. You can change this if you frequently switch between
@@ -156,6 +156,7 @@ local first_config = {}
 
 local function controller_setup(data)
    local id, config_launchpad, config_launchcontrol, config_midimix, config_pacer, config_djcontrol = table.unpack(data)
+   local last_state = {have_control = have_control, launchpad = launchpad}
    if not first_config[id] then
       launchpad = launchpad*config_launchpad ~= 0 and 1 or 0
       launchcontrol = launchcontrol*config_launchcontrol ~= 0 and 1 or 0
@@ -171,7 +172,12 @@ local function controller_setup(data)
       djcontrol = config_djcontrol ~= 0 and 1 or 0
    end
    have_control = launchpad ~= 0 or launchcontrol ~= 0 or midimix ~= 0 or
-   pacer ~= 0 or djcontrol ~= 0
+      pacer ~= 0 or djcontrol ~= 0
+   if last_state.have_control ~= have_control or
+      last_state.launchpad ~= launchpad then
+      -- reset the MIDI thru settings
+      midi_thru = not have_control and 1 or launchpad == 0 and 2 or 4
+   end
 end
 
 local function launchpad_setup(data)
