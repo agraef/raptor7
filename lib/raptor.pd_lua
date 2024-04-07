@@ -21,8 +21,7 @@
 
 local raptor = pd.Class:new():register("raptor")
 
--- Global configuration data that gets sent to the main patch during the
--- startup sequence.
+-- Global configuration data.
 
 -- debug_level: This only affects the plugin code. The available levels are:
 -- 1: print preset changes only, 2: also print the current beat and other
@@ -33,34 +32,32 @@ local raptor = pd.Class:new():register("raptor")
 local debug_level = 0
 
 -- Special device support. At present, these all work together nicely, so we
--- have them all enabled by default. But you can turn them on an off
--- individually by adjusting the corresponding variables below. The different
--- devices usually have an accompanying custom MIDI map in the data
--- subdirectory, which you may want to load inside Raptor. The bindings
--- all assume that the devices are connected to Pd's *second* MIDI input port,
--- so that they don't interfere with your primary input controller.
+-- have them all enabled by default. But you can turn them on or off
+-- individually by adjusting the corresponding variables below. For further
+-- details about each device, please check the documentation and the
+-- corresponding MIDI map in the data subdirectory.
 
--- For further details about each device, please check the documentation and
--- the corresponding MIDI map in the data subdirectory.
+local launchpad = 1     -- Novation Launchpad
+local launchcontrol = 1 -- Novation Launch Control XL
+local midimix = 1       -- AKAI Professional MIDIMIX
+local pacer = 1         -- Nektar PACER
+local djcontrol = 1     -- Hercules DJ Control devices
 
--- launchpad: Special support for the Novation Launchpad. (Probably only works
--- with recent versions, and only tested with the Pro MK3 so far.) NOTE: This
--- needs its own MIDI port. Please connect input and output to port #3.
-local launchpad = 1
+-- Additional parameters for the Launchpad.
 
 -- If you know the ids (12 = X, 13 = Mini MK3, 14 = Pro MK3) of your
 -- Launchpads, you can put them below, otherwise we'll try to guess them with
 -- an identity inquiry sysex at startup. NOTE: If you set this, make it a
--- table indexed by port numbers (only 3 an 4 will work at present). E.g. (Pro
--- MK3 on port 3, X on port 4):
+-- table indexed by port numbers (only 3 and 4 will work at present). E.g.
+-- (Pro MK3 on port 3, X on port 4):
 --local launchpad_id = { [3] = 14, [4] = 12 }
 local launchpad_id = nil
 
 -- This sets the sensitivity of the pads on the launch grid. Smaller values >
 -- 0 mean lighter touches will trigger; a touch below the threshold will show
--- the current binding in the console without triggering. A zero value
--- completely disables the launch grid, so that none of the bound functions
--- will be triggered, and none of the pads can be mapped using MIDI learn.
+-- a tooltip with the current binding in the console without triggering. A
+-- zero value completely disables the launch grid, so that none of the pads
+-- can be triggered or mapped using MIDI learn.
 local launchpad_trigger = 20
 
 -- Maximum number of most salient steps per bar to flash the Novation logo for
@@ -69,45 +66,22 @@ local launchpad_trigger = 20
 -- explanation of this parameter).
 local launchpad_n_pulses = 7
 
--- launchcontrol: Special support for the Novation Launch Control XL. This
--- requires that the Launch Control is switched to the first factory preset
--- (which transmits on MIDI channel 9), and is connected to Pd's second MIDI
--- input. It binds the Device Hold + Prev/Next Device Select and Device Hold +
--- Device Bank button combinations so that they will switch the ccmaster
--- accordingly.
-local launchcontrol = 1
-
--- midimix: Special support for the AKAI Professional MIDIMIX. This works
--- pretty much like the Launch Control XL support above. The MIDIMIX needs to
--- be on factory settings. The SOLO button is used as a shift button, thus
--- SOLO + BANK LEFT/RIGHT and SOLO + REC ARM 1-8 switches the ccmaster.
-local midimix = 1
-
--- pacer: Special support for the Nektar PACER. This requires the D3 KBDTL
--- preset to be set on the PACER. It maps stomp switches 1+2 to ccmaster
--- prev/next and stomps 3+4 to prev/next preset.
-local pacer = 1
-
--- djcontrol: Special support for the Hercules DJ Control devices. Various
--- parameters for the implementation can be adjusted with the additional
--- variables below. Currently tested (and known to work) with the DJ Control
--- Inpulse 200 MK2 and Inpulse 500 devices.
-local djcontrol = 1
-
--- The rhythm backlight could get rather busy with complex meters, so we only
--- trigger the n most salient pulses instead, as determined by the weight of
--- the pulse (using Barlow indispensabilities) and the total number of
--- beats. The default which I found to work best with most meters is 7, but
--- you can adjust that value according to your preferences below. Setting
--- djcontrol_n_pulses to a very large value like 1000 will trigger each and
--- every pulse. Decreasing the value gradually thins out the rhythm
--- display. Setting it to 0 disables the rhythm display.
-local djcontrol_n_pulses = 7
+-- Additional parameters for the DJ Control.
 
 -- This value determines how fast the playback position moves in response to
 -- jog wheel movements. Larger values slow it down, smaller values speed it
 -- up. The default value of 10 seems to be about right for me, but YMMV.
 local djcontrol_scrub_factor = 10
+
+-- The rhythm backlight could get rather busy with complex meters, so we only
+-- trigger the n most salient pulses, as determined by the weight of the pulse
+-- (using Barlow indispensabilities) and the total number of beats. The
+-- default which I found to work best with most meters is 7, but you can
+-- adjust that value according to your preferences below. Setting
+-- djcontrol_n_pulses to a very large value like 1000 will trigger each and
+-- every pulse. Decreasing the value gradually thins out the rhythm display.
+-- Setting it to 0 disables the rhythm display.
+local djcontrol_n_pulses = 7
 
 -- -------------------------------------------------------------------------
 
