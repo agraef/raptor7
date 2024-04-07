@@ -166,7 +166,7 @@ Raptor has an operation for *loading* MIDI map files, however, so that you can m
 
 Beyond MIDI learn, Raptor also offers special support for some widespread controllers, listed below. This typically entails some hard-wired bindings to select Raptor instances for receiving control data, as well as a custom MIDI map file. It is generally assumed that these devices are in their factory state and are connected to a *secondary* input port (usually Pd's second MIDI input port, but see the table below for the actual port numbers), so that they don't interfere with MIDI data from your primary input device on the first MIDI input, where you'd typically connect your MIDI keyboard, pad controller, etc. All drivers come with corresponding MIDI maps in the data subdirectory, which you should load using the "load map" operation described above if you want the full experience. (Otherwise most drivers only offer a few essential bindings, typically stuff that can't be mapped using MIDI learn.)
 
-For now, the special device drivers included in Raptor all work nicely together, so we have them all enabled by default. But if the bindings interfere with your own controllers or if you're worried about the overhead for devices that you don't have, you can easily turn them off using the corresponding variables at the beginning of the raptor.pd_lua source file in the lib subdirectory.
+For now, the special device drivers included in Raptor all work nicely together, so we have them all enabled by default. But if the bindings interfere with your own controllers or if you're worried about the overhead for devices that you don't have, you can easily turn them off using the config patch which you can find in Raptor's init subpatch. You can also make those changes permanent by saving the config patch. (Disabling a driver doesn't make the device go away, however, unless you also disconnect it from Raptor's input. Otherwise it will continue to function as a standard MIDI device without all the special processing that the driver provides.)
 
 Most controller implementations also provide at least a certain amount of device *feedback*, which needs a connection between the controller and Pd's corresponding MIDI *output* port, generally using the same port number as for the input. The amount of feedback varies from none or minimal (and optional) to rather extensive (but still optional). For the Launchpad devices, on the other hand, the feedback connection is mandatory, as they can't function properly without it.
 
@@ -184,7 +184,7 @@ The following table summarizes the currently supported controllers and lists the
 
 Raptor has a built-in MIDI patchbay which affords you some flexibility in setting up your MIDI connections. The MIDI port numbers 1-4 we alluded to above are in fact just *virtual* MIDI ports which can be connected to your first four physical Pd MIDI input and output ports in any desired manner.
 
-You can find the patchbay subpatch in the init subpatch of the main Raptor7 patch. Click on the subpatch to open it. The following screenies show the default state on the left, and a possible custom routing on the right:
+You can find the patchbay in the init subpatch of the main Raptor7 patch. Click on the subpatch to open it. The following screenies show the default state on the left, and a possible custom routing on the right:
 
 ![patchbay](doc/patchbay.png)
 
