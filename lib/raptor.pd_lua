@@ -2911,6 +2911,12 @@ function raptor:launchpad_note(atoms)
    return false
 end
 
+local launchpad_models = { [12] = "X", [13] = "Mini MK3", [14] = "Pro MK3" }
+
+local function launchpad_model_name(id)
+   return launchpad_models[id] and launchpad_models[id] or "??"
+end
+
 local launchpad_check
 
 function raptor:launchpad_idreq_timer_cb()
@@ -2918,10 +2924,8 @@ function raptor:launchpad_idreq_timer_cb()
    -- this will be checked by whatever instance gets here first
    if launchpad ~= 0 and not launchpad_check then
       if launchpad_id and next(launchpad_id) then
-	 local names = { [12] = "X", [13] = "Mini MK3", [14] = "Pro MK3" }
 	 for portno, id in pairs(launchpad_id) do
-	    local name = names[id] and names[id] or "??"
-	    print(string.format("Launchpad %s detected on port #%d", name, portno))
+	    print(string.format("Launchpad %s connected on port #%d", launchpad_model_name(id), portno))
 	 end
 	 self:launchpad_init()
       else
@@ -3190,10 +3194,8 @@ end
 
 function raptor:launchpad_sysex(atoms, portno)
    if launchpad ~= 0 then
-      -- identity reply, this is the critical number:
-      local id = atoms[8]
-      if not launchpad_id[portno] then
-	 -- check whether this is an identity reply message
+      -- check whether this is an identity reply message
+      do
 	 local idreq = {126, 0, 6, 2, 0, 32, 41, 0, 1}
 	 for i = 1, #idreq do
 	    if atoms[i] ~= idreq[i] and i~=2 and i~= 8 then
@@ -3201,15 +3203,18 @@ function raptor:launchpad_sysex(atoms, portno)
 	       goto skip
 	    end
 	 end
-	 if id == 0x23 then
-	    -- Launchpad Pro MK3
-	    launchpad_id[portno] = 14
-	 elseif id == 0x13 then
-	    -- Launchpad Mini
-	    launchpad_id[portno] = 13
-	 elseif id == 0x03 then
-	    -- Launchpad X
-	    launchpad_id[portno] = 12
+	 -- identity reply, this is the critical number:
+	 local rid = atoms[8]
+	 -- 14 = Launchpad Pro MK3, 13 = Launchpad Mini MK3, 12 = Launchpad X
+	 local id = rid==0x23 and 14 or rid==0x13 and 13 or rid==0x03 and 12
+	 if not id then
+	    pd.post(string.format("WARNING: unknown Launchpad device %xh on port #%d", rid, portno))
+	 elseif launchpad_id[portno] == id then
+	    -- another Launchpad, same model, this can be safely ignored
+	 elseif launchpad_id[portno] then
+	    pd.post(string.format("WARNING: Launchpad %s conflicts with Launchpad %s on port #%d", launchpad_model_name(id), launchpad_model_name(launchpad_id[portno]), portno))
+	 else
+	    launchpad_id[portno] = id
 	 end
       end
       ::skip::
