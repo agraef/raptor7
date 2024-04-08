@@ -3006,6 +3006,14 @@ function raptor:launchpad_idreq_timer_cb()
    end
 end
 
+-- This timer is used to detect long presses on the fader bank buttons. We'd
+-- actually need two of these, along with corresponding status variables, to
+-- prevent any race conditions if two separate Launchpads are connected at the
+-- same time. But we only have a single timer right now to keep things
+-- simple. This means that you can't initiate both a short press on one
+-- Launchpad and a long press on another at about the same time; they will
+-- then both be interpreted as short presses instead.
+
 function raptor:launchpad_fader_timer_on()
    -- kick off the momentary timer, initial state 0 (waiting for timer)
    self.launchpad_momentary = 0
@@ -3027,20 +3035,25 @@ end
 
 local launchpad_master = nil
 
+function raptor:lpmaster(id)
+   if id then
+      return id
+   elseif self.master then
+      -- fall back to the time master
+      return self.master
+   else
+      -- fall back to self
+      return self.id
+   end
+end
+
 function raptor:launchpad_master()
    -- select the Raptor instance that gets to send all feedback
    if launchpad_master then
       -- already selected, move along
-   elseif self.ccmaster then
-      -- otherwise, if we have a ccmaster then use that instance
-      launchpad_master = self.ccmaster
-   elseif self.master then
-      -- otherwise, if we have a time master then use that instance
-      launchpad_master = self.master
    else
-      -- otherwise, just grab the baton (we shouldn't really come here once a
-      -- time master has been set)
-      launchpad_master = self.id
+      -- try the ccmaster, time master, and self, in that order
+      launchpad_master = self:lpmaster(self.ccmaster)
    end
    -- check that we are the golden one
    return launchpad_master == self.id
@@ -3049,13 +3062,29 @@ end
 local launchpad_last_page = {}
 
 function raptor:launchpad_fader_page_change(old_id, new_id)
-   -- this gets invoked when the time master or ccmaster changes
-   if (not old_id or old_id == launchpad_master) and self.id == new_id and launchpad_id then
-      -- hand over to the new instance which holds the baton
+   -- This gets invoked when the time master or ccmaster changes, in which
+   -- case we may need to update the fader pages on all connected Launchpads
+   -- accordingly.
+   if not launchpad_id or not next(launchpad_id) then
+      -- We need the launchpad_id table to be populated which may not be the
+      -- case during startup. Later, there's nothing to do here if we don't
+      -- have any Launchpads connected, so we bail out in that case as well.
+      return
+   end
+   local old_master = self:lpmaster(old_id)
+   local new_master = self:lpmaster(new_id)
+   -- We only execute this in the new master, and there's nothing to do if the
+   -- master didn't change.
+   if new_master ~= old_master and self.id == new_master then
+      --assert(not launchpad_master or old_master == launchpad_master)
+      -- hand over to the new instance (i.e., self)
       self:launchpad_fader_timer_off()
       launchpad_master = self.id
+      --print(string.format("hand over %d -> %d", old_master, new_master))
       for portno, id in pairs(launchpad_id) do
-	 self:launchpad_fader_page(portno, launchpad_last_page[portno], true)
+	 local page = launchpad_last_page[portno]
+	 --print(string.format("#%d (%d), page %s", portno, id, page and string.format("%d", page) or "none"))
+	 self:launchpad_fader_page(portno, page)
       end
    end
 end
@@ -3070,12 +3099,11 @@ function raptor:launchpad_fader_set_page(portno, page)
    else
       self.launchpad_faders[portno] = -1
       self.lp_fader_map[portno] = nil
-      launchpad_master = nil
       launchpad_last_page[portno] = nil
    end
 end
 
-function raptor:launchpad_fader_page(portno, page, retriggered)
+function raptor:launchpad_fader_page(portno, page)
    if launchpad ~= 0 and self:launchpad_master() then
       --print("fader page", tostring(page), "on id", self.id)
       local id = launchpad_id[portno]
@@ -3097,26 +3125,25 @@ function raptor:launchpad_fader_page(portno, page, retriggered)
 	 end
 	 -- update the internal state
 	 self:launchpad_fader_set_page(portno, page)
-	 if not retriggered then
-	    -- kick off the momentary timer
-	    self:launchpad_fader_timer_on()
-	 end
+	 -- just in case we're still waiting for the timer
+	 self:launchpad_fader_timer_off()
       else
-	 -- Switch back to the previous non-fader page. Use mode 4 by default,
-	 -- which seems to be the default mode on the LP Pro at least, not
-	 -- sure about the other devices.
-	 page = self.launchpad_page[portno] and self.launchpad_page[portno] or id==14 and {4, 0} or {4}
+	 -- Switch back to the previous non-fader page. Use note mode as
+	 -- default if for some reason we never received a layout message.
+	 if self.launchpad_page[portno] then
+	    page = self.launchpad_page[portno]
+	 else
+	    page = id==12 and {1} or id==13 and {5} or {4,0}
+	 end
 	 if id == 14 then
-	    -- on the Pro, layout and page is followed by another zero
+	    -- the protocol demands an extra zero on the Pro, not sure why
 	    table.insert(page, 0)
 	 end
 	 self:outlet(1, "sysex", {0, 32, 41, 2, id, 0, table.unpack(page)})
 	 -- update the internal state
 	 self:launchpad_fader_set_page(portno)
-	 if not retriggered then
-	    -- kill off the timer if needed
-	    self:launchpad_fader_timer_off()
-	 end
+	 -- kill off the timer if needed
+	 self:launchpad_fader_timer_off()
       end
    end
 end
@@ -3198,6 +3225,8 @@ function raptor:launchpad_ctl(atoms)
 	       if page ~= old_page then
 		  -- switch to the new page
 		  self:launchpad_fader_page(portno, page)
+		  -- kick off the momentary timer
+		  self:launchpad_fader_timer_on()
 	       else
 		  -- switch back to the previous non-fader page
 		  self:launchpad_fader_page(portno)
@@ -4897,6 +4926,8 @@ function raptor:in_1_ccmaster(atoms)
    end
    if id and self.id then
       if flag == 0 then
+	 -- launchpad fader page tie-in
+	 self:launchpad_fader_page_change(self.ccmaster, nil)
 	 -- omni
 	 self.ccmaster = nil
 	 -- give feedback on the panel
