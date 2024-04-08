@@ -2254,8 +2254,11 @@ function raptor:initialize(sel, atoms)
    -- initialize the note-off timer
    self.clock = pd.Clock:new():register(self, "notes_off")
 
-   -- initialize the launchpad fader timer
-   self.launchpad_clock = pd.Clock:new():register(self, "launchpad_fader_timer_cb")
+   -- initialize the launchpad fader timers
+   self.launchpad_momentary = {}
+   self.launchpad_clock = {}
+   self.launchpad_clock[3] = pd.Clock:new():register(self, "launchpad_fader_timer_cb3")
+   self.launchpad_clock[4] = pd.Clock:new():register(self, "launchpad_fader_timer_cb4")
 
    -- this one only fires once, some time *after* the launchpad/djcontrol
    -- initialization timer
@@ -2305,7 +2308,9 @@ function raptor:check_ccmaster(var)
 end
 
 function raptor:finalize()
-   self.launchpad_clock:destruct()
+   for i = 3, 4 do
+      self.launchpad_clock[i]:destruct()
+   end
    self.launchpad_idreq_clock:destruct()
    self.init_clock:destruct()
    self.clock:destruct()
@@ -3006,31 +3011,36 @@ function raptor:launchpad_idreq_timer_cb()
    end
 end
 
--- This timer is used to detect long presses on the fader bank buttons. We'd
--- actually need two of these, along with corresponding status variables, to
--- prevent any race conditions if two separate Launchpads are connected at the
--- same time. But we only have a single timer right now to keep things
--- simple. This means that you can't initiate both a short press on one
--- Launchpad and a long press on another at about the same time; they will
--- then both be interpreted as short presses instead.
+-- This timer is used to detect long presses on the fader bank buttons. We
+-- actually use two of these, one for each Launchpad port, along with
+-- corresponding status variables, in order to prevent race conditions if two
+-- separate Launchpads are connected at the same time.
 
-function raptor:launchpad_fader_timer_on()
+function raptor:launchpad_fader_timer_on(portno)
    -- kick off the momentary timer, initial state 0 (waiting for timer)
-   self.launchpad_momentary = 0
+   self.launchpad_momentary[portno] = 0
    -- threshold for momentary changes
-   self.launchpad_clock:delay(500)
+   self.launchpad_clock[portno]:delay(500)
 end
 
-function raptor:launchpad_fader_timer_off()
-   if self.launchpad_momentary == 0 then
-      self.launchpad_clock:unset()
-      self.launchpad_momentary = nil
+function raptor:launchpad_fader_timer_off(portno)
+   if self.launchpad_momentary[portno] == 0 then
+      self.launchpad_clock[portno]:unset()
+      self.launchpad_momentary[portno] = nil
    end
 end
 
-function raptor:launchpad_fader_timer_cb()
+function raptor:launchpad_fader_timer_cb(portno)
    -- switch to long-press state
-   self.launchpad_momentary = 1
+   self.launchpad_momentary[portno] = 1
+end
+
+function raptor:launchpad_fader_timer_cb3()
+   self:launchpad_fader_timer_cb(3)
+end
+
+function raptor:launchpad_fader_timer_cb4()
+   self:launchpad_fader_timer_cb(4)
 end
 
 local launchpad_master = nil
@@ -3078,10 +3088,10 @@ function raptor:launchpad_fader_page_change(old_id, new_id)
    if new_master ~= old_master and self.id == new_master then
       --assert(not launchpad_master or old_master == launchpad_master)
       -- hand over to the new instance (i.e., self)
-      self:launchpad_fader_timer_off()
       launchpad_master = self.id
       --print(string.format("hand over %d -> %d", old_master, new_master))
       for portno, id in pairs(launchpad_id) do
+	 self:launchpad_fader_timer_off(portno)
 	 local page = launchpad_last_page[portno]
 	 --print(string.format("#%d (%d), page %s", portno, id, page and string.format("%d", page) or "none"))
 	 self:launchpad_fader_page(portno, page)
@@ -3126,7 +3136,7 @@ function raptor:launchpad_fader_page(portno, page)
 	 -- update the internal state
 	 self:launchpad_fader_set_page(portno, page)
 	 -- just in case we're still waiting for the timer
-	 self:launchpad_fader_timer_off()
+	 self:launchpad_fader_timer_off(portno)
       else
 	 -- Switch back to the previous non-fader page. Use note mode as
 	 -- default if for some reason we never received a layout message.
@@ -3143,7 +3153,7 @@ function raptor:launchpad_fader_page(portno, page)
 	 -- update the internal state
 	 self:launchpad_fader_set_page(portno)
 	 -- kill off the timer if needed
-	 self:launchpad_fader_timer_off()
+	 self:launchpad_fader_timer_off(portno)
       end
    end
 end
@@ -3226,15 +3236,15 @@ function raptor:launchpad_ctl(atoms)
 		  -- switch to the new page
 		  self:launchpad_fader_page(portno, page)
 		  -- kick off the momentary timer
-		  self:launchpad_fader_timer_on()
+		  self:launchpad_fader_timer_on(portno)
 	       else
 		  -- switch back to the previous non-fader page
 		  self:launchpad_fader_page(portno)
 	       end
-	    elseif self.launchpad_momentary == 0 then
+	    elseif self.launchpad_momentary[portno] == 0 then
 	       -- still momentary, cancel the timer
-	       self:launchpad_fader_timer_off()
-	    elseif self.launchpad_momentary == 1 then
+	       self:launchpad_fader_timer_off(portno)
+	    elseif self.launchpad_momentary[portno] == 1 then
 	       -- timer has triggered already, so we're in long-press state
 	       -- where we switch back to the previous non-fader page as soon
 	       -- as the button is released (which we just detected)
@@ -3339,7 +3349,7 @@ function raptor:launchpad_sysex(atoms, portno)
 	    self:launchpad_fader_set_page(portno)
 	    -- atoms[8] will only be set on the Pro
 	    self.launchpad_page[portno] = {atoms[7], atoms[8]}
-	    self:launchpad_fader_timer_off()
+	    self:launchpad_fader_timer_off(portno)
 	 end
       end
       return true
