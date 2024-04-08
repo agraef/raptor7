@@ -90,6 +90,13 @@
    Pro, however, you can switch to the fader banks from any of the session,
    note, drum, and chord views, using the mixer buttons at the bottom.)
 
+   The fader positions shown on the device will always reflect the current
+   parameter values in the Raptor patch. If you're running multiple Raptor
+   instances, that will be the values in the selected Raptor instance, or the
+   values of the time master, if no Raptor instance is selected. The values
+   are also updated live while switching instances, or if a value is changed
+   in the patch (or via some other connected controller).
+
    The available fader banks are mapped as follows:
 
    1: Volume: 1 = pitch hi, 2 = pitch lo, 3 = pattern mode (random, up, down,
