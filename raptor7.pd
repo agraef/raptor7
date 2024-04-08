@@ -1,5 +1,7 @@
-#N canvas 746 371 608 409 10;
+#N canvas 746 371 587 407 10;
 #X declare -path lib;
+#X obj 101 84 bng 25 250 50 0 \$0-midi-learn-bang empty empty 17 7
+0 10 #fcfcfc #000000 #000000;
 #N canvas 312 484 494 301 init 0;
 #X obj 310 46 pd-remote;
 #X msg 310 20 pdluax reload;
@@ -76,20 +78,20 @@ the loadbang with the toggle above., f 51;
 #X connect 14 0 16 0;
 #X connect 16 0 12 0;
 #X connect 16 0 15 0;
-#X restore 100 370 pd init;
-#X obj 310 10 namecanvas \$1;
-#X obj 86 77 cnv 15 81 38 empty \$0-learn-mode empty 20 12 0 14 #e0e0e0
+#X restore 90 370 pd init;
+#X obj 300 10 namecanvas \$1;
+#X obj 76 77 cnv 15 81 38 empty \$0-learn-mode empty 20 12 0 14 #e0e0e0
 #202020 0;
-#X obj 270 58 cnv 15 33 179 empty empty empty 20 12 0 14 #e0e0e0 #404040
+#X obj 260 58 cnv 15 33 179 empty empty empty 20 12 0 14 #e0e0e0 #404040
 0;
-#X obj 30 242 raptor;
-#X obj 81 340 tgl 15 0 empty empty empty 17 7 0 10 #fcfcfc #000000
+#X obj 20 242 raptor;
+#X obj 71 340 tgl 15 0 empty empty empty 17 7 0 10 #fcfcfc #000000
 #000000 0 1;
-#X obj 310 27 raptor-panel \$0;
-#X obj 280 58 vradio 15 0 0 20 \$0-presetno-set \$0-presetno empty
+#X obj 300 27 raptor-panel \$0;
+#X obj 270 58 vradio 15 0 0 20 \$0-presetno-set \$0-presetno empty
 0 -8 0 10 #fcfcfc #000000 #000000 14;
-#X msg 144 250 4 4;
-#X msg 174 250 3 4;
+#X msg 134 250 4 4;
+#X msg 164 250 3 4;
 #N canvas 694 510 450 300 meter 0;
 #X obj 30 190 list prepend meter;
 #X obj 30 215 list trim;
@@ -111,28 +113,29 @@ the loadbang with the toggle above., f 51;
 #X connect 5 1 4 1;
 #X connect 6 0 4 1;
 #X connect 9 0 3 0;
-#X restore 174 290 pd meter;
-#X msg 204 250 4 4 3;
-#X msg 130 340 90;
-#X msg 160 340 120;
-#X msg 190 340 160;
+#X restore 164 290 pd meter;
+#X msg 194 250 4 4 3;
+#X msg 120 340 90;
+#X msg 150 340 120;
+#X msg 180 340 160;
 #N canvas 432 513 450 300 tempo 0;
 #X obj 30 85 list trim;
 #X obj 30 30 inlet;
 #X obj 30 60 list prepend tempo;
 #X obj 30 110 s all-arp;
+#X obj 80 30 r \$0-bpm;
 #X connect 0 0 3 0;
 #X connect 1 0 2 0;
 #X connect 2 0 0 0;
-#X restore 160 370 pd tempo;
-#X text 260 34 presets;
-#X msg 30 162 reset;
-#X msg 30 141 panic;
-#X msg 30 183 reload;
-#X msg 30 120 stop;
-#X text 153 318 tempo (bpm);
-#X floatatom 220 340 5 30 960 0 - #0-tempo-sync -, f 5;
-#X obj 150 216 meter-examples;
+#X connect 4 0 2 0;
+#X restore 150 370 pd tempo;
+#X text 250 34 presets;
+#X msg 20 162 reset;
+#X msg 20 141 panic;
+#X msg 20 183 reload;
+#X msg 20 120 stop;
+#X text 143 318 tempo (bpm);
+#X floatatom 210 340 5 30 960 0 - #0-tempo-sync -, f 5;
 #N canvas 993 237 623 621 time 0;
 #X obj 460 210 inlet;
 #X obj 230 20 tgl 15 1 empty \$0-master-toggle M 17 7 0 10 #fcfcfc
@@ -686,8 +689,8 @@ doing..., f 45;
 #X connect 88 1 35 1;
 #X connect 88 2 78 1;
 #X coords 0 -1 1 1 187 21 1 113 17;
-#X restore 30 30 pd time;
-#N canvas 349 256 423 381 input 0;
+#X restore 20 30 pd time;
+#N canvas 297 252 423 381 input 0;
 #X obj 20 20 midi-input;
 #X obj 20 90 r \$0-arp;
 #X obj 20 70 r all-arp;
@@ -738,6 +741,8 @@ doing..., f 45;
 #X msg 160 93 6;
 #X obj 20 110 r \$0-myarp;
 #X obj 77 210 outlet;
+#X obj 250 20 r \$0-midi-learn-bang;
+#X msg 250 45 learn;
 #X connect 0 0 3 0;
 #X connect 0 1 14 0;
 #X connect 1 0 3 0;
@@ -752,7 +757,9 @@ doing..., f 45;
 #X connect 10 0 11 0;
 #X connect 12 0 10 0;
 #X connect 13 0 3 0;
-#X restore 30 210 pd input;
+#X connect 15 0 16 0;
+#X connect 16 0 3 0;
+#X restore 20 210 pd input;
 #N canvas 411 510 450 268 output 0;
 #X obj 20 130 spigot;
 #X obj 20 155 print out;
@@ -831,15 +838,15 @@ Barlow indispensabilities), f 63;
 #X connect 16 0 15 0;
 #X connect 17 0 19 0;
 #X connect 18 0 19 1;
-#X restore 30 370 pd output;
-#X obj 207 82 bng 25 250 50 0 \$0-play empty empty 17 7 0 10 #fcfcfc
+#X restore 20 370 pd output;
+#X obj 197 82 bng 25 250 50 0 \$0-play empty empty 17 7 0 10 #fcfcfc
 #000000 #000000;
-#X msg 30 80 learn;
-#X msg 30 100 unlearn;
-#X text 93 90 MIDI learn;
-#X obj 182 77 cnv 15 70 38 empty empty Raptor7 9 17 0 14 #ffffff #404040
+#X msg 20 80 learn;
+#X msg 20 100 unlearn;
+#X text 83 90 MIDI learn;
+#X obj 172 77 cnv 15 70 38 empty empty Raptor7 9 17 0 14 #ffffff #404040
 0;
-#X text 193 108 (c) 2024;
+#X text 183 108 (c) 2024;
 #N canvas 320 369 462 403 looper 0;
 #X floatatom 40 82 3 0 99 0 - - -, f 3;
 #X obj 70 82 bng 15 250 50 0 empty empty load 17 7 0 10 #fcfcfc #202020
@@ -1095,7 +1102,7 @@ Barlow indispensabilities), f 63;
 #X connect 43 1 1 0;
 #X connect 43 2 31 0;
 #X coords 0 -1 1 1 125 36 1 36 64;
-#X restore 130 160 pd looper;
+#X restore 100 160 pd looper;
 #N canvas 238 399 450 300 counter 0;
 #X obj 60 40 unpack f f;
 #X floatatom 60 84 4 0 0 0 - - -, f 4;
@@ -1115,7 +1122,7 @@ Barlow indispensabilities), f 63;
 #X connect 6 0 7 0;
 #X connect 8 0 1 0;
 #X coords 0 -1 1 1 81 39 1 38 65;
-#X restore 58 273 pd counter;
+#X restore 48 273 pd counter;
 #N canvas 233 477 450 300 learn 0;
 #X msg 20 70 open_map;
 #X obj 20 95 s \$0-arp;
@@ -1131,26 +1138,95 @@ Barlow indispensabilities), f 63;
 #X connect 4 0 1 0;
 #X connect 5 0 0 0;
 #X coords 0 -1 1 1 85 21 2 13 17;
-#X restore 84 120 pd learn;
-#X connect 4 0 26 0;
-#X connect 4 1 26 1;
-#X connect 4 2 34 0;
-#X connect 4 3 34 1;
-#X connect 5 0 26 2;
-#X connect 8 0 10 0;
-#X connect 9 0 10 0;
-#X connect 11 0 10 0;
+#X restore 74 120 pd learn;
+#N canvas 363 270 527 454 meter-examples 0;
+#X obj 22 353 cnv 15 326 41 empty empty empty 20 12 0 14 #e0e0e0 #404040
+0;
+#X obj 22 103 cnv 15 156 127 empty empty empty 20 12 0 14 #e0e0e0 #404040
+0;
+#X msg 32 113 4 4;
+#X msg 82 113 3 4;
+#X msg 32 143 6 8;
+#X msg 82 143 7 8;
+#X msg 132 143 9 8;
+#X msg 132 203 11 9;
+#X msg 32 203 12 12;
+#X msg 132 113 4 4 3;
+#X msg 32 173 7 16;
+#X msg 82 173 9 16;
+#X msg 132 173 15 16;
+#X obj 32 242 t a;
+#X obj 82 242 t a;
+#X obj 132 242 t a;
+#X text 202 143 8th notes \, e.g. 6/8 = 2 groups of 3;
+#X text 202 173 16th notes \, e.g. 15/16 = 3 groups of 5;
+#X text 202 113 common 4-based meters: 4/4 \, 3/4 \, 4/4 triplets;
+#X msg 112 363 90;
+#X msg 232 363 120;
+#X msg 32 363 60;
+#X msg 72 363 80;
+#X msg 152 363 100;
+#X msg 192 363 110;
+#X msg 312 363 160;
+#X msg 272 363 140;
+#X text 202 203 You can also use even more exotic time signatures such
+as 12/12 (which is effectively the same as 4 4 3) and 11/9 (= 11 3
+3). CAVEAT: Note that \, due to rounding issues \, denominators such
+as 9 that do *not* divide 96 = 3*2^5 evenly \, will not work well with
+MIDI clock sync \, resulting in a tempo which is slightly off. (Raptor's
+internal time base will work alright with these \, though.), f 52
+;
+#X text 22 23 Raptor lets you use pretty much any time signature whatsoever
+\, and will produce convincing rhythms for almost any of them. Time
+signatures are specified as pairs n m \, or as triples n m d \, where
+d denotes a subdivision of the base pulse. (E.g. \, d=2 denotes duplets
+\, d=3 triplets \, d=5 quintuplets etc.), f 79;
+#X obj 72 423 s \$0-bpm;
+#X text 372 363 various tempi (beats per minute), f 18;
+#X obj 82 292 s \$0-meter;
+#X connect 2 0 13 0;
+#X connect 3 0 14 0;
+#X connect 4 0 13 0;
+#X connect 5 0 14 0;
+#X connect 6 0 15 0;
+#X connect 7 0 15 0;
+#X connect 8 0 13 0;
+#X connect 9 0 15 0;
+#X connect 10 0 13 0;
+#X connect 11 0 14 0;
 #X connect 12 0 15 0;
-#X connect 13 0 15 0;
-#X connect 14 0 15 0;
-#X connect 17 0 25 0;
+#X connect 13 0 31 0;
+#X connect 14 0 31 0;
+#X connect 15 0 31 0;
+#X connect 19 0 29 0;
+#X connect 20 0 29 0;
+#X connect 21 0 29 0;
+#X connect 22 0 29 0;
+#X connect 23 0 29 0;
+#X connect 24 0 29 0;
+#X connect 25 0 29 0;
+#X connect 26 0 29 0;
+#X restore 130 220 pd meter-examples;
+#X text 246 193 #10;
+#X text 246 343 #20;
+#X connect 5 0 26 0;
+#X connect 5 1 26 1;
+#X connect 5 2 34 0;
+#X connect 5 3 34 1;
+#X connect 6 0 26 2;
+#X connect 9 0 11 0;
+#X connect 10 0 11 0;
+#X connect 12 0 11 0;
+#X connect 13 0 16 0;
+#X connect 14 0 16 0;
+#X connect 15 0 16 0;
 #X connect 18 0 25 0;
 #X connect 19 0 25 0;
 #X connect 20 0 25 0;
-#X connect 22 0 15 0;
-#X connect 23 0 10 0;
+#X connect 21 0 25 0;
+#X connect 23 0 16 0;
 #X connect 24 0 25 0;
-#X connect 25 0 4 0;
-#X connect 25 1 4 1;
+#X connect 25 0 5 0;
+#X connect 25 1 5 1;
 #X connect 28 0 25 0;
 #X connect 29 0 25 0;
