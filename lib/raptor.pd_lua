@@ -2504,13 +2504,16 @@ end
 
 function raptor:in_1_panic()
    self.arp:panic()
-   self:notes_off()
+   self:in_1_stop()
 end
 
 -- stop -- this just stops all sounding notes, but keeps the arpeggiator state
 
 function raptor:in_1_stop()
    self:notes_off()
+   -- turn off the pulse displays
+   self:djcontrol_pulse(0, 0)
+   self:launchpad_pulse(0, 0)
 end
 
 -- reload -- update the internal state of an instance after global state
