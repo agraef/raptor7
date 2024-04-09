@@ -2214,6 +2214,7 @@ function raptor:initialize(sel, atoms)
    self:djcontrol_init()
    -- launchpad
    self.lp_fader_map = {}
+   self.lp_fader_val = {}
    self.launchpad_faders = {}
    self.launchpad_page = {}
    self.launchpad_drums = {}
@@ -2625,6 +2626,8 @@ function raptor:recall_preset(i)
 	 end
       end
    end
+   -- LP feedback: reset the Launchpad fader pages if needed
+   self:launchpad_update_pages()
    if not preset.params["outchan"] then
       -- force to 0
       set("outchan", 0)
@@ -3097,7 +3100,6 @@ function raptor:launchpad_fader_page_change(old_id, new_id)
       --print(string.format("hand over %d -> %d", old_master, new_master))
       for portno, id in pairs(launchpad_id) do
 	 self:launchpad_fader_timer_off(portno)
-	 local page = launchpad_last_page[portno]
 	 --print(string.format("#%d (%d), page %s", portno, id, page and string.format("%d", page) or "none"))
 	 self:launchpad_fader_page(portno, page)
       end
@@ -3235,7 +3237,7 @@ function raptor:launchpad_ctl(atoms)
 	    if val > 0 then
 	       -- switch to one of the four fader banks:
 	       -- volumes, pans, sends, devices
-	       local old_page = self.launchpad_faders[portno] and self.launchpad_faders[portno] or -1
+	       local old_page = self.launchpad_faders[portno] or -1
 	       --print("fader page, old:", tostring(old_page), "new:", tostring(page))
 	       if page ~= old_page then
 		  -- switch to the new page
@@ -3292,8 +3294,22 @@ function raptor:launchpad_ctl(atoms)
 	 end
 	 return true
       elseif ch == 37 or ch == 53 then
-	 -- output from faders; we just pretend that these all come from port
-	 -- 3, to simplify the MIDI mapping
+	 -- output from faders
+	 local val, cc, ch = table.unpack(atoms)
+	 -- we need to keep track of these values to break MIDI feedback loops
+	 --print("in", cc, val)
+	 self.lp_fader_val[cc] = val
+	 -- direct sync between LP ports
+	 do
+	    -- swap ports
+	    local portno = ch == 37 and 4 or 3
+	    local id = launchpad_id[portno]
+	    if id then
+	       self:lp_out(portno, id, val, cc)
+	    end
+	 end
+	 -- we just pretend that these all come from port 3, to simplify the
+	 -- MIDI mapping
 	 atoms[3] = 37
 	 return atoms
       end
@@ -3374,6 +3390,15 @@ function raptor:launchpad_iter(fun)
 	 if ch then
 	    fun(ch, portno, id)
 	 end
+      end
+   end
+end
+
+function raptor:launchpad_update_pages()
+   if launchpad ~= 0 and launchpad_id and next(launchpad_id) then
+      self.lp_fader_val = {}
+      for portno, id in pairs(launchpad_id) do
+	 self.lp_fader_map[portno] = nil
       end
    end
 end
@@ -3459,14 +3484,14 @@ function raptor:launchpad_map(midi_map, ch0)
    end
 end
 
-function raptor:launchpad_fader_tomidi(var, val, opt)
+function raptor:lpfader_to_midi(var, val, opt)
    local i = param_i[var]
    if i and self.param_val[i] then
       local param = params[i]
-      -- Use the given value if any. This is intended for out-of-band data
-      -- which is being passed directly instead of the usual raptor:param()
-      -- call sequence (specifically, djcontrol feedback). Otherwise we fetch
-      -- the current value from the parameter storage.
+      -- Use the given value if any. This is intended for out-of-band
+      -- parameter feedback which is being passed directly instead of the
+      -- usual raptor:param() call sequence. Otherwise we fetch the current
+      -- value from the parameter storage.
       if not val then
 	 val = self.param_val[i]
       end
@@ -3487,13 +3512,13 @@ function raptor:launchpad_fader_tomidi(var, val, opt)
 	    -- this can't happen?
 	    val = 0
 	 elseif pol < 0 then
-	    -- inverse polarity
+	    -- inverted
 	    val = (max-val)/(max-min)*128
 	 else
 	    val = (val-min)/(max-min)*128
 	 end
-	 -- round down to integer
-	 val = math.floor(val)
+	 -- round to integer
+	 val = math.floor(val+0.5)
 	 -- clamp to MIDI data byte
 	 val = math.max(0, math.min(127, val))
       end
@@ -3501,7 +3526,42 @@ function raptor:launchpad_fader_tomidi(var, val, opt)
    return val
 end
 
+-- direct feedback to Launchpad
+function raptor:lp_out(portno, id, val, cc)
+   --print("out", portno, cc, val)
+   -- I think that there's a firmware bug on the Mini MK3, which even with the
+   -- latest firmware has the channels for the fader position and color sets
+   -- (5 and 6) the wrong way around.
+   local ch = id==13 and 38 or 37
+   if portno > 3 then
+      ch = ch+16
+   end
+   self:outlet(1, "ctl", {val, cc, ch})
+end
+
 function raptor:launchpad_fader_val(var, val)
+   -- Here we need to check whether the Launchpad itself last sent the value
+   -- that we now received as feedback from the param kitchen. If the fader
+   -- values match up (up to rounding errors), we just quietly drop the
+   -- feedback value in order to prevent a feedback loop which makes the fader
+   -- operation very sluggish, on the LP Mini and X at least. (The LP Pro
+   -- appears to have its own internal handler for this, as the faders seem to
+   -- run fine and smooth even without this whole rigmarole.)
+   function compare(cc, val)
+      local last_val = self.lp_fader_val[cc]
+      if last_val then
+	 local ivar, ival = self:from_midi(last_val, cc, 37)
+	 local ovar, oval = self:from_midi(val, cc, 37)
+	 if ival and oval then
+	    return math.abs(ival-oval)
+	 end
+      end
+      return 1e99 -- infinity :)
+   end
+   local function check(delta)
+      local eps = 1e-3 -- this should be > 0, but << 1, might need some tuning
+      return delta > eps -- we should be good
+   end
    if launchpad ~= 0 and var and launchpad_id and self:launchpad_master() then
       for portno, id in pairs(launchpad_id) do
 	 local b = self.launchpad_faders[portno]
@@ -3514,24 +3574,22 @@ function raptor:launchpad_fader_val(var, val)
 	       for i = 0, 7 do
 		  local cc = cc0 + i
 		  local var, opt = self:map_get(cc, ch)
-		  self.lp_fader_map[portno][var] = {cc, opt}
+		  if var then
+		     self.lp_fader_map[portno][var] = {cc, opt}
+		  end
 	       end
 	    end
 	    if self.lp_fader_map[portno] then
 	       local cc = self.lp_fader_map[portno][var]
 	       if cc then
 		  cc, opt = table.unpack(cc)
-		  local val = self:launchpad_fader_tomidi(var, val, opt)
-		  -- I think that there's a firmware bug on the Mini MK3,
-		  -- which even with the latest firmware has the channels for
-		  -- the fader position and color sets (5 and 6) the wrong way
-		  -- around.
-		  local ch = id==13 and 38 or 37
-		  if portno > 3 then
-		     ch = ch+16
-		  end
-		  if val then
-		     self:outlet(1, "ctl", {val, cc, ch})
+		  local val = self:lpfader_to_midi(var, val, opt)
+		  if not val then return end -- not mapped, bail out
+		  -- Compare the computed feedback value against real MIDI
+		  -- data sent from the Launchpad.
+		  local delta = compare(cc, val)
+		  if check(delta) then
+		     self:lp_out(portno, id, val, cc)
 		  end
 	       end
 	    end
@@ -3550,14 +3608,9 @@ function raptor:launchpad_fader_bank(portno, b)
       local cc = cc0 + i
       local var, opt = self:map_get(cc, ch)
       if var then
-	 local val = self:launchpad_fader_tomidi(var, nil, opt)
-	 -- Work around the LP Mini MK3 fader pos/col channel bug, see above.
-	 local ch = id==13 and 38 or 37
-	 if portno > 3 then
-	    ch = ch+16
-	 end
+	 local val = self:lpfader_to_midi(var, nil, opt)
 	 if val then
-	    self:outlet(1, "ctl", {val, cc, ch})
+	    self:lp_out(portno, id, val, cc)
 	 end
       end
    end
@@ -4727,6 +4780,8 @@ function raptor:learn(show)
       self:map_mode(0)
       print(string.format("%s %smapped to %s%s", self:cctostring(), var and "re" or "", self.midi_learn_var, self:opttostring(tgl or pol)))
       self:save_map()
+      -- LP feedback: reset the Launchpad fader pages if needed
+      self:launchpad_update_pages()
    elseif self.midi_learn_cc then
       local var = self:map_get(self.midi_learn_cc, self.midi_learn_ch)
       local tgl, pol = self.midi_learn_tgl, self.midi_learn_pol
@@ -4784,23 +4839,24 @@ function raptor:check_midi_learn(val, cc, ch)
    return false
 end
 
-function raptor:check_midi_map(val, cc, ch)
+function raptor:from_midi(val, cc, ch)
    local var, opt = self:map_get(cc, ch)
    local tgl = opt==true
    local pol = not tgl and type(opt) == "number" and opt or 1
-   if var and (self.assert_master or self:check_ccmaster(var)) then
-      -- apply existing mapping
+   if var then
       local i = param_i[var]
       if i then
 	 if params[i].toggled then
 	    if tgl then
 	       -- special toggle mode
 	       if val > 0 then
-		  self:param(var, self.param_val[i] == 0 and 1 or 0)
+		  return var, self.param_val[i] == 0 and 1 or 0
+	       else
+		  return var
 	       end
 	    else
 	       -- continuous controller, interpreted as toggle
-	       self:param(var, val > 0 and 1 or 0)
+	       return var, val > 0 and 1 or 0
 	    end
 	 else
 	    -- make sure that 64 gets mapped to the half-way value
@@ -4820,10 +4876,22 @@ function raptor:check_midi_map(val, cc, ch)
 	    if params[i].integer then
 	       val = math.floor(val+0.5)
 	    end
-	    self:param(var, val)
+	    return var, val
 	 end
-	 return true
+	 return var
       end
+   end
+end
+
+function raptor:check_midi_map(val, cc, ch)
+   local var = self:map_get(cc, ch)
+   if var and (self.assert_master or self:check_ccmaster(var)) then
+      var, val = self:from_midi(val, cc, ch)
+      if val then
+	 -- apply existing mapping
+	 self:param(var, val)
+      end
+      return true
    end
    return false
 end
@@ -4925,6 +4993,8 @@ function raptor:in_1_merge_map(atoms)
 	 print(string.format("added %d/%d mapping%s, %s conflict%s", p, k, p==1 and "" or "s", q>0 and tostring(q) or "no", q==1 and "" or "s"))
 	 if p > 0 then
 	    self:save_map()
+	    -- LP feedback: reset the Launchpad fader pages if needed
+	    self:launchpad_update_pages()
 	 end
       else
 	 self:error("couldn't load " .. fname)
