@@ -4614,13 +4614,13 @@ function raptor:load_map(fname2)
 		  return false
 	       end
 	       for ch, v in pairs(map) do
-		  local var, tgl
+		  local var, opt
 		  if type(v) == "table" then
-		     var, tgl = table.unpack(v)
+		     var, opt = table.unpack(v)
 		  else
-		     var, tgl = v, nil
+		     var, opt = v, nil
 		  end
-		  if type(var) ~= "string" or (tgl and type(tgl) ~= "boolean") or type(ch) ~= "number" or math.floor(ch) ~= ch or ch < 1 or ch > 128 then
+		  if type(var) ~= "string" or (opt and type(opt) ~= "number" and type(opt) ~= "boolean") or type(ch) ~= "number" or math.floor(ch) ~= ch or ch < 1 or ch > 128 then
 		     return false
 		  end
 	       end
