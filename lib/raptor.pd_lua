@@ -2961,7 +2961,7 @@ function raptor:launchpad_note(atoms)
 	       if p and (not p.transport or not p.toggled or var == "play") and not p.looper then
 		  if p.toggled then
 		     v = v~= 0 and "on" or "off"
-		  elseif p.integer then
+		  elseif p.integer or p.enum then
 		     v = string.format("%d", v)
 		  else
 		     v = string.format("%g", v)
@@ -3517,8 +3517,8 @@ function raptor:lpfader_to_midi(var, val, opt)
 	 else
 	    val = (val-min)/(max-min)*128
 	 end
-	 -- round to integer
-	 val = math.floor(val+0.5)
+	 -- round down to integer
+	 val = math.floor(val)
 	 -- clamp to MIDI data byte
 	 val = math.max(0, math.min(127, val))
       end
@@ -3559,7 +3559,7 @@ function raptor:launchpad_fader_val(var, val)
       return 1e99 -- infinity :)
    end
    local function check(delta)
-      local eps = 1e-3 -- this should be > 0, but << 1, might need some tuning
+      local eps = 1e-8 -- this should be > 0, but << 1, might need some tuning
       return delta > eps -- we should be good
    end
    if launchpad ~= 0 and var and launchpad_id and self:launchpad_master() then
@@ -4867,14 +4867,17 @@ function raptor:from_midi(val, cc, ch)
 	       max = math.min(max, self.arp.beats)
 	       min = -max
 	    end
+	    -- NOTE: We want these to "snap" to the min and max positions for
+	    -- the 0 and 127 data bytes, respectively, to avoid strange
+	    -- rounding issues with controller feedback.
 	    if pol < 0 then
 	       -- inverted
-	       val = val==127 and min or val/128*(min-max)+max
+	       val = val==0 and max or val==127 and min or val/128*(min-max)+max
 	    else
-	       val = val==127 and max or val/128*(max-min)+min
+	       val = val==0 and min or val==127 and max or val/128*(max-min)+min
 	    end
-	    if params[i].integer then
-	       val = math.floor(val+0.5)
+	    if int_param[i] then
+	       val = math.floor(val)
 	    end
 	    return var, val
 	 end
