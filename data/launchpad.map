@@ -71,6 +71,11 @@
    compatible (see the Lua table below for the actual numbers if you want to
    use these for a custom Launchpad layout).
 
+   The orientation of the fader banks can be configured with the
+   launchpad_fader_orientation variable in the source. By default, the first
+   fader bank is vertical, all others horizontal, which matches the layout of
+   the parameter panel in the patch fairly well.
+
    The fader banks 1-4 can be accessed using either the corresponding
    Volume/Pan/Sends/Device buttons in the bottom row of the Launchpad Pro MK3,
    or with the topmost four scene launch buttons in session mode, labeled
