@@ -66,6 +66,10 @@ local launchpad_trigger = 20
 -- explanation of this parameter).
 local launchpad_n_pulses = 7
 
+-- Fader orientation: This is a table with four entries, one for each fader
+-- bank (Volume, Pan, Send A, Send B; 0 means vertical, 1 horizontal).
+local launchpad_fader_orientation = { 0, 1, 1, 1 }
+
 -- Additional parameters for the DJ Control.
 
 -- This value determines how fast the playback position moves in response to
@@ -2765,9 +2769,10 @@ function raptor:launchpad_fader_bank_setup(portno, b, color)
    local j0 = (b==0 and 76 or b==1 and 48 or b==2 and 12 or 28) + 1
    local v = color[b+1]
    -- sysex header: identification, command 1 (fader bank setup), bank index
-   -- (always zero on Mini/X), orientation (0 means vertical)
+   -- (always zero on Mini/X), orientation (0 means vertical, 1 horizontal)
    local b0 = id==14 and b or 0
-   local syx = { 0, 32, 41, 2, id, 1, b0, 0 }
+   local orientation = launchpad_fader_orientation[b+1]
+   local syx = { 0, 32, 41, 2, id, 1, b0, orientation }
    -- It seems tidier (and is likely faster) if we assemble a sysex with all
    -- faders in memory, rather than sending a sysex for each individual fader.
    for i = 0, 7 do
