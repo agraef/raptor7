@@ -119,13 +119,11 @@ The time subpatch also has built-in MIDI sync support, which is enabled by defau
 
 ### The Looper
 
-You can toggle the loop control near the bottom of the panel at any time and it will switch between loop playback and arpeggiator output immediately. This comes in handy if you want to play along, or need to get your hands free to record a generated pattern.
+You can toggle the loop control near the bottom of the panel at any time and it will switch between loop playback and arpeggiator output immediately. This comes in handy if you want to play along, or need to get your hands free to record a generated pattern. To the left of the panel, you'll find the looper subpatch, a little applet which lets you save the loop that is currently playing to a file, and reload it later. It also has a progress indicator which counts off the bars of the loop in the numbox on the right, and flashes the gray LED next to it at the beginning of each loop iteration.
 
-To the left of the panel, you'll find the looper subpatch, a little applet which lets you save the currently playing loop to a file, and reload it later. It also counts off the bars in a loop, so that you can always tell where you are in the loop.
+Loops are stored in the data subdirectory, under the name of the current preset, so they will usually be associated with a given preset name. You can also switch presets while a loop is playing and store the same loop under different preset names. Moreover, the name prefix doesn't necessarily have to exist as an actual preset; the looper will happily use any name that you type into the preset name field at the bottom of the panel. To do this, type the name under which you want the loop to be stored into the preset name field and press Enter, then save the loop with the `save` button in the looper. The generated loop file will be stored under the given name prefix followed by a hyphen, the slot number (see below), and the .loop file type. To load the loop again, type the name prefix, press Enter, then the `load` button in the looper.
 
-Loops are stored in the data subdirectory, under the name of the current preset, so they will usually be associated with a given preset name. However, that name prefix doesn't necessarily have to exist as an actual preset; the looper will happily use any name prefix that you type into the preset name field at the bottom of the panel. You can also switch presets while a loop is playing and store the same loop under different preset names.
-
-For each preset there are 100 slots (numbered 0-99) under which a loop can be saved. The slot can be selected with the numbox on the left. If a slot already has a loop in it, the load button will turn gray to indicate that there's a loop that can be loaded there. Similarly, the save button will turn red to warn you that pressing the button would overwrite an existing loop in that slot. (If you still overwrite a loop file by accident, no worries, Raptor will have saved a backup copy, so that you can recover the loop if needed.)
+For each preset there are 100 slots (numbered 0-99) under which a loop can be saved. The slot can be selected with the numbox on the left. If a slot already has a loop in it, the `load` button will turn gray to indicate that there's a loop that can be loaded there. Similarly, the `save` button will turn red to warn you that pressing the button would overwrite an existing loop in that slot. (If you still overwrite a loop file by accident, no worries, Raptor will have saved a backup copy, so that you can recover the loop if needed.)
 
 The loop files themselves are just Lua tables, so you can also edit them in any text editor if needed, as long as you keep the Lua table syntax intact. Besides the actual note data, Raptor also records meter (including division) and tempo information in the loop file (you can find these at the end of the table). The meter and tempo will be restored when a loop file is loaded.
 
@@ -167,6 +165,8 @@ If you're running multiple Raptor instances, normally MIDI controls will affect 
 Raptor needs no special operation for *saving* the MIDI map after changes, since this happens automatically. However, once you're done with a specific set of mappings, you may want to store away the data/midi.map file in a secure location. There's no special operation for this task, but you can accomplish this quite easily with your file manager by copying the data/midi.map file to a new name or directory. By these means, you have a backup copy in case you lose your current map, which can also be shared with others if wanted.
 
 Raptor has an operation for *loading* MIDI map files, however, so that you can merge existing map files into your current MIDI map. To do this, click the `load map` button beneath the "MIDI Learn" label in the main patch. This opens a file dialog in the data subdirectory, from where you can navigate to any location on your hard disk and open any .map file that you have there. The operation will provide some feedback in the console window about how many bindings were added, and if there were any conflicts (i.e., whether an existing binding was replaced with a loaded one).
+
+Raptor comes with a few ready-made MIDI map files included in the data subdirectory, you can find those with `ls data/*.map` (or `dir data/*.map` on Windows). Most of these are associated with corresponding special device drivers (see below), but a few stand-alone maps are available as well. You can find more information about these by reading the comments at the beginning of each file.
 
 ### Special Device Drivers
 
@@ -220,15 +220,15 @@ The [Novation Launchpad][] is quite likely the most popular grid controller for 
 
 You'll need a recent Launchpad version. The present implementation should work with all Launchpads in Novation's current lineup, which at the time of this writing encompasses the Launchpad Pro and Mini (MK3), as well as the Launchpad X. The driver checks at startup which Launchpad model(s) you have connected and prints some information in the Pd console about the devices it recognized, and also warns you about unsupported Launchpad models.
 
-A custom MIDI map is included, see data/launchpad.map. Please check the comments in that file to find out more about Raptor's Launchpad implementation. Also, there's a little cheat sheet to help you get familiar with the most important fader and pad assignments, see [doc/raptor7-cheatsheet.pdf][]. This will also be useful in conjunction with the Novation Launch Control XL and AKAI MIDIMIX controllers, see below, because the Launchpad driver uses basically the same layout of buttons and faders/knobs.
+A custom MIDI map is included, see *data/launchpad.map*. Please check the comments in that file to find out more about Raptor's Launchpad implementation. Also, there's a little cheat sheet to help you get familiar with the most important fader and pad assignments, see [doc/raptor7-cheatsheet.pdf][]. This will also be useful in conjunction with the Novation Launch Control XL and AKAI MIDIMIX controllers, see below, because the Launchpad driver uses basically the same layout of buttons and faders/knobs.
 
 **IMPORTANT:** In contrast to the other controllers, this device needs to be connected to its own MIDI port, port 3 or 4, on *both* input and output, as the communication protocol is rather complicated and involves a lot of messages going back and forth between Pd and the device.
 
-Raptor reserves both ports 3 and 4 for use with the Launchpad, so that you can connect two different devices at the same time and have them work nicely together. This is necessary since the Launchpad driver needs to maintain a certain amount of state information about each device. It is possible to connect two or more devices *of the same model* to the same port. But different models *always* need to be connected to different ports, because there are some incompatibilities between different variations of Novation's MIDI protocol that the driver needs to adjust to. The driver will warn you at startup if it detects any such conflicts. In this case the conflicting models will have their session mode disabled, but you can still use them as standard MIDI controllers, e.g., for MIDI note and CC input. (This might actually come in handy if you have lots of spare Launchpads lying around.)
+Raptor reserves both ports 3 and 4 for use with the Launchpad, so that you can connect two different devices at the same time and have them work nicely together. This is necessary since the Launchpad driver needs to maintain a certain amount of state information about each device. It is possible to connect two or more devices *of the same model* to the same port, however, and have them operate in lockstep. This might actually come in handy if you have lots of spare Launchpads lying around, e.g., in different locations on stage or in the studio. But different models must *always* be connected to different ports. That's because there are some variations (or outright incompatibilities) of Novation's MIDI protocol for different models that the driver needs to accommodate. The driver will warn you at startup if it detects any such conflicts. In this case the conflicting models will have their session mode disabled, but you can still use them as standard MIDI controllers, e.g., for MIDI note and CC input.
 
 #### Novation Launch Control XL
 
-The [Novation Launch Control XL][] is a popular mixer-style controller with lots of knobs and faders, which makes for a nice Raptor control surface. To make this work, the Launch Control XL must be set to the first factory preset, and you need to connect it to Pd's second MIDI input port. There's a launchcontrol.map file in the data directory with ready-made MIDI bindings for the device that you can load. Check the comments at the beginning of the file for information on the bindings.
+The [Novation Launch Control XL][] is a popular mixer-style controller with lots of knobs and faders, which makes for a nice Raptor control surface. To make this work, the Launch Control XL must be set to the first factory preset, and you need to connect it to Pd's second MIDI input port. There's a *launchcontrol.map* file in the data directory with ready-made MIDI bindings for the device that you can load. Check the comments at the beginning of the file for information on the bindings.
 
 The hard-wired MIDI bindings of the Launch Control XL let you switch presets and the target Raptor instance for MIDI control. To do this, press (and hold) the "Device" button while clicking the up/down, left/right, or 1-8 buttons. The functions are:
 
@@ -239,7 +239,7 @@ Note that both types of bindings are only in effect as long as you press the "De
 
 #### AKAI Professional MIDIMIX
 
-The [AKAI MIDIMIX][] is another popular (and more budget-friendly) controller which has a very similar layout to the Launch Control XL. Raptor's support consists of a MIDI mapping and some hard-wired bindings for switching Raptor instances. These assume that the device uses the factory configuration. A description of the mapping can be found in the midimix.map file in the data directory. To use this mapping, load the map file and make sure that the MIDIMIX is connected to Pd's second MIDI input.
+The [AKAI MIDIMIX][] is a popular (and more budget-friendly) alternative to the Launch Control XL with a very similar layout. Raptor's support consists of a MIDI mapping and some hard-wired bindings for switching Raptor instances. These assume that the device uses the factory configuration. A description of the mapping, which aims to be as similar as possible to the Launch Control XL, can be found in the *midimix.map* file in the data directory. To use this mapping, load the map file and make sure that the MIDIMIX is connected to Pd's second MIDI input.
 
 The MIDIMIX lacks a dedicated device select button, so the SOLO button is used for selecting Raptor instances instead. To do this, press (and hold) the SOLO button, while you push the BANK LEFT and RIGHT buttons to cycle through the Raptor instances, or the buttons labeled 1-8 in the bottom row, right above the faders, to directly change to the corresponding instance (or switch back to "omni" if the given instance was already selected). If the controller is connected to Pd's second output port, Raptor will highlight the selected instance on the 1-8 button row while the SOLO button is pressed.
 
@@ -247,7 +247,7 @@ The MIDIMIX lacks a dedicated device select button, so the SOLO button is used f
 
 The [Nektar PACER][] is a programmable foot controller, which keeps your hands free for playing chords while switching presets and controlling Raptor with your feet. Personally, I really enjoy using this controller together with a MIDI guitar, which works pretty well as a basic live performance setup for playing Raptor.
 
-The hard-wired bindings feature Raptor instance switching (stomp 1+2) as well as preset switching (stomp 3+4), while the included MIDI map binds some useful extra functions such as play/loop on stomp 5+6 and gain/gate on the expression pedals; please check the data/pacer.map file for details.
+The hard-wired bindings feature Raptor instance switching (stomp 1+2) as well as preset switching (stomp 3+4), while the included MIDI map binds some useful extra functions such as play/loop on stomp 5+6 and gain/gate on the expression pedals; please check the *data/pacer.map* file for details.
 
 To use this mapping, load pacer.map, and make sure that you have selected the D3 KBDTL factory preset on the PACER and that the controller is connected to Pd's second MIDI input. (The current implementation doesn't provide any feedback to the controller, so you don't need an output connection.)
 
@@ -255,9 +255,9 @@ Our current mapping is pretty basic by design, so that it doesn't require any cu
 
 #### Hercules DJ Control
 
-[Hercules](https://www.hercules.com) offers an entire series of DJ controllers which can be used with Raptor. The driver has been tested with the Inpulse 200 MK2 and Inpulse 500. True to the nature of this very interesting class of devices, the Raptor implementation supports two separate decks and offers some fancy performance controls that are not available on the other control surfaces. It also sports a lot of useful device feedback if you connect the controller to Pd's second MIDI output port.
+[Hercules](https://www.hercules.com) offers an entire series of DJ controllers which can be used with Raptor. The driver has been tested with the Inpulse 200 MK2 and the Inpulse 500. True to the nature of this very interesting class of devices, the Raptor implementation supports two separate decks and offers some fancy performance controls that are not available on the other control surfaces. It also sports a lot of useful device feedback if you connect the controller to Pd's second MIDI output port.
 
-Note that you need to assign *deck numbers* to each Raptor instance to enable the 2-deck functionality, which can be done in the init subpatch. A working example can be found in the raptors2.pd patch included in the distribution. There's a fairly comprehensive overview in the comment section at the beginning of the accompanying MIDI map in data/djcontrol.map, so please make sure to read those notes for further setup and usage instructions.
+Note that you need to assign *deck numbers* to each Raptor instance to enable the 2-deck functionality, which can be done in the init subpatch. A working example can be found in the raptors2.pd patch included in the distribution. There's a fairly comprehensive overview in the comment section at the beginning of the accompanying MIDI map in *data/djcontrol.map*, so please make sure to read those notes for further setup and usage instructions.
 
 ## Quirks and Limitations
 
@@ -267,9 +267,9 @@ Here are some known issues and how to work around them. Anything else that seems
 
 While MIDI sync should just work out of the box if your DAW can spit out a coherent stream of MIDI clocks, pulses may occasionally appear to be "shifted" (out of phase) if the meter settings don't match up, or if your DAW lacks support for song position pointer (SPP) messages and you start playback in the middle of a bar.
 
-There's not really much that can be done about this on the Raptor side, as the limitations are in the protocol (or due to bugs in the DAW). The remedy is to make sure that you have Raptor's meter (and anacrusis) set correctly, then you should be fine.
+There's not really much that can be done about this on the Raptor side, as the limitations are in the protocol (or due to bugs in the DAW). The remedy is to make sure that you have Raptor's meter and anacrusis set correctly, then you should be fine.
 
-We might add more comprehensive protocols such as MTC, MMC, or [Ableton Link][] some time. But MIDI clocks are so much simpler and they work with pretty much any music application and recording gear, so they will do for now.
+We might add more comprehensive protocols such as MTC, MMC, or [Ableton Link][] some time. But MIDI clocks are simpler and work with pretty much any recording gear and software, so they will do for most purposes.
 
 ### Looper Features
 
@@ -281,9 +281,9 @@ Overdubbing and more advanced loop editing capabilities would be nice to have; b
 
 Raptor's MIDI learn facility, while simple to use, is fairly basic as well. It's only possible to map MIDI CC and note messages at present. Having support for other kinds of messages such as aftertouch would be nice.
 
-Also, there's no support for macro controls yet. It should be possible to add this now that we have the capability to configure inverted mappings, but it would still make the interaction with the MIDI learn facility more complex, so I'll have to come up with a design that keeps things simple.
+Also, there's no support for macro controls yet. It would make a lot of some sense to add this now that we have the capability to configure inverted mappings. But it would also make the interaction with the MIDI learn facility more complicated, so some effort will be needed to keep things as simple as possible.
 
-On the positive side, Raptor's MIDI map files are just Lua tables and their structure is fairly simple, so it's not too hard to process map files in Lua, or even generate the data from MIDI map file formats of other MIDI and DAW programs.
+On the positive side, Raptor's MIDI map files are just Lua tables and their structure is fairly simple, so it's not too hard to process them in Lua, or even generate the data from map file formats of other programs.
 
 ### Controller Support
 
