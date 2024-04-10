@@ -3542,25 +3542,22 @@ end
 function raptor:launchpad_fader_val(var, val)
    -- Here we need to check whether the Launchpad itself last sent the value
    -- that we now received as feedback from the param kitchen. If the fader
-   -- values match up (up to rounding errors), we just quietly drop the
+   -- values match up (up to rounding discrepancies), we just quietly drop the
    -- feedback value in order to prevent a feedback loop which makes the fader
    -- operation very sluggish, on the LP Mini and X at least. (The LP Pro
    -- appears to have its own internal handler for this, as the faders seem to
    -- run fine and smooth even without this whole rigmarole.)
-   function compare(cc, val)
+   function check(cc, val)
       local last_val = self.lp_fader_val[cc]
       if last_val then
-	 local ivar, ival = self:from_midi(last_val, cc, 37)
-	 local ovar, oval = self:from_midi(val, cc, 37)
+	 local ivar, ival, eps = self:from_midi(last_val, cc, 37)
+	 local ovar, oval, eps = self:from_midi(val, cc, 37)
 	 if ival and oval then
-	    return math.abs(ival-oval)
+	    local delta = math.abs(ival-oval)
+	    return delta > eps
 	 end
       end
-      return 1e99 -- infinity :)
-   end
-   local function check(delta)
-      local eps = 1e-8 -- this should be > 0, but << 1, might need some tuning
-      return delta > eps -- we should be good
+      return true
    end
    if launchpad ~= 0 and var and launchpad_id and self:launchpad_master() then
       for portno, id in pairs(launchpad_id) do
@@ -3587,8 +3584,7 @@ function raptor:launchpad_fader_val(var, val)
 		  if not val then return end -- not mapped, bail out
 		  -- Compare the computed feedback value against real MIDI
 		  -- data sent from the Launchpad.
-		  local delta = compare(cc, val)
-		  if check(delta) then
+		  if check(cc, val) then
 		     self:lp_out(portno, id, val, cc)
 		  end
 	       end
@@ -4847,16 +4843,18 @@ function raptor:from_midi(val, cc, ch)
       local i = param_i[var]
       if i then
 	 if params[i].toggled then
+	    -- eps value with min step width, 3rd return
+	    local eps = 0
 	    if tgl then
 	       -- special toggle mode
 	       if val > 0 then
-		  return var, self.param_val[i] == 0 and 1 or 0
+		  return var, self.param_val[i] == 0 and 1 or 0, eps
 	       else
 		  return var
 	       end
 	    else
 	       -- continuous controller, interpreted as toggle
-	       return var, val > 0 and 1 or 0
+	       return var, val > 0 and 1 or 0, eps
 	    end
 	 else
 	    -- make sure that 64 gets mapped to the half-way value
@@ -4876,10 +4874,14 @@ function raptor:from_midi(val, cc, ch)
 	    else
 	       val = val==0 and min or val==127 and max or val/128*(max-min)+min
 	    end
+	    -- the eps values for the continous and integer range cases are
+	    -- somewhat heuristic, might need some tuning
+	    local eps = (max-min)/128
 	    if int_param[i] then
 	       val = math.floor(val)
+	       eps = math.max(1, math.ceil(eps))
 	    end
-	    return var, val
+	    return var, val, eps
 	 end
 	 return var
       end
