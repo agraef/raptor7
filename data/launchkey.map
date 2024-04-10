@@ -1,0 +1,38 @@
+-- -*- mode: lua -*-
+
+-- MIDI map for the Novation Launchkey Mini MK3 keyboard.
+-- Albert Gräf <agggraef@gmail.com>, 10 April 2024
+
+-- While we don't have a special driver for the Launchkey Mini yet, which
+-- would enable the Launchpad-like functionality, here are at least some
+-- useful bindings for the buttons and knobs. To use this, load the map in
+-- Raptor and connect the Launchkey Mini to Pd's first MIDI input. The map
+-- assumes the factory setup for the knobs (CC21-28).
+
+-- This might also work for the bigger Launchkeys, but I haven't tested this.
+
+-- The map binds all the buttons that can be accessed without session/DAW
+-- mode, Raptor functions are given in parentheses: the ">" button (latch),
+-- the transport buttons (play, loop), and the (shifted) track left/right
+-- buttons (rewind, pulse).
+
+-- The knobs are mapped as in the first fader bank of the Launchpad, i.e.,
+-- from left to right: 1 = pitch hi, 2 = pitch lo, 3 = pattern mode (random,
+-- up, down, etc.), 4 = pos/anacrusis (the "scrubbing" control), 5 = tempo,
+-- 6 = meter numerator, 7 = meter denominator, 8 = division.
+
+{
+  [21]  = { [1] = { "pitchhi", 1 } },
+  [22]  = { [1] = { "pitchlo", 1 } },
+  [23]  = { [1] = { "mode", 1 } },
+  [24]  = { [1] = { "pos", 1 } },
+  [25]  = { [1] = { "tempo", 1 } },
+  [26]  = { [1] = { "meter-num", 1 } },
+  [27]  = { [1] = { "meter-denom", 1 } },
+  [28]  = { [1] = { "division", 1 } },
+  [102] = { [16] = { "pulse", true } },
+  [103] = { [16] = { "rewind", true } },
+  [104] = { [16] = { "latch", true } },
+  [115] = { [16] = { "play", true } },
+  [117] = { [16] = { "loop", true } }
+}
