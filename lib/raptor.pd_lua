@@ -2839,23 +2839,7 @@ function raptor:launchpad_init()
 	    self:outlet(1, "ctl", {accent_arrows, i, ch})
 	 end
 	 -- initialize the launch grid from the midi map
-	 local mapped = self:launchpad_map(self.midi_map, ch)
-	 -- populate the preset buttons
-	 for i = 1, 8 do
-	    if i == 1 then
-	       color = {blank, blank, 3, 58, blank, accent_arrows, accent_arrows, 3}
-	    elseif i == 2 then
-	       color = {61, 21, 5, blank, blank, 33, 5, accent_loop}
-	    else
-	       color = {blank, blank, blank, blank, blank, blank, blank, blank}
-	    end
-	    for j = 1, 8 do
-	       local num = i*10+j
-	       if not mapped[num] or color[j] ~= blank then
-		  self:outlet(1, "note", {num, color[j], ch})
-	       end
-	    end
-	 end
+	 self:launchpad_map(self.midi_map, ch)
 	 -- drum grid
 	 if id ~= 13 then -- not available on the Mini
 	    for i = 0, 63 do
@@ -3079,10 +3063,10 @@ end
 
 local launchpad_last_page = {}
 
-function raptor:launchpad_fader_page_change(old_id, new_id)
+function raptor:launchpad_master_change(old_id, new_id)
    -- This gets invoked when the time master or ccmaster changes, in which
-   -- case we may need to update the fader pages on all connected Launchpads
-   -- accordingly.
+   -- case we may need to update the fader pages and the launch grids on all
+   -- connected Launchpads accordingly.
    if not launchpad_id or not next(launchpad_id) then
       -- We need the launchpad_id table to be populated which may not be the
       -- case during startup. Later, there's nothing to do here if we don't
@@ -3102,21 +3086,23 @@ function raptor:launchpad_fader_page_change(old_id, new_id)
 	 self:launchpad_fader_timer_off(portno)
 	 --print(string.format("#%d (%d), page %s", portno, id, page and string.format("%d", page) or "none"))
 	 self:launchpad_fader_page(portno, page)
+	 self:launchpad_pads(portno)
       end
    end
 end
 
 function raptor:launchpad_fader_set_page(portno, page)
-   local id = launchpad_id[portno]
-   if page then
-      self:launchpad_fader_bank(portno, page)
-      self.launchpad_faders[portno] = page
-      self.lp_fader_map[portno] = nil
-      launchpad_last_page[portno] = page
-   else
-      self.launchpad_faders[portno] = -1
-      self.lp_fader_map[portno] = nil
-      launchpad_last_page[portno] = nil
+   if launchpad_id then
+      if page then
+	 self:launchpad_fader_bank(portno, page)
+	 self.launchpad_faders[portno] = page
+	 self.lp_fader_map[portno] = nil
+	 launchpad_last_page[portno] = page
+      else
+	 self.launchpad_faders[portno] = -1
+	 self.lp_fader_map[portno] = nil
+	 launchpad_last_page[portno] = nil
+      end
    end
 end
 
@@ -3300,7 +3286,7 @@ function raptor:launchpad_ctl(atoms)
 	 --print("in", cc, val)
 	 self.lp_fader_val[cc] = val
 	 -- direct sync between LP ports
-	 do
+	 if self:launchpad_master() then
 	    -- swap ports
 	    local portno = ch == 37 and 4 or 3
 	    local id = launchpad_id[portno]
@@ -3381,8 +3367,127 @@ end
 
 -- feedback
 
+-- All actual feedback operations are to be executed in the launchpad_master
+-- instance, so that we don't send out identical messages from each instance.
+-- Besides launchpad_ccmaster(), which only updates its own button for the
+-- ccmaster display on the LP Pro, the only exceptions are launchpad_map() and
+-- launchpad_pulse(), which are both executed in the time master -- the former
+-- because it is executed during startup, and the latter because it is the
+-- pulse display which should reflect the Raptor parameter settings of the
+-- time master instance.
+
+-- This needs to be global data (set at LP initialization time from the MIDI
+-- map) shared by all instances, so that the current launchpad_master knows
+-- about which button on the Launchpad grid is bound to which function.
+-- (Right now, this information is used to update toggles like "play" and
+-- "loop" on the launch grid when their status changes.)
+local lp_mapped
+
+-- Pad colors, indexed by Raptor parameters. Some functions have two colors
+-- assigned to them if they're used to represent toggle states.
+
+local lppadcolor = {
+   -- toggles and triggers
+   ["mute"] = {11, 61},
+   ["latch"] = {23, 21},
+   ["bypass"] = {7, 5},
+   ["loop-load"] = 33,
+   ["loop-save"] = 5,
+   ["loop"] = {accent_loop, accent_loop-8},
+   ["raptor"] = {2, 3},
+   ["uniq"] = {2, 3},
+   ["rewind"] = 58,
+   ["loop-prev"] = accent_arrows,
+   ["loop-next"] = accent_arrows,
+   ["play"] = {3, 25},
+   -- paraneters from fader bank 1
+   ["pitchhi"] = lpmini_colors[1],
+   ["pitchlo"] = lpmini_colors[1],
+   ["mode"] = lpmini_colors[1],
+   ["pos"] = lpmini_colors[1],
+   ["tempo"] = lpmini_colors[1],
+   ["meter-num"] = lpmini_colors[1],
+   ["meter-denom"] = lpmini_colors[1],
+   ["division"] = lpmini_colors[1],
+   -- paraneters from fader bank 2
+   ["velmod"] = lpmini_colors[2],
+   ["pmod"] = lpmini_colors[2],
+   ["gain"] = lpmini_colors[2],
+   ["gatemod"] = lpmini_colors[2],
+   ["hmod"] = lpmini_colors[2],
+   ["prefmod"] = lpmini_colors[2],
+   ["smod"] = lpmini_colors[2],
+   ["nmod"] = lpmini_colors[2],
+   -- paraneters from fader bank 3
+   ["minvel"] = lpmini_colors[3],
+   ["pmin"] = lpmini_colors[3],
+   ["wmin"] = lpmini_colors[3],
+   ["gate"] = lpmini_colors[3],
+   ["hmin"] = lpmini_colors[3],
+   ["pref"] = lpmini_colors[3],
+   ["smin"] = lpmini_colors[3],
+   -- uniq is handled as a toggle, see above
+   --["uniq"] = lpmini_colors[3],
+   -- paraneters from fader bank 4
+   ["maxvel"] = lpmini_colors[4],
+   ["pmax"] = lpmini_colors[4],
+   ["wmax"] = lpmini_colors[4],
+   ["gate"] = lpmini_colors[4],
+   ["hmax"] = lpmini_colors[4],
+   ["pref"] = lpmini_colors[4],
+   ["smax"] = lpmini_colors[4],
+   ["nmax"] = lpmini_colors[4]
+}
+
+local lp_rolling = 0
+
+function raptor:get_lppadcolor(var)
+   if var then
+      local color = lppadcolor[var]
+      if type(color) == "table" then
+	 -- the actual state for these toggles is *not* the one in param
+	 -- storage, we need to get it elsewhere
+	 local toggles = {
+	    mute = self.mute, bypass = self.bypass,
+	    latch = self.arp.latch and 1 or 0,
+	    play = lp_rolling, loop = self.arp.loopstate
+	 }
+	 local val = toggles[var]
+	 if not val then
+	    -- other params can be fetched straight from storage
+	    local i = param_i[var]
+	    if i then
+	       val = self.param_val[i]
+	    end
+	 end
+	 if val then
+	    local state = val ~= 0 and 1 or 0
+	    color = color[state+1]
+	 else
+	    color = color[1]
+	 end
+      elseif not color then
+	 color = assigned
+      end
+      return color
+   else
+      return blank
+   end
+end
+
+function raptor:launchpad_update_pages()
+   -- Status information about the current fader bank that needs to be updated
+   -- in every instance, no actual feedback is generated right here.
+   if launchpad ~= 0 and launchpad_id and next(launchpad_id) then
+      self.lp_fader_val = {}
+      for portno, id in pairs(launchpad_id) do
+	 self.lp_fader_map[portno] = nil
+      end
+   end
+end
+
 function raptor:launchpad_iter(fun)
-   if launchpad ~= 0 and launchpad_id then
+   if launchpad_id then
       -- iterate over all Launchpad ports
       for portno, id in pairs(launchpad_id) do
 	 local ch = portno==3 and 33 or portno==4 and 49
@@ -3394,20 +3499,12 @@ function raptor:launchpad_iter(fun)
    end
 end
 
-function raptor:launchpad_update_pages()
-   if launchpad ~= 0 and launchpad_id and next(launchpad_id) then
-      self.lp_fader_val = {}
-      for portno, id in pairs(launchpad_id) do
-	 self.lp_fader_map[portno] = nil
-      end
-   end
-end
-
 function raptor:launchpad_pulse(w, val)
-   -- w is the weight, val the velocity, n the number of beats per bar to
-   -- trigger, b the total number of beats.
-   if self.master and self.id == self.master then
-      -- we only do this on the time master
+   -- we only do this on the time master, no matter what the current
+   -- launchpad_master is
+   if  launchpad ~= 0 and self.master and self.id == self.master then
+      -- w is the weight, val the velocity, n the number of beats per bar to
+      -- trigger, b the total number of beats.
       local n, b = launchpad_n_pulses, self.arp.beats
       local state = w >= b-n and 1 or 0
       self:launchpad_iter(function(ch)
@@ -3417,70 +3514,135 @@ function raptor:launchpad_pulse(w, val)
 end
 
 function raptor:launchpad_ccmaster(state)
+   -- This gets invoked in *every* instance, each instance only sets its own
+   -- ccmaster button on or off (if any, those button are only on the LP Pro).
    if launchpad ~= 0 then
       local i = self:get_instance()
-      self:launchpad_iter(function(ch, portno, id)
-	    if i > 0 and i <= 8 and id == 14 then
-	       -- LP Pro only. Neither the Mini nor the X have these button
-	       -- rows, and I found that at least on the Mini things go
-	       -- haywire when it receives CCs in the 101-108 range.
-	       self:outlet(1, "note", {i+100, accent_arrows+8*state, ch})
-	    end
-      end)
+      if i > 0 and i <= 8 then
+	 self:launchpad_iter(function(ch, portno, id)
+	       if id == 14 then
+		  -- LP Pro only. Neither the Mini nor the X have these button
+		  -- rows, and I found that at least on the Mini things go
+		  -- haywire when it receives CCs in the 101-108 range.
+		  self:outlet(1, "note", {i+100, accent_arrows+8*state, ch})
+	       end
+	 end)
+      end
    end
 end
 
 function raptor:launchpad_play(state)
-   if launchpad ~= 0 then
+   -- this *must* be invoked in the time master, otherwise we get the wrong
+   -- transport state
+   if launchpad ~= 0 and self.master and self.id == self.master then
+      -- this is shared across all instances
+      lp_rolling = state
       self:launchpad_iter(function(ch, portno, id)
-	    self:outlet(1, "note", {18, 3+22*state, ch})
+	    local num = lp_mapped["play"]
+	    local color = lppadcolor["play"][state+1]
+	    if num then
+	       self:outlet(1, "note", {num, color, ch})
+	    end
 	    if id == 14 then
-	       self:outlet(1, "ctl", {3+22*state, 20, ch})
+	       self:outlet(1, "ctl", {color, 20, ch})
 	    end
       end)
    end
 end
 
 function raptor:launchpad_loop(state)
-   if launchpad ~= 0 then
+   if launchpad ~= 0 and self:launchpad_master() then
       self:launchpad_iter(function(ch, portno, id)
-	    self:outlet(1, "note", {28, accent_loop-8*state, ch})
+	    local num = lp_mapped["loop"]
+	    local color = lppadcolor["loop"][state+1]
+	    if num then
+	       self:outlet(1, "note", {num, color, ch})
+	    end
 	    if id == 14 then
-	       self:outlet(1, "ctl", {accent_loop-8*state, 10, ch})
+	       self:outlet(1, "ctl", {color, 10, ch})
 	    elseif id == 12 then
-	       self:outlet(1, "ctl", {accent_loop-8*state, 98, ch})
+	       self:outlet(1, "ctl", {color, 98, ch})
 	    end
       end)
    end
 end
 
+function raptor:launchpad_pad(var)
+   -- Generic pad feedback after param changes; this switches the toggles.
+   if launchpad ~= 0 and lp_mapped and self:launchpad_master() then
+      local num = lp_mapped[var]
+      local tgl = type(lppadcolor[var]) == "table"
+      if num and tgl then
+	 local color = self:get_lppadcolor(var)
+	 self:launchpad_iter(function(ch)
+	       self:outlet(1, "note", {num, color, ch})
+	 end)
+      end
+   end
+end
+
+function raptor:launchpad_pads(portno)
+   -- This updates all the pads (and also rebuilds the lp_mapped table).
+   local ch0 = portno==3 and 33 or portno==4 and 49
+   -- assert ch0, but to be on the safe side...
+   if launchpad ~= 0 and ch0 then
+      local mapped = {}
+      for cc, map in pairs(self.midi_map) do
+	 if cc >= 128 then
+	    local num = cc-128
+	    for ch, v in pairs(map) do
+	       if ch == 33 and v then
+		  local var = type(v) == "table" and v[1] or v
+		  local color = self:get_lppadcolor(var)
+		  mapped[var] = num
+		  self:outlet(1, "note", {num, color, ch0})
+	       end
+	    end
+	 end
+      end
+      lp_mapped = mapped
+   end
+end
+
 function raptor:launchpad_mapped(cc, ch, var)
-   if launchpad ~= 0 and ch == 33 and cc >= 128 then
-      local state = var ~= nil
-      local color = state and assigned or blank
+   if launchpad ~= 0 and ch == 33 and cc >= 128 and self:launchpad_master() then
+      local num = cc-128
+      -- update the lp_mapped table
+      if var then
+	 lp_mapped[var] = num
+      else
+	 -- need to look for any mappings of num and get rid of them
+	 for var1, num1 in pairs(lp_mapped) do
+	    if num1 == num then
+	       lp_mapped[var1] = nil
+	    end
+	 end
+      end
+      local color = self:get_lppadcolor(var)
       self:launchpad_iter(function(ch)
-	    self:outlet(1, "note", {cc-128, color, ch})
+	    self:outlet(1, "note", {num, color, ch})
       end)
    end
 end
 
 function raptor:launchpad_map(midi_map, ch0)
+   -- This is only invoked once, during launchpad_init(), in the time master.
    if launchpad ~= 0 then
       local mapped = {}
       for cc, map in pairs(midi_map) do
 	 if cc >= 128 then
 	    local num = cc-128
 	    for ch, v in pairs(map) do
-	       if ch == 33 then
-		  local state = v ~= nil
-		  local color = state and assigned or blank
-		  mapped[num] = state
+	       if ch == 33 and v then
+		  local var = type(v) == "table" and v[1] or v
+		  local color = self:get_lppadcolor(var)
+		  mapped[var] = num
 		  self:outlet(1, "note", {num, color, ch0})
 	       end
 	    end
 	 end
       end
-      return mapped
+      lp_mapped = mapped
    end
 end
 
@@ -3528,6 +3690,7 @@ end
 
 -- direct feedback to Launchpad
 function raptor:lp_out(portno, id, val, cc)
+   -- assert(self:launchpad_master())
    --print("out", portno, cc, val)
    -- I think that there's a firmware bug on the Mini MK3, which even with the
    -- latest firmware has the channels for the fader position and color sets
@@ -3595,6 +3758,7 @@ function raptor:launchpad_fader_val(var, val)
 end
 
 function raptor:launchpad_fader_bank(portno, b)
+   -- assert(self:launchpad_master())
    local id = launchpad_id[portno] -- assert id
    -- single fader bank feedback
    -- b = 0 = Volume, 1 = Pan, 2 = Send A (Send), 3 = Send B (Device)
@@ -5017,7 +5181,7 @@ function raptor:in_1_ccmaster(atoms)
    if id and self.id then
       if flag == 0 then
 	 -- launchpad fader page tie-in
-	 self:launchpad_fader_page_change(self.ccmaster, nil)
+	 self:launchpad_master_change(self.ccmaster, nil)
 	 -- omni
 	 self.ccmaster = nil
 	 -- give feedback on the panel
@@ -5029,7 +5193,7 @@ function raptor:in_1_ccmaster(atoms)
 	 self:midimix_ccmaster(0)
       else
 	 -- launchpad fader page tie-in
-	 self:launchpad_fader_page_change(self.ccmaster, id)
+	 self:launchpad_master_change(self.ccmaster, id)
 	 -- only the given raptor is receiving
 	 self.ccmaster = id
 	 -- give feedback on the panel
@@ -5174,7 +5338,7 @@ function raptor:in_1_master(atoms)
       return
    end
    -- launchpad fader page tie-in
-   self:launchpad_fader_page_change(self.master, id)
+   self:launchpad_master_change(self.master, id)
    self.master = id
 end
 
@@ -5311,6 +5475,8 @@ function raptor:param(var, val)
 	    end
 	    -- launchpad fader bank feedback
 	    self:launchpad_fader_val(var)
+	    -- launchpad pad feedback
+	    self:launchpad_pad(var)
 	 end
       end
    end
