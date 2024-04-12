@@ -3512,8 +3512,8 @@ function raptor:launchpad_pulse(w, val)
       -- trigger, b the total number of beats.
       local n, b = launchpad_n_pulses, self.arp.beats
       local state = w >= b-n and 1 or 0
-      self:launchpad_iter(function(ch)
-	    self:outlet(1, "ctl", {val*state, 99, ch})
+      self:launchpad_iter(function(ch, portno)
+	    pd.send(string.format("%s-launchpad", self.id), "pulse", {val*state, 99, ch, portno})
       end)
    end
 end
