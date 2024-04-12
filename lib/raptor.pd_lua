@@ -2358,6 +2358,11 @@ function raptor:in_1_djconfig(data)
    djcontrol_setup(data)
 end
 
+function raptor:in_1_fini()
+   self:launchpad_fini()
+   self:djcontrol_state_fini()
+end
+
 -- pulses
 
 function raptor:notes_off()
