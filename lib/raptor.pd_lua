@@ -4078,10 +4078,10 @@ function raptor:djcontrol_state_fini()
 	 local num_buttons = k == "ccmaster" and 8 or 1
 	 for offs = 0, num_buttons-1 do
 	    if type(b.ch) == "table" then
-	       pd.send(string.format("%s-djcontrol", self.id), "note", {b.num+offs, 0, b.ch[1]})
-	       pd.send(string.format("%s-djcontrol", self.id), "note", {b.num+offs, 0, b.ch[2]})
+	       self:outlet(1, "note", {b.num+offs, 0, b.ch[1]})
+	       self:outlet(1, "note", {b.num+offs, 0, b.ch[2]})
 	    else
-	       pd.send(string.format("%s-djcontrol", self.id), "note", {b.num+offs, 0, b.ch})
+	       self:outlet(1, "note", {b.num+offs, 0, b.ch})
 	    end
 	 end
       end
