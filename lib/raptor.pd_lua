@@ -3092,6 +3092,7 @@ function raptor:launchpad_master_change(old_id, new_id)
 	 --print(string.format("#%d (%d), page %s", portno, id, page and string.format("%d", page) or "none"))
 	 self:launchpad_fader_page(portno, page)
 	 self:launchpad_pads(portno)
+	 self:launchpad_loop(self.arp.loopstate)
       end
    end
 end
