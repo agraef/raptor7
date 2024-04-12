@@ -182,19 +182,21 @@ Note that disabling a driver doesn't make the device go away. Only the special p
 
 #### Device Feedback
 
-Most controller implementations also provide at least a certain amount of device *feedback*, which needs a connection between the controller and Pd's corresponding MIDI *output* port, generally using the same port number as for the input. The amount of feedback varies from none or minimal (and optional) to rather extensive (but still optional). For the Launchpad devices, on the other hand, the feedback connection is mandatory, as they can't function properly without it.
+Most controller implementations also provide at least a certain amount of device *feedback*, which needs a connection between the controller and Pd's corresponding MIDI *output* port, generally using the same port number as for the input. The amount of feedback varies from none or minimal (and optional) to rather extensive (but still optional). For the Launchpad devices, on the other hand, the feedback connection is mandatory, as the driver cannot function properly without it.
+
+**CAVEAT:** Depending on the platform and particular Pd version, Raptor may not always succeed in sending the MIDI data necessary to reset a device to its initial state when exiting Raptor. It is generally a good idea to close the patch before you quit Pd. If that doesn't seem to do the trick, there is a `fini` message in the main page which you can click to force device finalization before exiting Pd.
 
 #### Device Overview
 
-The following table summarizes the currently supported controllers and lists their port numbers and feedback information. More details can be found in the subsections below.
+The following table summarizes the currently supported controllers and lists their MIDI port numbers, feedback information, and the names of the accompanying MIDI map files in the data subdirectory. More details can be found in the subsections below.
 
-| Device                     | Input Port #  | Output Port # | Feedback                   |
-| -------------------------- | ------------- | ------------- | -------------------------- |
-| Novation Launchpad         | **3** / **4** | **3** / **4** | required, 2 separate ports |
-| Novation Launch Control XL | 2             | 2             | optional                   |
-| AKAI Professional MIDIMIX  | 2             | 2             | optional                   |
-| Nektar PACER               | 2             |               | none                       |
-| Hercules DJ Control        | 2             | 2             | recommended                |
+| Device                     | I/O Port #    | Feedback                   | MIDI Map          |
+| -------------------------- | ------------- | -------------------------- | ----------------- |
+| Novation Launchpad         | **3** / **4** | required, 2 separate ports | launchpad.map     |
+| Novation Launch Control XL | 2             | yes (optional)             | launchcontrol.map |
+| AKAI Professional MIDIMIX  | 2             | yes (optional)             | midimix.map       |
+| Nektar PACER               | 2             | no                         | pacer.map         |
+| Hercules DJ Control        | 2             | yes (recommended)          | djcontrol.map     |
 
 #### The Built-In Patchbay
 
@@ -212,7 +214,7 @@ Note that each physical port 1-4 can only be connected to a single virtual port,
 
 As you can see in the screenshot on the left, by default the physical ports 1-4 are just routed through, but you can change this to accommodate your MIDI setup. You do this by just clicking on the radio buttons making up the routing matrices. Say, you don't need any ports for the Launchpads, but you'd like to connect a MIDIMIX, a Hercules DJ Control, and a Nektar PACER, all on different hardware ports, then you can map all those physical ports to the virtual port Control #2 and don't assign Control #3 and #4 at all. Since the PACER needs no feedback port, that leaves you with an extra output port which you'd might use for a secondary synthesizer, as shown in the custom setup of the screenshot on the right.
 
-The patchbay manages only your first four physical Pd MIDI input and output ports. All other ports are just routed through. So you can always use more ports for controllers, sequencers, synths, and the like. The extra inputs can also be used with the MIDI learn facility. For the special controller support, however, you need to stick to the first four ports, but you can route these as needed with the patchbay. And of course Raptor's built-in patchbay can also be used together with external patchbay programs, such as [MidiPipe][] on the Mac or [QjackCtl][] on Linux, for even greater flexibility.
+The patchbay manages only your first four physical Pd MIDI input and output ports. All other ports are just routed through. So you can always use more ports for controllers, sequencers, synths, and the like. The extra inputs can also be used with the MIDI learn facility. For the special controller support, however, you need to stick to the first four ports, but you can route these as needed with the patchbay.
 
 #### Novation Launchpad
 
@@ -259,7 +261,7 @@ Our current mapping is pretty basic by design, so that it doesn't require any cu
 
 Note that you need to assign *deck numbers* to each Raptor instance to enable the 2-deck functionality, which can be done in the init subpatch. A working example can be found in the raptors2.pd patch included in the distribution. There's a fairly comprehensive overview in the comment section at the beginning of the accompanying MIDI map in *data/djcontrol.map*, so please make sure to read those notes for further setup and usage instructions.
 
-## Quirks and Limitations
+## Bugs and Limitations
 
 Here are some known issues and how to work around them. Anything else that seems to be missing or not working properly? File a [bug report][], or (better yet) submit a [pull request][]!
 
@@ -289,7 +291,7 @@ On the positive side, Raptor's MIDI map files are just Lua tables and their stru
 
 Special support is already available for some popular MIDI controllers, but it's always good to have more. Please share your MIDI maps or controller implementations and let me know, or submit a [pull request][]!
 
-Device management is another area where Raptor still has room for improvements. Ideally, we'd like the MIDI input and output ports to be fully configurable by the user, in a DAW-like fashion. But for the time being, you can at least use the built-in patchbay to manage small to medium-sized setups.
+Device management is another area where Raptor still has room for improvements. Ideally, we'd like the MIDI input and output ports to be fully configurable by the user, just like in a DAW. But for the time being, you can at least use the built-in patchbay to manage small to medium-sized setups. And of course the built-in patchbay can also be used together with external patchbay programs, such as [MidiPipe][] on the Mac or [QjackCtl][] on Linux, for even greater flexibility.
 
 [ICMC 2006 paper]: https://github.com/agraef/raptor7/blob/main/doc/scale.pdf
 [doc/raptor7-cheatsheet.pdf]: https://github.com/agraef/raptor7/blob/main/doc/raptor7-cheatsheet.pdf
