@@ -3062,6 +3062,8 @@ function raptor:launchpad_fader_timer_cb4()
 end
 
 local launchpad_master = nil
+-- forward declaration, since we need this variable below
+local launchkey_master = nil
 
 function raptor:lpmaster(id)
    if id then
@@ -3923,8 +3925,6 @@ end
 -- feedback (similar to the Launchpad, but simpler)
 
 local lk_mapped
-
-local launchkey_master = nil
 
 function raptor:launchkey_master()
    -- select the Raptor instance that gets to send all feedback
