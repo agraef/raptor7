@@ -172,6 +172,8 @@ Raptor comes with a few ready-made MIDI map files included in the data subdirect
 
 Beyond MIDI learn, Raptor also offers special support for some widespread controllers, listed below. This typically entails some hard-wired bindings to select Raptor instances for receiving control data, as well as a custom MIDI map file. It is generally assumed that these devices are in their factory state and are connected to a *secondary* input port (usually Pd's second MIDI input port, but see the table below for the actual port numbers), so that they don't interfere with MIDI data from your primary input device on the first MIDI input, where you'd typically connect your MIDI keyboard, pad controller, etc. All drivers come with corresponding MIDI maps in the data subdirectory, which you should load using the "load map" operation described above if you want the full experience. (Otherwise most drivers only offer a few essential bindings, typically stuff that can't be mapped using MIDI learn.)
 
+#### Device Configuration
+
 For now, the special device drivers included in Raptor all work nicely together, so we have them all enabled by default. But if the bindings interfere with your own controllers or if you're worried about the overhead for devices that you don't have, you can easily turn them off using the `config` patch which you can find in Raptor's `init` subpatch. Click on the patch to open it. It contains the following dialog:
 
 <img src="doc/config.png" alt="config" style="zoom:85%;" />
@@ -184,19 +186,22 @@ Note that disabling a driver doesn't make the device go away. Only the special p
 
 Most controller implementations also provide at least a certain amount of device *feedback*, which needs a connection between the controller and Pd's corresponding MIDI *output* port, generally using the same port number as for the input. The amount of feedback varies from none or minimal (and optional) to rather extensive (but still optional). For the Launchpad devices, on the other hand, the feedback connection is mandatory, as the driver cannot function properly without it.
 
-**CAVEAT:** Depending on the platform and particular Pd version, Raptor may not always succeed in sending the MIDI data necessary to reset a device to its initial state when exiting Raptor. It is generally a good idea to close the patch before you quit Pd. If that doesn't seem to do the trick, there is a `fini` message in the main page which you can click to force device finalization before exiting Pd.
+**CAVEAT:** Depending on the platform and particular Pd version, the driver may not always succeed in sending the MIDI data necessary to reset a device to its initial state when exiting Raptor. It is generally a good idea to close the patch before you quit Pd. If that doesn't seem to do the trick, there is a `fini` message in the main page which you can click to force device finalization before exiting Pd.
 
 #### Device Overview
 
-The following table summarizes the currently supported controllers and lists their MIDI port numbers, feedback information, and the names of the accompanying MIDI map files in the data subdirectory. More details can be found in the subsections below.
+The following table summarizes the currently supported controllers and lists their MIDI port numbers, feedback capabilities, and the names of the accompanying MIDI map files in the data subdirectory. More details can be found in the subsections below.
 
 | Device                     | I/O Port #    | Feedback                   | MIDI Map          |
 | -------------------------- | ------------- | -------------------------- | ----------------- |
 | Novation Launchpad         | **3** / **4** | required, 2 separate ports | launchpad.map     |
+| Novation Launchkey         | 1* + 2        | yes (recommended)          | launchkey.map     |
 | Novation Launch Control XL | 2             | yes (optional)             | launchcontrol.map |
 | AKAI Professional MIDIMIX  | 2             | yes (optional)             | midimix.map       |
-| Nektar PACER               | 2             | no                         | pacer.map         |
+| Nektar PACER               | 2*            | no                         | pacer.map         |
 | Hercules DJ Control        | 2             | yes (recommended)          | djcontrol.map     |
+
+\* = input only
 
 #### The Built-In Patchbay
 
@@ -222,11 +227,21 @@ The [Novation Launchpad][] is quite likely the most popular grid controller for 
 
 You'll need a recent Launchpad version. The present implementation should work with all Launchpads in Novation's current lineup, which at the time of this writing encompasses the Launchpad Pro and Mini (MK3), as well as the Launchpad X. The driver checks at startup which Launchpad model(s) you have connected and prints some information in the Pd console about the devices it recognized, and also warns you about unsupported Launchpad models.
 
-A custom MIDI map is included, see *data/launchpad.map*. Please check the comments in that file to find out more about Raptor's Launchpad implementation. Also, there's a little cheat sheet to help you get familiar with the most important fader and pad assignments, see [doc/raptor7-cheatsheet.pdf][]. This will also be useful in conjunction with the Novation Launch Control XL and AKAI MIDIMIX controllers, see below, because the Launchpad driver uses basically the same layout of buttons and faders/knobs.
+A custom MIDI map is included, see *data/launchpad.map*. Please check the comments in that file to find out more about Raptor's Launchpad implementation. Also, there's a little cheat sheet to help you get familiar with the most important fader and pad assignments, see [doc/raptor7-cheatsheet.pdf][]. This will also be useful in conjunction with the Novation Launchkey, Novation Launch Control XL, and AKAI MIDIMIX controllers, see below, which use basically the same layout of buttons and faders/knobs.
 
 **IMPORTANT:** In contrast to the other controllers, this device needs to be connected to its own MIDI port, port 3 or 4, on *both* input and output, as the communication protocol is rather complicated and involves a lot of messages going back and forth between Pd and the device.
 
 Raptor reserves both ports 3 and 4 for use with the Launchpad, so that you can connect two different devices at the same time and have them work nicely together. This is necessary since the Launchpad driver needs to maintain a certain amount of state information about each device. It is possible to connect two or more devices *of the same model* to the same port, however, and have them operate in lockstep. This might actually come in handy if you have lots of spare Launchpads lying around, e.g., in different locations on stage or in the studio. But different models must *always* be connected to different ports. That's because there are some variations (or outright incompatibilities) of Novation's MIDI protocol for different models that the driver needs to accommodate. The driver will warn you at startup if it detects any such conflicts. In this case the conflicting models will have their session mode disabled, but you can still use them as standard MIDI controllers, e.g., for MIDI note and CC input.
+
+#### Novation Launchkey
+
+The [Novation Launchkey][] is Novation's keyboard controller which combines a standard MIDI keyboard with eight encoders and a reduced Launchpad-like 2x8 grid of pads. The driver requires that you connect both the first port (the "MIDI" port) of the Launchkey to Pd's first MIDI input for the keyboard input, and the second port (the "DAW" port) to Pd's second MIDI port on both input and output for the Launchpad-like functionality.
+
+The accompanying MIDI map in data/launchkey.map has bindings for both session and standalone mode, so you can also use the Launchkey as a standard MIDI keyboard with drum pads if you disable the driver in the `config` patch, or disconnect Launchkey's DAW port from Pd. In session mode, the Launchkey functions pretty much like a little Launchpad with mappable pads, drum grid, and knobs for controlling the usual four banks of Raptor controls; please check the map file for details.
+
+To these ends, the Launchkey can be switched into various different modes by pressing the Shift key together with one of the pads (Session, Drum, Volume, Pan, Send A+B); by default, the device starts up with the Session and Pan modes activated. The transport buttons also work as expected, and you can select Raptor instances and switch presets with the arrow buttons like on the Launchpad.
+
+You'll need one of the latest Launchkey devices (MK3 at the time of this writing). So far, we have only been able to test the driver with the Launchkey Mini MK3, so that device is known to work. Support for the bigger Launchkey controllers is planned, however, and if you own one of these then you should already be able to give it a go (but expect some bugs).
 
 #### Novation Launch Control XL
 
@@ -306,6 +321,7 @@ Device management is another area where Raptor still has room for improvements. 
 [QjackCtl]: https://qjackctl.sourceforge.io/
 [MidiPipe]: http://www.subtlesoft.square7.net/MidiPipe.html
 [Novation Launchpad]: https://novationmusic.com/products/launchpad-pro-mk3
+[Novation Launchkey]: https://novationmusic.com/launchkey
 [Novation Launch Control XL]: https://novationmusic.com/products/launch-control-xl
 [AKAI MIDIMIX]: https://www.akaipro.com/midimix
 [Nektar PACER]: https://nektartech.com/pacer-midi-daw-footswitch-controller/
