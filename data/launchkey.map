@@ -1,27 +1,41 @@
 -- -*- mode: lua -*-
 
 -- MIDI map for the Novation Launchkey Mini MK3 keyboard.
--- Albert Gräf <agggraef@gmail.com>, 10 April 2024
+-- Albert Gräf <agggraef@gmail.com>, 13 April 2024
 
--- While we don't have a special driver for the Launchkey Mini yet, which
--- would enable the Launchpad-like functionality, here are at least some
--- useful bindings for the buttons and knobs. To use this, load the map in
--- Raptor and connect the Launchkey Mini to Pd's first MIDI input. The map
--- assumes the factory setup for the knobs (CC21-28).
+-- This contains the default MIDI map for the Launchkey driver, as well as
+-- some rudimentary bindings for the buttons and knobs in standalone mode
+-- (these are only active if the Launchpad driver is turned off). To use this,
+-- load the map in Raptor and connect the Launchkey Mini to Pd's first MIDI
+-- input. In addition, to use the built-in driver, also connect the second
+-- (DAW) port to Pd's second port, for both input and output. The map assumes
+-- the factory setup for the knobs (CC21-28).
 
 -- This might also work for the bigger Launchkeys, but I haven't tested this.
 
--- The map binds all the buttons that can be accessed without session/DAW
--- mode, Raptor functions are given in parentheses: the ">" button (latch),
--- the transport buttons (play, loop), and the (shifted) track left/right
--- buttons (rewind, pulse).
+-- STANDALONE:
+
+-- The standalone map binds all the buttons that can be accessed without
+-- session/DAW mode, Raptor functions are given in parentheses: the ">" button
+-- (latch), the transport buttons (play, loop), and the (shifted) track
+-- left/right buttons (rewind, pulse).
 
 -- The knobs are mapped as in the first fader bank of the Launchpad, i.e.,
 -- from left to right: 1 = pitch hi, 2 = pitch lo, 3 = pattern mode (random,
 -- up, down, etc.), 4 = pos/anacrusis (the "scrubbing" control), 5 = tempo,
 -- 6 = meter numerator, 7 = meter denominator, 8 = division.
 
+-- SESSION MODE:
+
+-- The session mode binding works pretty much like the Launchpad one (within
+-- the limitations of the device), with the same fader banks (Volume, Pan,
+-- Send A, Send B) and bottommost two rows on the launch grid. The transport
+-- buttons work as well (play, loop), and the (shifted) arrow keys let you
+-- select Raptor instances (left, right) and presets (up, down).
+
 {
+  -- standalone bindings (these will only be active if the launchkey driver is
+  -- turned off)
   [21]  = { [1] = { "pitchhi", 1 } },
   [22]  = { [1] = { "pitchlo", 1 } },
   [23]  = { [1] = { "mode", 1 } },
@@ -34,5 +48,61 @@
   [103] = { [16] = { "rewind", true } },
   [104] = { [16] = { "latch", true } },
   [115] = { [16] = { "play", true } },
-  [117] = { [16] = { "loop", true } }
+  [117] = { [16] = { "loop", true } },
+  -- session mode bindings (active if the launchkey driver is turned on)
+  -- send A (min value) faders
+  [13] = { [32] = "minvel" },
+  [14] = { [32] = "pmin" },
+  [15] = { [32] = "wmin" },
+  [16] = { [32] = "gate" },
+  [17] = { [32] = "hmin" },
+  [18] = { [32] = "pref" },
+  [19] = { [32] = "smin" },
+  [20] = { [32] = "uniq" },
+  -- send B (max value) faders
+  [29] = { [32] = "maxvel" },
+  [30] = { [32] = "pmax" },
+  [31] = { [32] = "wmax" },
+  [32] = { [32] = "gate" },
+  [33] = { [32] = "hmax" },
+  [34] = { [32] = "pref" },
+  [35] = { [32] = "smax" },
+  [36] = { [32] = "nmax" },
+  -- pan (bipolar mod) faders
+  [49] = { [32] = "velmod" },
+  [50] = { [32] = "pmod" },
+  [51] = { [32] = "gain" },
+  [52] = { [32] = "gatemod" },
+  [53] = { [32] = "hmod" },
+  [54] = { [32] = "prefmod" },
+  [55] = { [32] = "smod" },
+  [56] = { [32] = "nmod" },
+  -- volume faders
+  [77] = { [32] = "pitchhi" },
+  [78] = { [32] = "pitchlo" },
+  [79] = { [32] = "mode" },
+  [80] = { [32] = "pos" },
+  [81] = { [32] = "tempo" },
+  [82] = { [32] = "meter-num" },
+  [83] = { [32] = "meter-denom" },
+  [84] = { [32] = "division" },
+  -- transport
+  [115] = { [32] = { "play", true }, [16] = { "play", true } },
+  [117] = { [32] = { "loop", true }, [16] = { "loop", true } },
+  -- predefined pads (session view)
+  -- 240, 241 unassigned
+  [242] = { [17] = { "raptor", true } },
+  [243] = { [17] = { "rewind", true } },
+  -- 244 unassigned
+  [245] = { [17] = { "loop-prev", true } },
+  [246] = { [17] = { "loop-next", true } },
+  [247] = { [17] = { "play", true } },
+  -- upper row
+  [224] = { [17] = { "mute", true } },
+  [225] = { [17] = { "latch", true } },
+  [226] = { [17] = { "bypass", true } },
+  -- 227, 228 unassigned
+  [229] = { [17] = { "loop-load", true } },
+  [230] = { [17] = { "loop-save", true } },
+  [231] = { [17] = { "loop", true } },
 }

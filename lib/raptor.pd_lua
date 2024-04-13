@@ -37,6 +37,7 @@ local debug_level = 0
 -- details about each device, please check the documentation and the
 -- corresponding MIDI map in the data subdirectory.
 
+local launchkey = 1     -- Novation Launchkey
 local launchpad = 1     -- Novation Launchpad
 local launchcontrol = 1 -- Novation Launch Control XL
 local midimix = 1       -- AKAI Professional MIDIMIX
@@ -90,8 +91,8 @@ local djcontrol_n_pulses = 7
 -- -------------------------------------------------------------------------
 
 -- make sure that this is set if any of the above is enabled
-local have_control = launchpad ~= 0 or launchcontrol ~= 0 or midimix ~= 0 or
-   pacer ~= 0 or djcontrol ~= 0
+local have_control = launchkey ~= 0 or launchpad ~= 0 or launchcontrol ~= 0 or
+   midimix ~= 0 or pacer ~= 0 or djcontrol ~= 0
 
 -- -------------------------------------------------------------------------
 
@@ -159,9 +160,10 @@ end
 local first_config = {}
 
 local function controller_setup(data)
-   local id, config_launchpad, config_launchcontrol, config_midimix, config_pacer, config_djcontrol = table.unpack(data)
+   local id, config_launchkey, config_launchpad, config_launchcontrol, config_midimix, config_pacer, config_djcontrol = table.unpack(data)
    local last_state = {have_control = have_control, launchpad = launchpad}
    if not first_config[id] then
+      launchkey = launchkey*config_launchkey ~= 0 and 1 or 0
       launchpad = launchpad*config_launchpad ~= 0 and 1 or 0
       launchcontrol = launchcontrol*config_launchcontrol ~= 0 and 1 or 0
       midimix = midimix*config_midimix ~= 0 and 1 or 0
@@ -169,14 +171,15 @@ local function controller_setup(data)
       djcontrol = djcontrol*config_djcontrol ~= 0 and 1 or 0
       first_config[id] = true
    else
+      launchkey = config_launchkey ~= 0 and 1 or 0
       launchpad = config_launchpad ~= 0 and 1 or 0
       launchcontrol = config_launchcontrol ~= 0 and 1 or 0
       midimix = config_midimix ~= 0 and 1 or 0
       pacer = config_pacer ~= 0 and 1 or 0
       djcontrol = config_djcontrol ~= 0 and 1 or 0
    end
-   have_control = launchpad ~= 0 or launchcontrol ~= 0 or midimix ~= 0 or
-      pacer ~= 0 or djcontrol ~= 0
+   have_control = launchkey ~= 0 or launchpad ~= 0 or launchcontrol ~= 0 or
+      midimix ~= 0 or pacer ~= 0 or djcontrol ~= 0
    if last_state.have_control ~= have_control or
       last_state.launchpad ~= launchpad then
       -- reset the MIDI thru settings
@@ -2294,6 +2297,8 @@ function raptor:late_init()
       launchpad_id = {}
       self.launchpad_idreq_clock:delay(500)
    end
+   -- launchkey initialization
+   self:launchkey_init()
    -- djcontrol initialization
    self:djcontrol_state_init()
 end
@@ -2321,6 +2326,7 @@ function raptor:finalize()
    self.clock:destruct()
    self.recv:destruct()
    self:launchpad_fini()
+   self:launchkey_fini()
    self:djcontrol_state_fini()
    if self.ccmaster and self:check_ccmaster() then
       -- tell all running raptors that we're back to omni
@@ -2338,6 +2344,7 @@ end
 -- controller setup
 
 function raptor:in_1_config(data)
+   local last_launchkey = launchkey
    local last_launchpad = launchpad
    controller_setup(data)
    if last_launchpad ~= launchpad then
@@ -2346,6 +2353,14 @@ function raptor:in_1_config(data)
 	 self:launchpad_fini(true)
       else
 	 self:launchpad_init()
+      end
+   end
+   if last_launchkey ~= launchkey then
+      -- process launchkey status change
+      if launchkey == 0 then
+	 self:launchkey_fini(true)
+      else
+	 self:launchkey_init()
       end
    end
 end
@@ -2799,6 +2814,9 @@ function raptor:launchpad_fader_bank_setup(portno, b, color)
    self:outlet(1, "sysex", syx)
 end
 
+-- shared transport state, needed for transport feedback (play button)
+local rolling = 0
+
 function raptor:launchpad_init()
    if launchpad ~= 0 and self.master and self.id == self.master then
       -- iterate over all connected launchpads
@@ -2861,6 +2879,9 @@ function raptor:launchpad_init()
 	       self:launchpad_fader_bank_setup(portno, b, lpmini_colors)
 	    end
 	 end
+	 -- play/loop
+	 self:launchpad_play(rolling)
+	 self:launchpad_loop(self.arp.loopstate)
 	 ::skip::
       end
    end
@@ -3086,6 +3107,7 @@ function raptor:launchpad_master_change(old_id, new_id)
       --assert(not launchpad_master or old_master == launchpad_master)
       -- hand over to the new instance (i.e., self)
       launchpad_master = self.id
+      launchkey_master = self.id
       --print(string.format("hand over %d -> %d", old_master, new_master))
       for portno, id in pairs(launchpad_id) do
 	 self:launchpad_fader_timer_off(portno)
@@ -3094,6 +3116,8 @@ function raptor:launchpad_master_change(old_id, new_id)
 	 self:launchpad_pads(portno)
 	 self:launchpad_loop(self.arp.loopstate)
       end
+      self:launchkey_pads()
+      self:launchkey_loop(self.arp.loopstate)
    end
 end
 
@@ -3445,33 +3469,29 @@ local lppadcolor = {
    ["nmax"] = lpmini_colors[4]
 }
 
-local lp_rolling = 0
-
-function raptor:get_lppadcolor(var)
+function raptor:get_lppadcolor(var, state)
    if var then
       local color = lppadcolor[var]
       if type(color) == "table" then
-	 -- the actual state for these toggles is *not* the one in param
-	 -- storage, we need to get it elsewhere
-	 local toggles = {
-	    mute = self.mute, bypass = self.bypass,
-	    latch = self.arp.latch and 1 or 0,
-	    play = lp_rolling, loop = self.arp.loopstate
-	 }
-	 local val = toggles[var]
-	 if not val then
-	    -- other params can be fetched straight from storage
-	    local i = param_i[var]
-	    if i then
-	       val = self.param_val[i]
+	 if not state then
+	    -- the actual state for these toggles is *not* the one in param
+	    -- storage, we need to get it elsewhere
+	    local toggles = {
+	       mute = self.mute, bypass = self.bypass,
+	       latch = self.arp.latch and 1 or 0,
+	       play = rolling, loop = self.arp.loopstate
+	    }
+	    local val = toggles[var]
+	    if not val then
+	       -- other params can be fetched straight from storage
+	       local i = param_i[var]
+	       if i then
+		  val = self.param_val[i]
+	       end
 	    end
+	    state = val and val ~= 0 and 1 or 0
 	 end
-	 if val then
-	    local state = val ~= 0 and 1 or 0
-	    color = color[state+1]
-	 else
-	    color = color[1]
-	 end
+	 color = color[state+1]
       elseif not color then
 	 color = assigned
       end
@@ -3538,11 +3558,12 @@ function raptor:launchpad_ccmaster(state)
 end
 
 function raptor:launchpad_play(state)
-   -- this *must* be invoked in the time master, otherwise we get the wrong
-   -- transport state
+   -- This *must* be invoked in the time master, otherwise we get the wrong
+   -- transport state.
    if launchpad ~= 0 and self.master and self.id == self.master then
-      -- this is shared across all instances
-      lp_rolling = state
+      -- This is shared across all instances and is also used by the launchkey
+      -- driver.
+      rolling = state
       self:launchpad_iter(function(ch, portno, id)
 	    local num = lp_mapped["play"]
 	    local color = lppadcolor["play"][state+1]
@@ -3573,11 +3594,15 @@ function raptor:launchpad_loop(state)
    end
 end
 
+function raptor:tgl_lppadcolor(var)
+   return type(lppadcolor[var]) == "table"
+end
+
 function raptor:launchpad_pad(var)
-   -- Generic pad feedback after param changes; this switches the toggles.
+   -- Generic pad feedback after param changes; this updates the toggles.
    if launchpad ~= 0 and lp_mapped and self:launchpad_master() then
       local num = lp_mapped[var]
-      local tgl = type(lppadcolor[var]) == "table"
+      local tgl = self:tgl_lppadcolor(var)
       if num and tgl then
 	 local color = self:get_lppadcolor(var)
 	 self:launchpad_iter(function(ch)
@@ -3779,6 +3804,219 @@ function raptor:launchpad_fader_bank(portno, b)
 	    self:lp_out(portno, id, val, cc)
 	 end
       end
+   end
+end
+
+-- Launchkey (tested with Mini MK3)
+
+function raptor:launchkey_init()
+   if launchkey ~= 0 then
+      self.lkmode = 3 -- default knob mode (3 == pan)
+      -- switch the Launchkey into DAW/session mode
+      self:outlet(1, "note", {12, 127, 32})
+      -- populate the session pads
+      self:launchkey_pads()
+      -- populate the drum pads
+      for num = 36, 51 do
+	 local color = (num-36)//8*8+33
+	 self:outlet(1, "note", {num, color, 26})
+      end
+      -- play/loop
+      self:launchkey_play(rolling)
+      self:launchkey_loop(self.arp.loopstate)
+   end
+end
+
+function raptor:launchkey_fini(force)
+   if force or launchkey ~= 0 then
+      -- session pads
+      for num = 96, 103 do
+	 self:outlet(1, "note", {num, 0, 17})
+      end
+      for num = 112, 119 do
+	 self:outlet(1, "note", {num, 0, 17})
+      end
+      -- drum pads
+      for num = 36, 51 do
+	 self:outlet(1, "note", {num, 0, 26})
+      end
+      -- play/loop
+      self:outlet(1, "ctl", {0, 115, 17})
+      self:outlet(1, "ctl", {0, 117, 17})
+      -- switch the Launchkey back to standalone mode
+      self:outlet(1, "note", {12, 0, 32})
+   end
+end
+
+function raptor:launchkey_note(atoms)
+   if launchkey ~= 0 then
+      local num, val, ch = table.unpack(atoms)
+      if ch == 26 then
+	 -- drum pads, remap to channel 10
+	 atoms[3] = 10
+	 return atoms
+      end
+      -- everything else goes straight through to be MIDI-mapped
+   end
+   return false
+end
+
+-- Mapping of the Launchkey knob modes (a.k.a. Volume, Pan, Send A, Send B).
+-- NOTE: Mode 2 of the Launchkey (Device) isn't used for anything special, but
+-- the CCs (CC21-28) are passed straight through, so you can still map them.
+local lk_knob = { [1] = 76, [2] = 20, [3] = 48, [4] = 12, [5] = 28 }
+
+function raptor:launchkey_ctl(atoms)
+   if launchkey ~= 0 then
+      local val, num, ch = table.unpack(atoms)
+      if ch == 17 or ch == 32 then
+	 if num == 3 and ch == 32 then
+	    -- pad mode, currently we don't use this
+	 elseif num == 9 and ch == 32 then
+	    -- knob mode, used to map the knobs to our usual 4 CC banks
+	    self.lkmode = val
+	 elseif num >= 21 and num <= 28 and ch == 32 then
+	    -- knobs, remapped to the 4 CC banks
+	    local cc0 = lk_knob[self.lkmode]
+	    if cc0 then
+	       atoms[2] = cc0+num-20
+	    end
+	    return atoms
+	 elseif num == 108 and ch == 17 then
+	    -- shift status; this activates the arrow buttons
+	    self.shift = val > 0
+	 elseif not self.shift then
+	    -- the remaining bindings use the shift button
+	    return false
+	 elseif num >= 102 and num <= 103 and ch == 32 or
+	    num >= 104 and num <= 105 and ch == 17 then
+	    -- arrow buttons
+	    if val > 0 then
+	       local up, down, left, right = 104, 105, 103, 102
+	       if num == left then
+		     self:in_1_ccmaster_prev()
+	       elseif num == right then
+		     self:in_1_ccmaster_next()
+	       elseif num == up then
+		  if self:check_ccmaster() then
+		     local i = self.presetno or 1
+		     i = i-1
+		     self:recall_preset(i)
+		  end
+	       elseif num == down then
+		  if self:check_ccmaster() then
+		     local i = self.presetno or 1
+		     i = i+1
+		     self:recall_preset(i)
+		  end
+	       end
+	    end
+	 else
+	    return false
+	 end
+	 return true
+      end
+   end
+   return false
+end
+
+-- feedback (similar to the Launchpad, but simpler)
+
+local lk_mapped
+
+local launchkey_master = nil
+
+function raptor:launchkey_master()
+   -- select the Raptor instance that gets to send all feedback
+   if launchkey_master then
+      -- already selected, move along
+   else
+      -- try the ccmaster, time master, and self, in that order
+      -- we borrow self:lpmaster() from the Launchpad driver here
+      launchkey_master = self:lpmaster(self.ccmaster)
+   end
+   -- check that we are the golden one
+   return launchkey_master == self.id
+end
+
+function raptor:launchkey_play(state)
+   -- This *must* be invoked in the time master, otherwise we get the wrong
+   -- transport state.
+   if launchkey ~= 0 and self.master and self.id == self.master then
+      rolling = state
+      local num = lk_mapped["play"]
+      if num then
+	 local color = self:get_lppadcolor("play", state)
+	 self:outlet(1, "note", {num, color, 17})
+      end
+      self:outlet(1, "ctl", {127*state, 115, 17})
+   end
+end
+
+function raptor:launchkey_loop(state)
+   if launchkey ~= 0 and self:launchkey_master() then
+      local num = lk_mapped["loop"]
+      if num then
+	 local color = self:get_lppadcolor("loop", state)
+	 self:outlet(1, "note", {num, color, 17})
+      end
+      self:outlet(1, "ctl", {127*state, 117, 17})
+   end
+end
+
+function raptor:launchkey_pads()
+   if launchkey ~= 0 and self:launchkey_master() then
+      local mapped = {}
+      for cc, map in pairs(self.midi_map) do
+	 local num = cc-128
+	 if num >= 96 and num <= 103 or num >= 112 and num <= 119 then
+	    for ch, v in pairs(map) do
+	       if ch == 17 and v then
+		  local var = type(v) == "table" and v[1] or v
+		  -- we borrow the color map from the Launchpad here
+		  local color = self:get_lppadcolor(var)
+		  mapped[var] = num
+		  self:outlet(1, "note", {num, color, ch})
+	       end
+	    end
+	 end
+      end
+      lk_mapped = mapped
+   end
+end
+
+function raptor:launchkey_pad(var)
+   -- Generic pad feedback after param changes; this updates the toggles.
+   if launchkey ~= 0 and lk_mapped and self:launchkey_master() then
+      local num = lk_mapped[var]
+      local tgl = self:tgl_lppadcolor(var)
+      if num and tgl then
+	 -- we borrow the color map from the Launchpad here
+	 local color = self:get_lppadcolor(var)
+	 self:outlet(1, "note", {num, color, 17})
+      end
+   end
+end
+
+function raptor:launchkey_mapped(cc, ch, var)
+   local num = cc-128
+   if launchkey ~= 0 and ch == 17 and
+      (num >= 96 and num <= 103 or num >= 112 and num <= 119) and
+      self:launchkey_master() then
+      -- update the lk_mapped table
+      if var then
+	 lk_mapped[var] = num
+      else
+	 -- need to look for any mappings of num and get rid of them
+	 for var1, num1 in pairs(lk_mapped) do
+	    if num1 == num then
+	       lk_mapped[var1] = nil
+	    end
+	 end
+      end
+      -- we borrow the color map from the Launchpad here
+      local color = self:get_lppadcolor(var)
+      self:outlet(1, "note", {num, color, ch})
    end
 end
 
@@ -4454,6 +4692,10 @@ function raptor:process_note(atoms)
       end
       -- Only port 2 gets processed from here on.
       if portno == 2 then
+	 local res = launchkey ~= 0 and self:launchkey_note(atoms)
+	 if res then
+	    return res
+	 end
 	 local res = launchcontrol ~= 0 and self:launchcontrol_note(atoms)
 	 if res then
 	    return res
@@ -4492,6 +4734,10 @@ function raptor:process_ctl(atoms)
       end
       -- Only port 2 gets processed from here on.
       if portno == 2 then
+	 local res = launchkey ~= 0 and self:launchkey_ctl(atoms)
+	 if res then
+	    return res
+	 end
 	 local res = launchcontrol ~= 0 and self:launchcontrol_ctl(atoms)
 	 if res then
 	    return res
@@ -4561,7 +4807,7 @@ end
 
 function raptor:in_1_note(atoms)
    local res = self:process_note(atoms)
-   -- launchpad: mapped note gets processed as if it was on input
+   -- launchpad/launchkey: mapped note gets processed as if it was on input
    if res and type(res) ~= "table" then
       return
    end
@@ -4611,7 +4857,7 @@ function raptor:in_1_ctl(atoms)
    if res and type(res) ~= "table" then
       return
    elseif res then
-      -- launchpad: mapped CC gets processed as if it was on input
+      -- launchpad/launchkey: mapped CC gets processed as if it was on input
       goto skip
    end
    if portno == 2 then
@@ -4909,8 +5155,9 @@ function raptor:map_set(cc, ch, var, opt)
    else
       map[ch] = var
    end
-   -- launchpad tie-in: light up buttons on the grid when they're bound
+   -- launchpad/launchkey tie-in: light up buttons on the grid when they're bound
    self:launchpad_mapped(cc, ch, var)
+   self:launchkey_mapped(cc, ch, var)
 end
 
 function raptor:map_find(var)
@@ -5353,6 +5600,7 @@ end
 function raptor:in_1_transport_state(atoms)
    self:djcontrol_play(atoms[1])
    self:launchpad_play(atoms[1])
+   self:launchkey_play(atoms[1])
 end
 
 function raptor:in_1_sync(atoms)
@@ -5478,11 +5726,13 @@ function raptor:param(var, val)
 	       -- djcontrol and launchpad tie-in, updates the LOOP buttons
 	       self:djcontrol_loop(self.arp.loopstate)
 	       self:launchpad_loop(self.arp.loopstate)
+	       self:launchkey_loop(self.arp.loopstate)
 	    end
 	    -- launchpad fader bank feedback
 	    self:launchpad_fader_val(var)
-	    -- launchpad pad feedback
+	    -- launchpad/launchkey pad feedback
 	    self:launchpad_pad(var)
+	    self:launchkey_pad(var)
 	 end
       end
    end
@@ -5512,6 +5762,7 @@ function raptor:in_1(sel, atoms)
 	 -- djcontrol and launchpad tie-in, updates the LOOP buttons
 	 self:djcontrol_loop(self.arp.loopstate)
 	 self:launchpad_loop(self.arp.loopstate)
+	 self:launchkey_loop(self.arp.loopstate)
       end
    else
       local i = param_i[sel]
