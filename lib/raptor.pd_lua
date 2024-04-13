@@ -3811,11 +3811,15 @@ end
 
 -- Launchkey (tested with Mini MK3)
 
+-- default knob mode (1 == Volume)
+local lkmode = 1
+
 function raptor:launchkey_init()
-   if launchkey ~= 0 then
-      self.lkmode = 3 -- default knob mode (3 == pan)
+   if launchkey ~= 0 and self.master and self.id == self.master then
       -- switch the Launchkey into DAW/session mode
       self:outlet(1, "note", {12, 127, 32})
+      -- set the default knob mode
+      self:outlet(1, "ctl", {lkmode, 9, 32})
       -- populate the session pads
       self:launchkey_pads()
       -- populate the drum pads
@@ -3876,10 +3880,10 @@ function raptor:launchkey_ctl(atoms)
 	    -- pad mode, currently we don't use this
 	 elseif num == 9 and ch == 32 then
 	    -- knob mode, used to map the knobs to our usual 4 CC banks
-	    self.lkmode = val
+	    lkmode = val
 	 elseif num >= 21 and num <= 28 and ch == 32 then
 	    -- knobs, remapped to the 4 CC banks
-	    local cc0 = lk_knob[self.lkmode]
+	    local cc0 = lk_knob[lkmode]
 	    if cc0 then
 	       atoms[2] = cc0+num-20
 	    end
