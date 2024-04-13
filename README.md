@@ -235,13 +235,13 @@ Raptor reserves both ports 3 and 4 for use with the Launchpad, so that you can c
 
 #### Novation Launchkey
 
-The [Novation Launchkey][] is Novation's keyboard controller which combines a standard MIDI keyboard with eight encoders and a reduced Launchpad-like 2x8 grid of pads. The driver requires that you connect both the first port (the "MIDI" port) of the Launchkey to Pd's first MIDI input for the keyboard input, and the second port (the "DAW" port) to Pd's second MIDI port on both input and output for the Launchpad-like functionality.
+[Novation Launchkey][] is Novation's lineup of keyboard controllers of various sizes, combining a standard MIDI keyboard with eight encoders and a reduced (2x8) Launchpad-like grid of pads. The driver requires that you connect both the first port (the "MIDI" port) of the Launchkey to Pd's first MIDI port for the keyboard input, and the second port (the "DAW" port) to Pd's second MIDI port, on both input and output, for the Launchpad-like functionality.
 
-The accompanying MIDI map in data/launchkey.map has bindings for both session and standalone mode, so you can also use the Launchkey as a standard MIDI keyboard with drum pads if you disable the driver in the `config` patch, or disconnect Launchkey's DAW port from Pd. In session mode, the Launchkey functions pretty much like a little Launchpad with mappable pads, drum grid, and knobs for controlling the usual four banks of Raptor controls; please check the map file for details.
+The accompanying MIDI map in data/launchkey.map has bindings for both session and standalone mode, so if you prefer this you can also use the Launchkey as a standard MIDI keyboard with drum pads. To do this, you can disable the driver in the `config` patch or disconnect Launchkey's DAW port from Pd. In session mode, the Launchkey functions pretty much like a little Launchpad with mappable pads, drum grid, and knobs for controlling the usual four banks of Raptor controls; please check the map file for details.
 
-To these ends, the Launchkey can be switched into various different modes by pressing the Shift key together with one of the pads (Session, Drum, Volume, Pan, Send A+B); by default, the device starts up with the Session and Pan modes activated. The transport buttons also work as expected, and you can select Raptor instances and switch presets with the arrow buttons like on the Launchpad.
+To these ends, the Launchkey can be switched into various different modes by pressing the Shift key together with one of the pads (Session, Drum, Volume, Pan, Send A+B). By default, the device starts up with the Session and Volume modes activated. The transport buttons also work as expected, and you can select Raptor instances and switch presets with the arrow buttons like on the Launchpad.
 
-You'll need one of the latest Launchkey devices (MK3 at the time of this writing). So far, we have only been able to test the driver with the Launchkey Mini MK3, so that device is known to work. Support for the bigger Launchkey controllers is planned, however, and if you own one of these then you should already be able to give it a go (but expect some bugs).
+You'll need one of the latest Launchkey devices (MK3 at the time of this writing). So far, we have only tested the driver with the Launchkey Mini MK3. Support for the bigger Launchkeys is planned, however, and if you own one of these then you can already give it a try (but expect some bugs).
 
 #### Novation Launch Control XL
 

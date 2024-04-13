@@ -5,13 +5,14 @@
 
 -- This contains the default MIDI map for the Launchkey driver, as well as
 -- some rudimentary bindings for the buttons and knobs in standalone mode
--- (these are only active if the Launchpad driver is turned off). To use this,
+-- (these are only active if the Launchkey driver is turned off). To use this,
 -- load the map in Raptor and connect the Launchkey Mini to Pd's first MIDI
 -- input. In addition, to use the built-in driver, also connect the second
 -- (DAW) port to Pd's second port, for both input and output. The map assumes
 -- the factory setup for the knobs (CC21-28).
 
--- This might also work for the bigger Launchkeys, but I haven't tested this.
+-- This might also work for the bigger Launchkey MK3 devices, but I haven't
+-- tested those yet.
 
 -- STANDALONE:
 
@@ -28,10 +29,13 @@
 -- SESSION MODE:
 
 -- The session mode binding works pretty much like the Launchpad one (within
--- the limitations of the device), with the same fader banks (Volume, Pan,
--- Send A, Send B) and bottommost two rows on the launch grid. The transport
--- buttons work as well (play, loop), and the (shifted) arrow keys let you
--- select Raptor instances (left, right) and presets (up, down).
+-- the limitations of the device), with the knobs mapped to the same four
+-- banks of Raptor controls under the corresponding knob modes (Volume, Pan,
+-- Send A, Send B), and the two rows of pads functioning either as a launch or
+-- a drum grid, depending on the mode (session or drums), with the pads being
+-- mappable in session mode. The transport buttons work as well (play, loop),
+-- and the (shifted) arrow keys let you select Raptor instances (left, right)
+-- and presets (up, down).
 
 {
   -- standalone bindings (these will only be active if the launchkey driver is
