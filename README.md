@@ -182,6 +182,10 @@ The toggles for the device drivers are in the upper half. In the lower half, you
 
 Note that disabling a driver doesn't make the device go away. Only the special processing of the device driver (including MIDI feedback, see below) will be suspended. The device itself will continue to function as a standard MIDI controller, thus it can still send MIDI data and initiate parameter changes via the MIDI learn facility, unless you really disconnect the device from Raptor's input.
 
+#### Pickup Mode
+
+At the bottom of the config patch you can find the fader/knob *pickup* mode toggle. Most modern DAW programs and some digital mixers also offer this kind of option. It ensures that a mapped Raptor parameter starts changing only *after* you move the hardware control near its current value. This is to ensure that parameters don't suddenly jump to a new value if a fader or knob was remapped, or if the parameter was previously modified through the GUI or another controller.
+
 #### Device Feedback
 
 Most controller implementations also provide at least a certain amount of device *feedback*, which needs a connection between the controller and Pd's corresponding MIDI *output* port, generally using the same port number as for the input. The amount of feedback varies from none or minimal (and optional) to rather extensive (but still optional). For the Launchpad devices, on the other hand, the feedback connection is mandatory, as the driver cannot function properly without it.
