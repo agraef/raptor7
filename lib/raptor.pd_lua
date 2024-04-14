@@ -3837,6 +3837,13 @@ function raptor:launchkey_init()
 	 local color = (num-36)//8*8+33
 	 self:outlet(1, "note", {num, color, 26})
       end
+      -- light the arrow buttons (32 = 25%, I guess)
+      -- XXXCHECK: Not sure whether these buttons have any backlight on the
+      -- larger LK models, on the Mini they do. Same applies to the transport
+      -- buttons below (play, loop).
+      for num = 102, 107 do
+	 self:outlet(1, "ctl", {32, num, 32})
+      end
       -- play/loop
       self:launchkey_play(rolling)
       self:launchkey_loop(self.arp.loopstate)
@@ -3855,6 +3862,10 @@ function raptor:launchkey_fini(force)
       -- drum pads
       for num = 36, 51 do
 	 self:outlet(1, "note", {num, 0, 26})
+      end
+      -- arrow buttons
+      for num = 102, 107 do
+	 self:outlet(1, "ctl", {0, num, 17})
       end
       -- play/loop
       self:outlet(1, "ctl", {0, 115, 17})
