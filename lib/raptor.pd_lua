@@ -3883,8 +3883,20 @@ end
 local lk_knob = { [1] = 76, [2] = 20, [3] = 48, [4] = 12, [5] = 28 }
 
 function raptor:launchkey_ctl(atoms)
+   -- Kludge: We need to mess with some of the CC data for buttons only on the
+   -- bigger LK models, even if the driver is off.
+   local val, num, ch = table.unpack(atoms)
+   if ch == 32 and num >= 74 and num <= 77 then
+      -- Capture MIDI, Quantise, Click, Undo buttons: The driver currently
+      -- doesn't do anything with these, but CC74-77 partially overlap with
+      -- our assignments for the Volume bank (which can't be moved for
+      -- compatibility with the Launch Control XL). We'd still like to be able
+      -- to map these, so we move them over to CC119-122, where they will
+      -- hopefully cause much less trouble.
+      atoms[2] = num-74+119
+      return atoms
+   end
    if launchkey ~= 0 then
-      local val, num, ch = table.unpack(atoms)
       if ch == 17 or ch == 32 then
 	 if num == 3 and ch == 32 then
 	    -- pad mode, currently we don't use this
@@ -3898,15 +3910,65 @@ function raptor:launchkey_ctl(atoms)
 	       atoms[2] = cc0+num-20
 	    end
 	    return atoms
+	 elseif num == 116 and ch == 32 then
+	    -- Stop button (not on the Mini MK3): Raptor has no equivalent,
+	    -- but we can simulate this function with a press of the Play
+	    -- button if transport is currently rolling.
+	    if rolling ~= 0 and val > 0 then
+	       atoms[2] = 115
+	       return atoms
+	    else
+	       -- ignore
+	       return true
+	    end
+	 elseif not self.shift and
+	    (num >= 102 and num <= 103 and ch == 32 or
+	     num >= 106 and num <= 107 and ch == 32) then
+	    -- unshifted arrow buttons
+	    if val > 0 then
+	       -- XXXCHECK: According to the LK MK3 programmer's reference,
+	       -- the left/right buttons have CCs 102 and 103, whereas the
+	       -- shifted buttons on the Mini MK3 are the other way round (at
+	       -- least that's the case on my unit with the latest firmware).
+	       -- Is this a firmware bug on the Mini? Or are the docs wrong?
+	       local up, down, left, right = 106, 107, 102, 103
+	       if num == left then
+		     self:in_1_ccmaster_prev()
+	       elseif num == right then
+		     self:in_1_ccmaster_next()
+	       elseif num == up then
+		  if self:check_ccmaster() then
+		     local i = self.presetno or 1
+		     i = i-1
+		     self:recall_preset(i)
+		  end
+	       elseif num == down then
+		  if self:check_ccmaster() then
+		     local i = self.presetno or 1
+		     i = i+1
+		     self:recall_preset(i)
+		  end
+	       end
+	    end
 	 elseif num == 108 and ch == 17 then
-	    -- shift status; this activates the arrow buttons
+	    -- shift status; this activates the arrow buttons on the Mini
 	    self.shift = val > 0
 	 elseif not self.shift then
 	    -- the remaining bindings use the shift button
 	    return false
+	 elseif num == 115 and ch == 32 then
+	    -- Shifted Play button: We use this to emulate the functionality
+	    -- of the Stop button on the Mini MK3 which doesn't have one.
+	    -- But the same will also work on the bigger Launchkeys.
+	    if rolling ~= 0 and val > 0 then
+	       return atoms
+	    else
+	       -- ignore
+	       return true
+	    end
 	 elseif num >= 102 and num <= 103 and ch == 32 or
 	    num >= 104 and num <= 105 and ch == 17 then
-	    -- arrow buttons
+	    -- shifted arrow buttons (Mini MK3)
 	    if val > 0 then
 	       local up, down, left, right = 104, 105, 103, 102
 	       if num == left then

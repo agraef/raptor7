@@ -45,9 +45,13 @@
 -- Launchpad, the pads are fully mappable in Session pad mode, and the default
 -- binding matches the two bottom rows of the Launchpad's grid.
 
--- The (shifted) arrow keys let you select Raptor instances (left, right) and
--- presets (up, down). The transport buttons work as well (play, loop), and
--- also light up to reflect the current transport/loop playback state.
+-- The arrow keys let you select Raptor instances (left, right) and presets
+-- (up, down). Note that on the Mini MK3 you'll have to press Shift to get
+-- these. The transport buttons work as well (play, loop), and also light up
+-- to reflect the current transport/loop playback state. The Stop button will
+-- work in DAW mode as well (it stops the transport if it is currently
+-- rolling). This button is only available on the bigger Launchkey devices,
+-- but on the Mini you can press Shift+Play instead to get this function.
 
 -- NOTE: In session mode, you'll have two more knob modes available: Custom
 -- knob mode which for consistency works like in standalone mode (so it
