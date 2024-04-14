@@ -16,44 +16,73 @@
 
 -- STANDALONE:
 
--- The standalone map binds all the buttons that can be accessed without
--- session/DAW mode, Raptor functions are given in parentheses: the ">" button
--- (latch), the transport buttons (play, loop), and the (shifted) track
--- left/right buttons (rewind, pulse).
+-- The standalone map binds all buttons that can be accessed without session/
+-- DAW mode on a Mini MK3. Note that the bigger Launchkey MK3 models have a
+-- lot more mappable buttons, you're free to map those in addition to the
+-- buttons listed below. The standalone map, as well as the driver's session
+-- mode map described below, were chosen so that they will work on *any*
+-- Launchkey MK3 device, and the Mini MK3 is the most limited of these.
+
+-- Bindings with Raptor functions given in parentheses:
+-- - The (unshifted) ">" and "Stop/Solo/Mute" buttons (latch, mute), these also
+--   work in session mode.
+-- - The transport buttons (play, loop).
+-- - The (shifted) track left/right buttons (rewind, pulse).
 
 -- The knobs are mapped as in the first fader bank of the Launchpad, i.e.,
 -- from left to right: 1 = pitch hi, 2 = pitch lo, 3 = pattern mode (random,
 -- up, down, etc.), 4 = pos/anacrusis (the "scrubbing" control), 5 = tempo,
--- 6 = meter numerator, 7 = meter denominator, 8 = division.
+-- 6 = meter numerator, 7 = meter denominator, 8 = division. These bindings
+-- will also work in session mode if you choose the Custom knob mode.
 
--- SESSION MODE:
+-- SESSION/DAW MODE:
 
--- The session mode binding works pretty much like the Launchpad one (within
--- the limitations of the device), with the knobs mapped to the same four
--- banks of Raptor controls under the corresponding knob modes (Volume, Pan,
--- Send A, Send B), and the two rows of pads functioning either as a launch or
--- a drum grid, depending on the mode (session or drums), with the pads being
--- mappable in session mode. The transport buttons work as well (play, loop),
--- and the (shifted) arrow keys let you select Raptor instances (left, right)
--- and presets (up, down).
+-- The session a.k.a. DAW mode binding works pretty much like the Launchpad
+-- one (within the limitations of the device), with the knobs mapped to the
+-- same four banks of Raptor controls under the corresponding knob modes
+-- (Volume, Pan, Send A+B), and the 2x8 grid functioning either as launch or
+-- drum pads, depending on the pad mode (Session or Drums). Just like on the
+-- Launchpad, the pads are fully mappable in Session pad mode, and the default
+-- binding matches the two bottom rows of the Launchpad's grid.
+
+-- The (shifted) arrow keys let you select Raptor instances (left, right) and
+-- presets (up, down). The transport buttons work as well (play, loop), and
+-- also light up to reflect the current transport/loop playback state.
+
+-- NOTE: In session mode, you'll have two more knob modes available: Custom
+-- knob mode which for consistency works like in standalone mode (so it
+-- replicates what you already have on the Volume bank), and Device knob mode
+-- which is not used by the driver and is separate from Custom mode, so those
+-- knobs can be mapped to whatever you want.
+
+-- To come up with reasonable default bindings for the Device knobs, I mapped
+-- them to the Raptor controls that I use most frequently (see the controls in
+-- boldface in doc/raptor7-cheatsheet.pdf), so that I have all of these on tap
+-- without having to switch back and forth between the four preconfigured
+-- banks so often. YMMV, of course, so feel free to reassign these to whatever
+-- controls *you* use most frequently.
 
 {
-  -- standalone bindings (these will only be active if the launchkey driver is
-  -- turned off)
-  [21]  = { [1] = { "pitchhi", 1 } },
-  [22]  = { [1] = { "pitchlo", 1 } },
-  [23]  = { [1] = { "mode", 1 } },
-  [24]  = { [1] = { "pos", 1 } },
-  [25]  = { [1] = { "tempo", 1 } },
-  [26]  = { [1] = { "meter-num", 1 } },
-  [27]  = { [1] = { "meter-denom", 1 } },
-  [28]  = { [1] = { "division", 1 } },
+  -- standalone knob bindings, these work the same in session mode if you
+  -- choose the Custom knob mode
+  [21]  = { [1] = "pitchhi" },
+  [22]  = { [1] = "pitchlo" },
+  [23]  = { [1] = "mode" },
+  [24]  = { [1] = "pos" },
+  [25]  = { [1] = "tempo" },
+  [26]  = { [1] = "meter-num" },
+  [27]  = { [1] = "meter-denom" },
+  [28]  = { [1] = "division" },
+  -- standalone button assignments (pulse/rewind only work in standalone mode,
+  -- the others also in session mode which also has alternative launch grid
+  -- bindings for all these functions)
   [102] = { [16] = { "pulse", true } },
   [103] = { [16] = { "rewind", true } },
   [104] = { [16] = { "latch", true } },
+  [105] = { [16] = { "mute", true } },
   [115] = { [16] = { "play", true } },
   [117] = { [16] = { "loop", true } },
-  -- session mode bindings (active if the launchkey driver is turned on)
+  -- session mode bindings (only active if the launchkey driver is turned on)
   -- send A (min value) faders
   [13] = { [32] = "minvel" },
   [14] = { [32] = "pmin" },
@@ -90,7 +119,21 @@
   [82] = { [32] = "meter-num" },
   [83] = { [32] = "meter-denom" },
   [84] = { [32] = "division" },
+  -- device mode faders (selection of most frequently used controls)
+  [21]  = { [32] = "mode" },
+  [22]  = { [32] = "pos" },
+  [23]  = { [32] = "gain" },
+  [24]  = { [32] = "gate" },
+  [25]  = { [32] = "hmin" },
+  [26]  = { [32] = "hmax" },
+  [27]  = { [32] = "pref" },
+  [28]  = { [32] = "prefmod" },
+  -- alternative bindings for latch/mute, same as in standalone
+  -- NOTE: standalone bindings repeated here, so that they aren't overridden
+  [104] = { [17] = { "latch", true }, [16] = { "latch", true } },
+  [105] = { [17] = { "mute", true }, [16] = { "mute", true } },
   -- transport
+  -- NOTE: standalone bindings repeated here, so that they aren't overridden
   [115] = { [32] = { "play", true }, [16] = { "play", true } },
   [117] = { [32] = { "loop", true }, [16] = { "loop", true } },
   -- predefined pads (session view)
