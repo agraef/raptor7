@@ -178,13 +178,13 @@ For now, the special device drivers included in Raptor all work nicely together,
 
 <img src="doc/config.png" alt="config" style="zoom:85%;" />
 
-The toggles for the device drivers are in the upper half. In the lower half, you can configure some device-specific parameters for the Novation Launchpad and the Hercules DJ Control. You can submit your changes to Raptor at runtime by pressing the `Submit` button, or revert to the factory settings with the `Defaults` button. This affects all running Raptor instances. You can also make your changes permanent by just saving the config patch, so that your custom settings will be reloaded the next time you launch Raptor.
+The toggles for the device drivers are in the upper half. In the lower half, you can configure some device-specific parameters for the Novation Launchpad and the Hercules DJ Control. You can submit your changes to Raptor at any time by pressing the `Submit` button, or revert to the factory settings with the `Defaults` button. This affects all running Raptor instances. You can also make your changes permanent by just saving the config patch, so that your custom settings will be reloaded the next time you launch Raptor.
 
 Note that disabling a driver doesn't make the device go away. Only the special processing of the device driver (including MIDI feedback, see below) will be suspended. The device itself will continue to function as a standard MIDI controller, thus it can still send MIDI data and initiate parameter changes via the MIDI learn facility, unless you really disconnect the device from Raptor's input.
 
 #### Pickup Mode
 
-At the bottom of the config patch you can find the fader/knob *pickup* mode toggle. Most modern DAW programs and some digital mixers also offer this kind of option. It ensures that a mapped Raptor parameter starts changing only *after* you move the hardware control near its current value. This is to ensure that parameters don't suddenly jump to a new value if a fader or knob was remapped, or if the parameter was previously modified through the GUI or another controller.
+At the bottom of the config patch you can find the fader/knob *pickup* mode toggle. Most modern DAW programs and some digital mixers have this, so you're likely familiar with it. In Raptor, if this option is enabled (which is the default), a mapped parameter starts changing only *after* you move the hardware control into the vicinity of its current value. This is to ensure that parameters don't suddenly jump to a new value if a fader or knob was remapped, or if the parameter was previously modified through the GUI or another controller.
 
 #### Device Feedback
 
@@ -239,7 +239,7 @@ Raptor reserves both ports 3 and 4 for use with the Launchpad, so that you can c
 
 #### Novation Launchkey
 
-[Novation Launchkey][] is Novation's lineup of keyboard controllers of various sizes, combining a standard MIDI keyboard with eight encoders and a reduced (2x8) Launchpad-like grid of pads. The driver requires that you connect both the first port (the "MIDI" port) of the Launchkey to Pd's first MIDI port for the keyboard input, and the second port (the "DAW" port) to Pd's second MIDI port, on both input and output, for the Launchpad-like functionality.
+[Novation Launchkey][] is Novation's lineup of keyboard controllers which seem popular among musicians as affordable but capable Ableton Live controllers with keys. The Launchkey combines a standard MIDI keyboard (available in different sizes) with eight encoders and a Launchpad-like 2x8 grid of pads. The driver requires that you connect both the first port (the "MIDI" port) of the Launchkey to Pd's first MIDI port for the keyboard input, and the second port (the "DAW" port) to Pd's second MIDI port, on both input and output, for the Launchpad-like functionality.
 
 The accompanying MIDI map in data/launchkey.map has bindings for both session and standalone mode, so if you prefer this you can also use the Launchkey as a standard MIDI keyboard with drum pads. To do this, you can disable the driver in the `config` patch or disconnect Launchkey's DAW port from Pd. In session mode, the Launchkey functions pretty much like a little Launchpad with mappable pads, drum grid, and knobs for controlling the usual four banks of Raptor controls; please check the map file for details.
 
