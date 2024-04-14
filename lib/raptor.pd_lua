@@ -31,6 +31,14 @@ local raptor = pd.Class:new():register("raptor")
 -- pattern changes and note generation, use the arp.debug setting below.
 local debug_level = 0
 
+-- pickup mode: When enabled (default), this makes sure that CC changes do not
+-- cause large jumps if the CC value does not reflect the current value of the
+-- corresponding Raptor parameter. This can happen, specifically, if the MIDI
+-- mapping of a knob suddenly changes due to a new MIDI learn binding or
+-- actions on the controller itself, or if the parameter was changed
+-- internally or through a GUI action.
+local pickup_mode = 1
+
 -- Special device support. At present, these all work together nicely, so we
 -- have them all enabled by default. But you can turn them on or off
 -- individually by adjusting the corresponding variables below. For further
@@ -160,7 +168,7 @@ end
 local first_config = {}
 
 local function controller_setup(data)
-   local id, config_launchkey, config_launchpad, config_launchcontrol, config_midimix, config_pacer, config_djcontrol = table.unpack(data)
+   local id, config_launchkey, config_launchpad, config_launchcontrol, config_midimix, config_pacer, config_djcontrol, config_pickup = table.unpack(data)
    local last_state = {have_control = have_control, launchpad = launchpad}
    if not first_config[id] then
       launchkey = launchkey*config_launchkey ~= 0 and 1 or 0
@@ -169,6 +177,7 @@ local function controller_setup(data)
       midimix = midimix*config_midimix ~= 0 and 1 or 0
       pacer = pacer*config_pacer ~= 0 and 1 or 0
       djcontrol = djcontrol*config_djcontrol ~= 0 and 1 or 0
+      pickup_mode = pickup_mode*config_pickup ~= 0 and 1 or 0
       first_config[id] = true
    else
       launchkey = config_launchkey ~= 0 and 1 or 0
@@ -177,6 +186,7 @@ local function controller_setup(data)
       midimix = config_midimix ~= 0 and 1 or 0
       pacer = config_pacer ~= 0 and 1 or 0
       djcontrol = config_djcontrol ~= 0 and 1 or 0
+      pickup_mode = config_pickup ~= 0 and 1 or 0
    end
    have_control = launchkey ~= 0 or launchpad ~= 0 or launchcontrol ~= 0 or
       midimix ~= 0 or pacer ~= 0 or djcontrol ~= 0
@@ -3745,7 +3755,7 @@ function raptor:launchpad_fader_val(var, val)
    -- run fine and smooth even without this whole rigmarole.)
    function check(cc, val)
       local last_val = self.lp_fader_val[cc]
-      if last_val then
+      if last_val and not self.check_pickup then
 	 local ivar, ival, eps = self:from_midi(last_val, cc, 37)
 	 local ovar, oval, eps = self:from_midi(val, cc, 37)
 	 if ival and oval then
@@ -5256,6 +5266,40 @@ function raptor:check_midi_learn(val, cc, ch)
    return false
 end
 
+-- pickup check
+
+function raptor:pickup_check(state)
+   -- start (state == true) and stop (state == false) pickup checks
+   self.check_pickup = state and pickup_mode ~= 0
+end
+
+function raptor:reset_pickup(var)
+   -- reset the pickup state after param updates, unless a pickup check is
+   -- currently in progress
+   if not self.check_pickup and self.pickup_state and
+      self.pickup_state.var == var then
+      self.pickup_state = nil
+   end
+end
+
+function raptor:pickup(cc, ch, var, state)
+   -- check the pickup state of a CC change
+   -- state denotes the current state (true iff the pickup check succeeded)
+   -- if cc, ch, or var changes, state gives the new state of the check
+   -- otherwise, the new state is true iff either the old or the new state is
+   -- return the new state in either case
+   if not self.pickup_state or self.pickup_state.var ~= var or
+      self.pickup_state.cc ~= cc or self.pickup_state.ch ~= ch then
+      self.pickup_state = { cc = cc, ch = ch, var = var, state = state }
+   else
+      state = self.pickup_state.state or state
+      self.pickup_state.state = state
+   end
+   return state
+end
+
+-- apply an existing mapping, with pickup check
+
 function raptor:from_midi(val, cc, ch)
    local var, opt = self:map_get(cc, ch)
    local tgl = opt==true
@@ -5302,6 +5346,12 @@ function raptor:from_midi(val, cc, ch)
 	       val = math.floor(val)
 	       eps = math.max(1, math.ceil(eps))
 	    end
+	    if self.check_pickup and cc < 128 then
+	       -- check pickup value for CCs
+	       if not self:pickup(cc, ch, var, eps == 0 or math.abs(self.param_val[i]-val) < eps) then
+		  return var
+	       end
+	    end
 	    return var, val, eps
 	 end
 	 return var
@@ -5312,15 +5362,22 @@ end
 function raptor:check_midi_map(val, cc, ch)
    local var = self:map_get(cc, ch)
    if var and (self.assert_master or self:check_ccmaster(var)) then
+      -- We don't do the pickup check for the Launchpad (ports 3+4), as its
+      -- faders are by definition always in sync, and doing the pickup check
+      -- would also interfere with the device feedback.
+      self:pickup_check(ch <= 32 or ch > 64)
       var, val = self:from_midi(val, cc, ch)
       if val then
 	 -- apply existing mapping
 	 self:param(var, val)
       end
+      self:pickup_check(false)
       return true
    end
    return false
 end
+
+-- process MIDI learn messages
 
 function raptor:in_1_learn()
    if self.midi_learn == 1 then
@@ -5714,6 +5771,7 @@ function raptor:param(var, val)
 	    end
 	    -- update the current value
 	    self.param_val[i] = v
+	    self:reset_pickup(var)
 	    if self.param_set[i] == self.set then
 	       -- these actually live in the raptor instance
 	       self.param_set[i](self, var, v)
