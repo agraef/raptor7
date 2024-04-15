@@ -3830,8 +3830,9 @@ function raptor:launchkey_init()
       self:outlet(1, "note", {12, 127, 32})
       -- set the default knob mode
       self:outlet(1, "ctl", {lkmode, 9, 32})
-      -- populate the session pads
+      -- populate the session pads and param display
       self:launchkey_pads()
+      self:launchkey_knobs()
       -- populate the drum pads
       for num = 36, 51 do
 	 local color = (num-36)//8*8+33
@@ -3913,7 +3914,10 @@ function raptor:launchkey_ctl(atoms)
 	    -- pad mode, currently we don't use this
 	 elseif num == 9 and ch == 32 then
 	    -- knob mode, used to map the knobs to our usual 4 CC banks
-	    lkmode = val
+	    if val ~= lkmode then
+	       lkmode = val
+	       self:launchkey_knobs()
+	    end
 	 elseif num >= 21 and num <= 28 and ch == 32 then
 	    -- knobs, remapped to the 4 CC banks
 	    local cc0 = lk_knob[lkmode]
@@ -4048,6 +4052,50 @@ function raptor:launchkey_loop(state)
 	 self:outlet(1, "note", {num, color, 17})
       end
       self:outlet(1, "ctl", {127*state, 117, 17})
+   end
+end
+
+function raptor:launchkey_param(i, var)
+   --print(string.format("LK var %d: %s", i, var))
+   self:outlet(1, "sysex", {0, 32, 41, 2, 15, 7, i+55, string.byte(var, 1, string.len(var))})
+end
+
+function raptor:launchkey_val(i, val)
+   --print(string.format("LK val %d: %s", i, val))
+   self:outlet(1, "sysex", {0, 32, 41, 2, 15, 8, i+55, string.byte(val, 1, string.len(val))})
+end
+
+function raptor:launchkey_knob(var, val, cc, ch)
+   local k = lk_knob[lkmode]
+   if launchkey ~= 0 and self:launchkey_master() and ch == 32 and
+      cc >= k+1 and cc <= k+8 then
+      local i = param_i[var]
+      if i then
+	 self:outlet(2, "float", {2})
+	 if int_param[i] then
+	    val = string.format("%4d", val)
+	 else
+	    val = string.format("%5.2f", val)
+	 end
+	 self:launchkey_val(cc-k, val)
+      end
+   end
+end
+
+function raptor:launchkey_knobs()
+   if launchkey ~= 0 and self:launchkey_master() then
+      local k = lk_knob[lkmode]
+      if k then
+	 local ch = 32
+	 self:outlet(2, "float", {2})
+	 for i = 1, 8 do
+	    local cc = k+i
+	    local var = self:map_get(cc, ch)
+	    if var then
+	       self:launchkey_param(i, var)
+	    end
+	 end
+      end
    end
 end
 
@@ -5443,6 +5491,8 @@ function raptor:check_midi_map(val, cc, ch)
       if val then
 	 -- apply existing mapping
 	 self:param(var, val)
+	 -- tie-in with Launchkey parameter display
+	 self:launchkey_knob(var, val, cc, ch)
       end
       self:pickup_check(false)
       return true
