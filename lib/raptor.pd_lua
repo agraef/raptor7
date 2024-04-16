@@ -2386,6 +2386,7 @@ end
 
 function raptor:in_1_fini()
    self:launchpad_fini()
+   self:launchkey_fini()
    self:djcontrol_state_fini()
 end
 
@@ -3930,6 +3931,7 @@ function raptor:launchkey_fini(force)
       self:outlet(1, "ctl", {0, 117, 17})
       -- switch the Launchkey back to standalone mode
       self:outlet(1, "note", {12, 0, 32})
+      launchkey_master = nil
    end
 end
 
