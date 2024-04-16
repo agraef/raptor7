@@ -75,9 +75,9 @@ local launchpad_trigger = 20
 -- explanation of this parameter).
 local launchpad_n_pulses = 7
 
--- Fader orientation: This is a table with four entries, one for each fader
--- bank (Volume, Pan, Send A, Send B; 0 means vertical, 1 horizontal).
-local launchpad_fader_orientation = { 0, 1, 1, 1 }
+-- Fader orientation: This is a table with five entries, one for each fader
+-- bank (Volume, Pan, Send A, Send B, Extra; 0 means vertical, 1 horizontal).
+local launchpad_fader_orientation = { 0, 1, 1, 1, 0 }
 
 -- Additional parameters for the DJ Control.
 
@@ -2228,6 +2228,7 @@ function raptor:initialize(sel, atoms)
    -- launchpad
    self.lp_fader_map = {}
    self.lp_fader_val = {}
+   self.lp_alt_cc = {}
    self.launchpad_faders = {}
    self.launchpad_page = {}
    self.launchpad_drums = {}
@@ -2775,9 +2776,9 @@ local accent_arrows = 45 -- arrow buttons
 local accent_loop = 57 -- loop buttons
 -- mixer buttons
 -- LPPro: Record Arm, Mute, Solo, Volume, Pan, Sends, Device, Stop Clip
-local lppro_colors = {5, 61, 21, 60, 62, 64, 66, 32}
+local lppro_colors = {5, 61, 21, 60, 62, 64, 66, 33}
 -- X/Mini: Volume, Pan, Send A, Send B, Stop Clip, Mute, Solo, Record Arm
-local lpmini_colors = {60, 62, 64, 66, 32, 61, 21, 5}
+local lpmini_colors = {60, 62, 64, 66, 33, 61, 21, 5}
 
 -- arrow buttons: up, down, left, right
 local lppro_arrow_buttons = { 80, 70, 91, 92 } or { 91, 92, 93, 94 }
@@ -2785,37 +2786,63 @@ local lpmini_arrow_buttons = { 91, 92, 93, 94 }
 
 -- buttons for the fader pages (we support both the LP Pro and the Mini/X
 -- buttons in parallel, they will *both* work on the LP Pro)
-local lppro_fader_buttons = { 4, 5, 6, 7 }
-local lpmini_fader_buttons = { 89, 79, 69, 59 }
+local lppro_fader_buttons = { 4, 5, 6, 7, 8 }
+local lpmini_fader_buttons = { 89, 79, 69, 59, 49 }
 
 local lppro_fader_pages = {}
 local lpmini_fader_pages = {}
 for k, i in ipairs(lppro_fader_buttons) do lppro_fader_pages[i] = k-1 end
 for k, i in ipairs(lpmini_fader_buttons) do lpmini_fader_pages[i] = k-1 end
 
+-- CC base numbers for the five fader banks 0-4 that we maintain.
+
+-- The first four banks: Volume, Pan, Send A, Send B (Device on the Pro). On
+-- the Pro, we actually have all these as preconfigured fader banks in memory,
+-- on the other Launchpads they have to be set up on the fly. The controls of
+-- these are mapped out in a way that is compatible with the Launch Control XL
+-- factory preset 1: b = 0 = Volume, 1 = Pan (bipolar), 2 = Send A (Send on
+-- the Pro), 3 = Send B (Device on the Pro).
+
+-- The fifth "extra" fader bank (b = 4) is available on the fifth scene launch
+-- button in Session mode (labeled "Probability" on the Pro and "Stop Clip" on
+-- the X). This emulates the "Device" fader bank of the Launchkey, which
+-- provides quick access to some frequently used controls. On the Pro, since
+-- only four banks can be kept in memory, we swap out the first fader bank to
+-- generate the extra one on the fly.
+
+local lp_fader_banks = { 76, 48, 12, 28, 20 }
+
+local function lp_fader_bank(b)
+   local num = lp_fader_banks[b+1]
+   if not num then
+      num = lp_fader_banks[5] -- default, to be on the safe side
+   end
+   return num+1
+end
+
 function raptor:launchpad_fader_bank_setup(portno, b, color)
    local id = launchpad_id[portno]
    -- sets up a single fader bank on the given (launchpad) port
-   -- map out the controls in a way that is compatible with the Launch
-   -- Control XL factory preset 1: b = 0 = Volume, 1 = Pan
-   -- (bipolar), 2 = Send A (Send), 3 = Send B (Device)
-   local j0 = (b==0 and 76 or b==1 and 48 or b==2 and 12 or 28) + 1
+   local j0 = lp_fader_bank(b)
    local v = color[b+1]
    -- sysex header: identification, command 1 (fader bank setup), bank index
    -- (always zero on Mini/X), orientation (0 means vertical, 1 horizontal)
-   local b0 = id==14 and b or 0
+   local b0 = id==14 and b<4 and b or 0
    local orientation = launchpad_fader_orientation[b+1]
    local syx = { 0, 32, 41, 2, id, 1, b0, orientation }
    -- It seems tidier (and is likely faster) if we assemble a sysex with all
    -- faders in memory, rather than sending a sysex for each individual fader.
    for i = 0, 7 do
-      -- there are some controls on the volume bank (hi, lo, and pos) which
-      -- are actually bipolar in nature, we deal with those on the spot; maybe
-      -- we should tie in with the params table to auto-configure this, but
-      -- that seems overkill right now
-      local p = b==1 or b==0 and (i <= 1 or i == 3)
-      local p = p and 1 or 0 -- 0 = unipolar, 1 = bipolar
       local j = j0 + i
+      -- There are some bipolar controls on these pages, we tie in with MIDI
+      -- map and params table to check this and deal with them on the spot.
+      local function bipolar_check(cc)
+	 local var = self:map_get(cc, 37)
+	 local i = var and param_i[var] or nil
+	 local p = i and params[i] or nil
+	 return p and not p.toggled and p.min == -p.max
+      end
+      local p = bipolar_check(j) and 1 or 0 -- 0 = unipolar, 1 = bipolar
       -- i is the fader index, p the polarity, j the CC number, v the color
       local fader = { i, p, j, v }
       -- concatenate the fader to the sysex
@@ -2842,7 +2869,7 @@ function raptor:launchpad_init()
 	 -- self.launchpad_page
 	 self:outlet(1, "sysex", {0, 32, 41, 2, id, 0})
 	 -- light up all buttons
-	 local color = {accent_loop, 3, 1, 1, 1, 1, accent_arrows, accent_arrows}
+	 local color = {accent_loop, 3, 1, 1, 1, 32, accent_arrows, accent_arrows}
 	 for i = 1, 8 do
 	    -- left- and rightmost columns (the former is only on the LPPro)
 	    if id == 14 then
@@ -2882,8 +2909,8 @@ function raptor:launchpad_init()
 	 end
 	 self.launchpad_drums[portno] = false
 	 if id == 14 then
-	    -- LP Pro: Set up the four fader banks in advance. On the LP Mini/X
-	    -- this is done on the fly, because AFAICT there's only a single
+	    -- LP Pro: Set up the four fader banks in advance. On the LP
+	    -- Mini/X this is done on the fly, because there's only a single
 	    -- fader bank on these devices.
 	    for b = 0, 3 do
 	       self:launchpad_fader_bank_setup(portno, b, lpmini_colors)
@@ -3158,9 +3185,13 @@ function raptor:launchpad_fader_page(portno, page)
 	 -- switch to the new page
 	 -- initialize the fader values via MIDI feedback
 	 if id == 14 then
-	    -- LP Pro: The four fader banks are available as separate pages on
-	    -- the fader layour (#1).
-	    self:outlet(1, "sysex", {0, 32, 41, 2, id, 0, 1, page, 0})
+	    -- LP Pro: The first four fader banks are available as separate
+	    -- pages on the fader layout (#1). For the fifth page, we swap out
+	    -- the first fader bank on the fly.
+	    if page == 0 or page == 4 then
+	       self:launchpad_fader_bank_setup(portno, page, lpmini_colors)
+	    end
+	    self:outlet(1, "sysex", {0, 32, 41, 2, id, 0, 1, page<4 and page or 0, 0})
 	 else
 	    -- LP Mini/X: We need to set up the fader page here on the fly,
 	    -- since there's just a single bank of these and a single fader
@@ -3227,11 +3258,15 @@ function raptor:launchpad_ctl(atoms)
 	       return false
 	    end
 	 end
-	 -- Notes layout button on the Launchpad X, do some magic with the
-	 -- button to switch between notes and drum view.
+	 -- For the Note layout button on the Launchpad X (CC96), we do some
+	 -- magic to switch between notes and drum view. For the Launchpad
+	 -- Pro, we use the Clear button (CC60) instead (alas, the Note button
+	 -- by itself doesn't generate any MIDI data on the Pro), and check
+	 -- that we're currently in note mode.
 	 local last_page = self.launchpad_page[portno] and self.launchpad_page[portno][1]
-	 local notes_num = id==12 and last_page == 1 and 96
-	 if num == 8 or num == 49 or num == notes_num then
+	 local current_fader_page = self.launchpad_faders[portno] or -1
+	 local notes_num = id==12 and last_page == 1 and 96 or id==14 and current_fader_page<0 and last_page == 4 and 60
+	 if num == notes_num then
 	    if val > 0 and self:launchpad_master() then
 	       -- toggles drum mode
 	       self.launchpad_drums[portno] = not self.launchpad_drums[portno]
@@ -3245,12 +3280,8 @@ function raptor:launchpad_ctl(atoms)
 		  -- output of Bitwig Studio.
 		  self:outlet(1, "sysex", {0, 32, 41, 2, id, 0, flag+1})
 	       elseif id == 13 then
-		  -- There's no drum rack on the Mini, but we can emulate
-		  -- that functionality (kind of) by switching to custom
-		  -- mode 1 (drums) or 2 (keys), a.k.a. layout 4 and 5.
-		  self:outlet(1, "sysex", {0, 32, 41, 2, id, 0, 5-flag})
-		  -- update the fader page status, just in case
-		  self:launchpad_fader_set_page(portno)
+		  -- There's no drum rack on the Mini, ignore.
+		  return true
 	       elseif id == 12 then
 		  -- Launchpad X. Works pretty much like the Pro, but uses a
 		  -- different sysex message.
@@ -3263,8 +3294,7 @@ function raptor:launchpad_ctl(atoms)
 	 local page = lppro_fader_pages[num] or lpmini_fader_pages[num]
 	 if page then
 	    if val > 0 then
-	       -- switch to one of the four fader banks:
-	       -- volumes, pans, sends, devices
+	       -- Switch to one of the five fader banks:
 	       local old_page = self.launchpad_faders[portno] or -1
 	       --print("fader page, old:", tostring(old_page), "new:", tostring(page))
 	       if page ~= old_page then
@@ -3327,6 +3357,12 @@ function raptor:launchpad_ctl(atoms)
 	 -- we need to keep track of these values to break MIDI feedback loops
 	 --print("in", cc, val)
 	 self.lp_fader_val[cc] = val
+	 -- some controls are also on the extra page, update these as well
+	 local alt_cc = self.lp_alt_cc[cc]
+	 if alt_cc then
+	    --print("alt_cc feedback", cc, alt_cc)
+	    self.lp_fader_val[alt_cc] = val
+	 end
 	 -- direct sync between LP ports
 	 if self:launchpad_master() then
 	    -- swap ports
@@ -3334,6 +3370,9 @@ function raptor:launchpad_ctl(atoms)
 	    local id = launchpad_id[portno]
 	    if id then
 	       self:lp_out(portno, id, val, cc)
+	       if alt_cc then
+		  self:lp_out(portno, id, val, alt_cc)
+	       end
 	    end
 	 end
 	 -- we just pretend that these all come from port 3, to simplify the
@@ -3518,6 +3557,7 @@ function raptor:launchpad_update_pages()
    -- in every instance, no actual feedback is generated right here.
    if launchpad ~= 0 and launchpad_id and next(launchpad_id) then
       self.lp_fader_val = {}
+      self.lp_alt_cc = {}
       for portno, id in pairs(launchpad_id) do
 	 self.lp_fader_map[portno] = nil
       end
@@ -3766,6 +3806,7 @@ function raptor:launchpad_fader_val(var, val)
       return true
    end
    if launchpad ~= 0 and var and launchpad_id and self:launchpad_master() then
+      local portno1
       for portno, id in pairs(launchpad_id) do
 	 local b = self.launchpad_faders[portno]
 	 if b and b >= 0 then
@@ -3773,14 +3814,30 @@ function raptor:launchpad_fader_val(var, val)
 	    if not self.lp_fader_map[portno] then
 	       -- need to reinitialize our map for the current fader bank
 	       self.lp_fader_map[portno] = {}
-	       local cc0 = (b==0 and 76 or b==1 and 48 or b==2 and 12 or 28) + 1
+	       local cc0 = lp_fader_bank(b)
 	       for i = 0, 7 do
 		  local cc = cc0 + i
 		  local var, opt = self:map_get(cc, ch)
 		  if var then
 		     self.lp_fader_map[portno][var] = {cc, opt}
 		  end
+		  if portno1 and self.lp_fader_map[portno1][var] then
+		     -- We also need to record alternative CC bindings for the
+		     -- page on the other port here. This is used for cross
+		     -- feedback between two Launchpads connected on separate
+		     -- ports, if one of these has the "extra" page of faders
+		     -- selected. The extra bindings overlap with the other
+		     -- pages, so that we can actually have two *different*
+		     -- CCs representing the same parameter at the same time.
+		     local alt_cc = self.lp_fader_map[portno1][var][1]
+		     if alt_cc ~= cc then
+			--print("alt_cc setup", cc, alt_cc)
+			self.lp_alt_cc[cc] = alt_cc
+			self.lp_alt_cc[alt_cc] = cc
+		     end
+		  end
 	       end
+	       portno1 = portno
 	    end
 	    if self.lp_fader_map[portno] then
 	       local cc = self.lp_fader_map[portno][var]
@@ -3804,8 +3861,8 @@ function raptor:launchpad_fader_bank(portno, b)
    -- assert(self:launchpad_master())
    local id = launchpad_id[portno] -- assert id
    -- single fader bank feedback
-   -- b = 0 = Volume, 1 = Pan, 2 = Send A (Send), 3 = Send B (Device)
-   local cc0 = (b==0 and 76 or b==1 and 48 or b==2 and 12 or 28) + 1
+   -- b = 0 = Volume, 1 = Pan, 2 = Send A (Send), 3 = Send B (Device), 4 = Extra
+   local cc0 = lp_fader_bank(b)
    local ch = 37
    for i = 0, 7 do
       local cc = cc0 + i

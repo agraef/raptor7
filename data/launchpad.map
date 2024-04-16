@@ -43,10 +43,13 @@
 
    - Four fader banks which function like the Volume faders and the Pan, Send
      A, and Send B rotary encoders of the Launch Control XL. In this mode each
-     bank consists of 8 vertical faders which can be operated in the same way
-     as the track and mixer controls described in the Launchpad X and Pro MK3
-     user guides. (The Launchpad Mini MK3 works the same, although it doesn't
-     offer the velocity-sensitive fader operation of its two siblings.)
+     bank consists of 8 faders which can be operated in the same way as the
+     track and mixer controls described in the Launchpad X and Pro MK3 user
+     guides. (The Launchpad Mini MK3 works the same, although it doesn't offer
+     the velocity-sensitive fader operation of its two siblings.)
+
+   - A fifth "Extra" fader bank that replicates the Launchkey's Device knobs,
+     which has some frequently used performance controls bound to it.
 
    - The hardware buttons surrounding the launch grid which are used for
      switching fader banks, selecting Raptor instances and presets, and for
@@ -57,10 +60,10 @@
    to from Ableton Live, however. In particular, the Mute, Solo, and Record
    Arm buttons are bound to Raptor's mute, latch, and bypass "voice" controls.
 
-   On the Launchpad Pro, the Stop Clip button toggles between Launchpad's note
-   and drum views. On the Launchpad X, you can just press the Notes button
-   instead, while the Mini lets you switch between the two custom layouts by
-   pressing the Keys and Drums buttons.
+   On the Launchpad Pro, the Clear button toggles between Launchpad's note and
+   drum views when in note mode. On the Launchpad X, you can just press the
+   Notes button instead, while the Mini lets you switch between the two custom
+   layouts by pressing the Keys and Drums buttons.
 
    In the following we discuss each of the elements of the Raptor mapping in
    more detail.
@@ -69,21 +72,24 @@
    (which see), with the faders and knobs of the XL on the Launchpad's Volume,
    Pan, and Send A/B fader banks. The CC numbers have been chosen to be
    compatible (see the Lua table below for the actual numbers if you want to
-   use these for a custom Launchpad layout).
+   use these for a custom Launchpad layout). The same is true for the fifth
+   Extra fader bank which emulates the Launchkey's Device knobs.
 
    The orientation of the fader banks can be configured with the
    launchpad_fader_orientation variable in the source. By default, the first
-   fader bank is vertical, all others horizontal, which matches the layout of
-   the parameter panel in the patch fairly well.
+   and last fader banks are vertical, all others horizontal. This is intended
+   to reflect the layout of the parameter panel in the patch, at least for the
+   first four banks.
 
-   The fader banks 1-4 can be accessed using either the corresponding
-   Volume/Pan/Sends/Device buttons in the bottom row of the Launchpad Pro MK3,
-   or with the topmost four scene launch buttons in session mode, labeled
-   Volume, Pan, Send A, and Send B on the Launchpad X (which are also the
-   labels we use in the following, since they nicely match up with the
-   labeling on the Launch Control XL). The latter binding works on all
-   devices, but is only active in session mode. (Which is incovenient, but
-   Novation made it so that these buttons only function in that mode.)
+   The fader banks 1-5 can be accessed using either the corresponding
+   Volume/Pan/Sends/Device/Clip Stop buttons in the bottom row of the
+   Launchpad Pro MK3, or with the topmost five scene launch buttons in session
+   mode, labeled Volume, Pan, Send A, Send B, and Stop Clip on the Launchpad X
+   (which are also the labels we use for the first four banks in the
+   following, since they nicely match up with the labeling on the Launch
+   Control XL). The latter binding works on all devices, but is only active in
+   session mode. (Which is inconvenient, but Novation made it so that these
+   buttons only function in that mode.)
 
    A click of the button activates the corresponding fader bank. Another click
    of the same button then returns you to the most recent (non-fader) view.
@@ -110,9 +116,12 @@
    arpeggiator controls in the panel, except #4 pos/anacrusis which is in the
    time subpatch.
 
-   2: Pan = bipolar mod controls (panel).
+   2: Pan = (mostly) bipolar mod controls (panel).
 
-   3/4: Send A/B = unipolar min/max controls (panel).
+   3/4: Send A/B = (mostly) unipolar min/max controls (panel).
+
+   5: Extra = various frequently used performance controls. These are my own
+   favorites, but YMMV, so feel free to reassign these as you see fit.
 
    Here's the detailed map of all fader pages, with some of the labels
    abbreviated so that each bank fits on a single line:
@@ -122,9 +131,11 @@
    3  [minvel] [pmin] [wmin] [gate]    [hmin]  [pref]    [smin]  [uniq]
    4  [maxvel] [pmax] [wmax] [gate]    [hmax]  [pref]    [smax]  [nmax]
 
+   5  [mode]   [pos]  [gain] [gate]    [hmin]  [hmax]    [pref]  [prefmod]
+
    NOTE: The three faders on bank 1 (Volume) that are marked with an asterisk
-   are bipolar, as are *all* the faders on bank 2 (Pan). The other faders are
-   all unipolar.
+   are bipolar, as are all of the faders on bank 2 (Pan) except gain. The
+   other faders are unipolar.
 
    NB: This table and the following one are also included in the distribution
    as a nicely formatted pdf document, see doc/raptor7-cheatsheet.pdf. You
@@ -135,7 +146,7 @@
    the two pad rows at the bottom, following the same layout as the two button
    rows on the Launch Control XL:
 
-     - voice controls -                       - looper controls -
+     - voice controls -                    - looper/transport controls -
    [mute] [latch] [bypass]  [      ] [      ] [load] [save] [loop]
                   [raptor]  [rewind]          [prev] [next] [play]
 
@@ -169,6 +180,13 @@
    loop functions, respectively. If you don't have these then you can use the
    corresponding pads in the session view instead (see above).
 
+   The "Note" button on the Launchpad X toggles between the note and drumrack
+   views in note mode. On the Launchpad Pro, you have the same function on the
+   "Clear" botton on the left. (That's because on the Pro the Note button
+   itself generates no MIDI data in note mode. Also note that this function
+   isn't available on the Mini, because it has no dedicated note mode, but you
+   can use the custom Keys and Drums modes instead.)
+
    The left and right arrow buttons can be used to select the current Raptor
    instance, while the up and down arrow buttons change presets. Note that
    these buttons are in slightly different locations depending on the
@@ -183,9 +201,8 @@
    Record Arm/Mute/Solo: These are mapped to the bypass/mute/latch toggles,
    which are also on the launch grid, albeit in a different order (see above).
 
-   Volume/Pan/Sends/Device: Access to the four fader pages (see above).
-
-   Stop Clip: Toggle between the standard note view and the drumrack view.
+   Volume/Pan/Sends/Device/Clip Stop: Access to the five fader pages (see
+   above).
 
    On all Launchpad versions, the same functionality is replicated on the
    scene launch buttons in session mode, in a different order and labeled
@@ -249,6 +266,15 @@
   [82] = { [37] = "meter-num" },
   [83] = { [37] = "meter-denom" },
   [84] = { [37] = "division" },
+  -- "extra" faders (selection of most frequently used controls)
+  [21] = { [37] = "mode" },
+  [22] = { [37] = "pos" },
+  [23] = { [37] = "gain" },
+  [24] = { [37] = "gate" },
+  [25] = { [37] = "hmin" },
+  [26] = { [37] = "hmax" },
+  [27] = { [37] = "pref" },
+  [28] = { [37] = "prefmod" },
   -- predefined pads (session view)
   -- 139, 140 unassigned
   [141] = { [33] = { "raptor", true } },
