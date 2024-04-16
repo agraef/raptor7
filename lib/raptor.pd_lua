@@ -2991,8 +2991,8 @@ function raptor:launchpad_note(atoms)
 	 else
 	    var = self:map_get(cc, ch)
 	 end
-	 local i = var and param_i[var] or nil
-	 local p = i and params[i] or nil
+	 local i = var and param_i[var]
+	 local p = i and params[i]
 	 if val >= launchpad_trigger then
 	    if p and p.toggled then
 	       -- toggle-like behavior, "on" is at full velocity; otherwise
@@ -3021,7 +3021,7 @@ function raptor:launchpad_note(atoms)
 	       else
 		  v = ""
 	       end
-	       print(string.format("%s is mapped to %s%s%s", self:cctostring(cc, ch), var, self:opttostring(opt), v))
+	       print(string.format("%s is mapped to %s%s", self:cctostring(cc, ch), var, v))
 	    end
 	    return true
 	 else
@@ -4122,6 +4122,33 @@ function raptor:launchkey_val(i, val)
    self:outlet(1, "sysex", {0, 32, 41, 2, 15, 8, i+55, string.byte(val, 1, string.len(val))})
 end
 
+function raptor:launchkey_padval(num, var)
+   -- tooltip display for the pads
+   local i = param_i[var]
+   local p = i and params[i]
+   local v = self.param_val[i]
+   if p and (not p.transport or not p.toggled or var == "play") and not p.looper then
+      if p.toggled then
+	 v = v~= 0 and "on" or "off"
+      elseif p.integer or p.enum then
+	 v = string.format("%d", v)
+      else
+	 v = string.format("%0.2f", v)
+      end
+   else
+      v = nil
+   end
+   if v then
+      v = string.format("%s %s", var, v)
+   else
+      v = var
+   end
+   --print(v)
+   -- XXXCHECK: Does a row index of 1 denote the first or the second row? The
+   -- docs don't say.
+   self:outlet(1, "sysex", {0, 32, 41, 2, 15, 4, 1, string.byte(v, 1, string.len(v))})
+end
+
 function raptor:launchkey_knob(cc, ch, var, val, val2)
    local k = lk_knob[lkmode]
    if launchkey ~= 0 and self:launchkey_master() and ch == 32 and
@@ -4185,14 +4212,20 @@ function raptor:launchkey_pads()
 end
 
 function raptor:launchkey_pad(var)
-   -- Generic pad feedback after param changes; this updates the toggles.
+   -- Generic pad feedback after param changes; this updates the toggles and
+   -- shows some tooltips for the pads on the LCD display.
    if launchkey ~= 0 and lk_mapped and self:launchkey_master() then
       local num = lk_mapped[var]
-      local tgl = self:tgl_lppadcolor(var)
-      if num and tgl then
-	 -- we borrow the color map from the Launchpad here
-	 local color = self:get_lppadcolor(var)
-	 self:outlet(1, "note", {num, color, 17})
+      if num then
+	 -- tooltip
+	 self:outlet(2, "float", {2})
+	 self:launchkey_padval(num, var)
+	 local tgl = self:tgl_lppadcolor(var)
+	 if tgl then
+	    -- we borrow the color map from the Launchpad here
+	    local color = self:get_lppadcolor(var)
+	    self:outlet(1, "note", {num, color, 17})
+	 end
       end
    end
 end
