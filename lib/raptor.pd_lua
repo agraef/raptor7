@@ -4122,7 +4122,7 @@ function raptor:launchkey_val(i, val)
    self:outlet(1, "sysex", {0, 32, 41, 2, 15, 8, i+55, string.byte(val, 1, string.len(val))})
 end
 
-function raptor:launchkey_knob(var, val, cc, ch)
+function raptor:launchkey_knob(cc, ch, var, val, val2)
    local k = lk_knob[lkmode]
    if launchkey ~= 0 and self:launchkey_master() and ch == 32 and
       cc >= k+1 and cc <= k+8 then
@@ -4131,8 +4131,15 @@ function raptor:launchkey_knob(var, val, cc, ch)
 	 self:outlet(2, "float", {2})
 	 if int_param[i] then
 	    val = string.format("%4d", val)
+	    val2 = val2 and string.format("%d", val2)
 	 else
 	    val = string.format("%5.2f", val)
+	    val2 = val2 and string.format("%0.2f", val2)
+	 end
+	 -- val2 ~= nil means a failed pickup check, in that case we also
+	 -- indicate the target value that we need to catch up to
+	 if val2 then
+	    val = string.format("%s [%s]", val, val2)
 	 end
 	 self:launchkey_val(cc-k, val)
       end
@@ -5527,9 +5534,13 @@ function raptor:from_midi(val, cc, ch)
 	    if self.check_pickup and cc < 128 then
 	       -- check pickup value for CCs
 	       if not self:pickup(cc, ch, var, eps == 0 or math.abs(self.param_val[i]-val) < eps) then
+		  -- tie-in with Launchkey parameter display
+		  self:launchkey_knob(cc, ch, var, val, self.param_val[i])
 		  return var
 	       end
 	    end
+	    -- tie-in with Launchkey parameter display
+	    self:launchkey_knob(cc, ch, var, val)
 	    return var, val, eps
 	 end
 	 return var
@@ -5548,8 +5559,6 @@ function raptor:check_midi_map(val, cc, ch)
       if val then
 	 -- apply existing mapping
 	 self:param(var, val)
-	 -- tie-in with Launchkey parameter display
-	 self:launchkey_knob(var, val, cc, ch)
       end
       self:pickup_check(false)
       return true
