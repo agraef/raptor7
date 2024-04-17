@@ -2153,6 +2153,8 @@ end
 raptor.instances = {}
 -- assigned deck information
 raptor.decks = {}
+-- current presets
+raptor.presets = {}
 
 function raptor:get_instance(id1)
    if not id1 then
@@ -2287,11 +2289,14 @@ function raptor:initialize(sel, atoms)
    self.launchpad_clock[3] = pd.Clock:new():register(self, "launchpad_fader_timer_cb3")
    self.launchpad_clock[4] = pd.Clock:new():register(self, "launchpad_fader_timer_cb4")
 
-   -- this one only fires once, some time *after* the launchpad/djcontrol
-   -- initialization timer
+   -- this fires once, some time *after* the driver initialization timer, to
+   -- complete the Launchpad initializations
    self.launchpad_idreq_clock = pd.Clock:new():register(self, "launchpad_idreq_timer_cb")
 
-   -- initialize and kick off the launchpad/djcontrol initialization timer
+   -- this also fires once, to complete the Launchkey initializations
+   self.init2_clock = pd.Clock:new():register(self, "late_init2")
+
+   -- initialize and kick off the driver initialization timer
    self.init_clock = pd.Clock:new():register(self, "late_init")
    self.init_clock:delay(500)
 
@@ -2320,6 +2325,13 @@ function raptor:late_init()
    self:launchkey_init()
    -- djcontrol initialization
    self:djcontrol_state_init()
+   -- kick off the timer for even later initializations
+   self.init2_clock:delay(300)
+end
+
+function raptor:late_init2()
+   -- launchkey initialization, part 2
+   self:launchkey_init2()
 end
 
 function raptor:check_ccmaster(var)
@@ -2341,6 +2353,7 @@ function raptor:finalize()
       self.launchpad_clock[i]:destruct()
    end
    self.launchpad_idreq_clock:destruct()
+   self.init2_clock:destruct()
    self.init_clock:destruct()
    self.clock:destruct()
    self.recv:destruct()
@@ -2355,8 +2368,9 @@ function raptor:finalize()
    if i > 0 then
       -- remove ourself from the instances table
       table.remove(raptor.instances, i)
-      -- also remove the assigned deck information
+      -- also remove the assigned deck and preset information
       raptor.decks[self.id] = nil
+      raptor.presets[self.id] = nil
    end
 end
 
@@ -2682,6 +2696,7 @@ function raptor:recall_preset(i)
    end
    self.presetno = i
    if self.id then
+      raptor.presets[self.id] = preset.name
       pd.send(string.format("%s-%s", self.id, "preset"), "symbol", {preset.name})
       pd.send(string.format("%s-%s", self.id, "presetno"), "set", {i-1})
    end
@@ -3909,9 +3924,8 @@ function raptor:launchkey_init()
       self:outlet(1, "note", {12, 127, 32})
       -- set the default knob mode
       self:outlet(1, "ctl", {lkmode, 9, 32})
-      -- populate the session pads and param display
+      -- populate the session pads
       self:launchkey_pads()
-      self:launchkey_knobs()
       -- populate the drum pads
       for num = 36, 51 do
 	 local color = (num-36)//8*8+33
@@ -3927,16 +3941,27 @@ function raptor:launchkey_init()
       -- play/loop
       self:launchkey_play(rolling)
       self:launchkey_loop(self.arp.loopstate)
-      if launchkey_welcome then
-	 local msg = launchkey_welcome
-	 self:outlet(2, "float", {2})
-	 self:outlet(1, "sysex", {0, 32, 41, 2, 15, 4, 0, string.byte(msg, 1, string.len(msg))})
-      end
+   end
+end
+
+function raptor:launchkey_init2()
+   -- NOTE: These sysex messages *must* be sent some time after the MIDI data
+   -- which puts the Launchkey into DAW mode. Otherwise they may arrive early
+   -- and be ignored. (At least that's what I saw on Linux with ALSA.)
+   -- Therefore we have a secondary initialization phase here which gets
+   -- executed at a later time.
+   if launchkey ~= 0 and self.master and self.id == self.master then
+      -- initialize the display
+      self:launchkey_welcome(launchkey_welcome)
+      -- populate the param display
+      self:launchkey_knobs()
    end
 end
 
 function raptor:launchkey_fini(force)
    if force or launchkey ~= 0 then
+      -- clear the display
+      self:launchkey_welcome()
       -- session pads
       for num = 96, 103 do
 	 self:outlet(1, "note", {num, 0, 17})
@@ -4121,6 +4146,15 @@ function raptor:launchkey_master()
    return launchkey_master == self.id
 end
 
+function raptor:launchkey_welcome(msg)
+   self:outlet(2, "float", {2})
+   if msg then
+      self:outlet(1, "sysex", {0, 32, 41, 2, 15, 4, 0, string.byte(msg, 1, string.len(msg))})
+   else
+      self:outlet(1, "sysex", {0, 32, 41, 2, 15, 6})
+   end
+end
+
 function raptor:launchkey_play(state)
    -- This *must* be invoked in the time master, otherwise we get the wrong
    -- transport state.
@@ -4186,9 +4220,9 @@ function raptor:launchkey_ccmaster(state)
    local i = self:get_instance()
    if launchkey ~= 0 and self:launchkey_master() and i > 0 then
       self:outlet(2, "float", {2})
-      local msg = "select omni"
+      local msg = "omni"
       if state ~= 0 then
-	 msg = string.format("select #%d %s", i, self.id)
+	 msg = string.format("%d %s", i, raptor.presets[self.id])
       end
       self:outlet(1, "sysex", {0, 32, 41, 2, 15, 4, 1, string.byte(msg, 1, string.len(msg))})
    end
@@ -5323,6 +5357,8 @@ function raptor:in_1_dump(atoms)
       self.id = id
       -- we also keep track of the ids of all running raptor instances
       table.insert(raptor.instances, id)
+      -- and the preset of each instance
+      raptor.presets[id] = "default"
    end
 end
 
