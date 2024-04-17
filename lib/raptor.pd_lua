@@ -3186,6 +3186,7 @@ function raptor:launchpad_master_change(old_id, new_id)
       end
       -- we also deal with the Launchkey here
       self:launchkey_pads()
+      self:launchkey_knobs()
       self:launchkey_loop(self.arp.loopstate)
    end
 end
@@ -3937,8 +3938,8 @@ function raptor:launchkey_init()
 	 self:outlet(1, "note", {num, color, 26})
       end
       -- light the arrow buttons (32 = 25%, I guess)
-      -- XXXCHECK: Not sure whether these buttons have any backlight on the
-      -- larger LK models, on the Mini they do. Same applies to the transport
+      -- NOTE: Most of the smaller buttons have no backlight on the larger LK
+      -- models; on the Mini they all do. Same applies to the transport
       -- buttons below (play, loop).
       for num = 102, 107 do
 	 self:outlet(1, "ctl", {32, num, 32})
@@ -3949,7 +3950,7 @@ function raptor:launchkey_init()
       if launchkey_welcome then
 	 local msg = launchkey_welcome
 	 self:outlet(2, "float", {2})
-	 self:outlet(1, "sysex", {0, 32, 41, 2, 15, 4, 1, string.byte(msg, 1, string.len(msg))})
+	 self:outlet(1, "sysex", {0, 32, 41, 2, 15, 4, 0, string.byte(msg, 1, string.len(msg))})
       end
    end
 end
@@ -3969,11 +3970,11 @@ function raptor:launchkey_fini(force)
       end
       -- arrow buttons
       for num = 102, 107 do
-	 self:outlet(1, "ctl", {0, num, 17})
+	 self:outlet(1, "ctl", {0, num, 32})
       end
       -- play/loop
-      self:outlet(1, "ctl", {0, 115, 17})
-      self:outlet(1, "ctl", {0, 117, 17})
+      self:outlet(1, "ctl", {0, 115, 32})
+      self:outlet(1, "ctl", {0, 117, 32})
       -- switch the Launchkey back to standalone mode
       self:outlet(1, "note", {12, 0, 32})
       -- wind down some shared status so that we can correctly power up again
@@ -4005,15 +4006,23 @@ function raptor:launchkey_ctl(atoms)
    -- Kludge: We need to mess with some of the CC data for buttons only on the
    -- bigger LK models, even if the driver is off.
    local val, num, ch = table.unpack(atoms)
-   if ch == 32 and num >= 74 and num <= 77 then
-      -- Capture MIDI, Quantise, Click, Undo buttons: The driver currently
-      -- doesn't do anything with these, but CC74-77 partially overlap with
-      -- our assignments for the Volume bank (which can't be moved for
-      -- compatibility with the Launch Control XL). We'd still like to be able
-      -- to map these, so we move them over to CC119-122, where they will
-      -- hopefully cause much less trouble.
-      atoms[2] = num-74+119
-      return atoms
+   if ch == 32 then
+      if num >= 74 and num <= 77 then
+	 -- Capture MIDI, Quantise, Click, Undo buttons: The driver currently
+	 -- doesn't do anything with these, but CC74-77 partially overlap with
+	 -- our assignments for the Volume bank (which can't be moved for
+	 -- compatibility with the Launch Control XL). We'd still like to be
+	 -- able to map these, so we move them over to CC119-122, where they
+	 -- will hopefully cause much less trouble.
+	 atoms[2] = num-74+119
+	 return atoms
+      elseif num >= 51 and num <= 52 then
+	 -- Device Select and Device Lock buttons: These get the same
+	 -- treatment, as they are already assigned to the Pan bank.
+	 -- Moved to CC123-124.
+	 atoms[2] = num-51+123
+	 return atoms
+      end
    end
    if launchkey ~= 0 then
       if ch == 17 or ch == 32 then
@@ -4021,7 +4030,7 @@ function raptor:launchkey_ctl(atoms)
 	    -- pad mode, currently we don't use this
 	 elseif num == 9 and ch == 32 then
 	    -- knob mode, used to map the knobs to our usual 4 CC banks
-	    if val ~= lkmode then
+	    if val ~= lkmode and self:launchkey_master() then
 	       lkmode = val
 	       self:launchkey_knobs()
 	    end
@@ -4048,12 +4057,7 @@ function raptor:launchkey_ctl(atoms)
 	     num >= 106 and num <= 107 and ch == 32) then
 	    -- unshifted arrow buttons
 	    if val > 0 then
-	       -- XXXCHECK: According to the LK MK3 programmer's reference,
-	       -- the left/right buttons have CCs 102 and 103, whereas the
-	       -- shifted buttons on the Mini MK3 are the other way round (at
-	       -- least that's the case on my unit with the latest firmware).
-	       -- Is this a firmware bug on the Mini? Or are the docs wrong?
-	       local up, down, left, right = 106, 107, 102, 103
+	       local up, down, left, right = 106, 107, 103, 102
 	       if num == left then
 		     self:in_1_ccmaster_prev()
 	       elseif num == right then
@@ -4147,7 +4151,7 @@ function raptor:launchkey_play(state)
 	 local color = self:get_lppadcolor("play", state)
 	 self:outlet(1, "note", {num, color, 17})
       end
-      self:outlet(1, "ctl", {127*state, 115, 17})
+      self:outlet(1, "ctl", {127*state, 115, 32})
    end
 end
 
@@ -4158,7 +4162,7 @@ function raptor:launchkey_loop(state)
 	 local color = self:get_lppadcolor("loop", state)
 	 self:outlet(1, "note", {num, color, 17})
       end
-      self:outlet(1, "ctl", {127*state, 117, 17})
+      self:outlet(1, "ctl", {127*state, 117, 32})
    end
 end
 
@@ -4194,8 +4198,6 @@ function raptor:launchkey_padval(num, var)
       v = var
    end
    --print(v)
-   -- XXXCHECK: Does a row index of 1 denote the first or the second row? The
-   -- docs don't say.
    self:outlet(1, "sysex", {0, 32, 41, 2, 15, 4, 1, string.byte(v, 1, string.len(v))})
 end
 
