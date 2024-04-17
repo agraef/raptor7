@@ -2685,6 +2685,7 @@ function raptor:recall_preset(i)
       pd.send(string.format("%s-%s", self.id, "preset"), "symbol", {preset.name})
       pd.send(string.format("%s-%s", self.id, "presetno"), "set", {i-1})
    end
+   self:launchkey_preset(preset.name)
 end
 
 function raptor:in_1_preset(atoms)
@@ -4199,6 +4200,28 @@ function raptor:launchkey_padval(num, var)
    end
    --print(v)
    self:outlet(1, "sysex", {0, 32, 41, 2, 15, 4, 1, string.byte(v, 1, string.len(v))})
+end
+
+function raptor:launchkey_ccmaster(state)
+   -- tooltip display for ccmaster switch
+   local i = self:get_instance()
+   if launchkey ~= 0 and self:launchkey_master() and i > 0 then
+      self:outlet(2, "float", {2})
+      local msg = "select omni"
+      if state ~= 0 then
+	 msg = string.format("select #%d %s", i, self.id)
+      end
+      self:outlet(1, "sysex", {0, 32, 41, 2, 15, 4, 1, string.byte(msg, 1, string.len(msg))})
+   end
+end
+
+function raptor:launchkey_preset(name)
+   -- tooltip display for preset recall
+   if launchkey ~= 0 and self:launchkey_master() then
+      local msg = string.format("preset %s", name)
+      self:outlet(2, "float", {2})
+      self:outlet(1, "sysex", {0, 32, 41, 2, 15, 4, 1, string.byte(msg, 1, string.len(msg))})
+   end
 end
 
 function raptor:launchkey_knob(cc, ch, var, val, val2)
@@ -5777,6 +5800,7 @@ function raptor:in_1_ccmaster(atoms)
 	 -- ccmaster feedback
 	 self:djcontrol_ccmaster(0)
 	 self:launchpad_ccmaster(0)
+	 self:launchkey_ccmaster(0)
 	 self:launchcontrol_ccmaster(0)
 	 self:midimix_ccmaster(0)
       else
@@ -5790,6 +5814,7 @@ function raptor:in_1_ccmaster(atoms)
 	 -- ccmaster feedback
 	 self:djcontrol_ccmaster(flag)
 	 self:launchpad_ccmaster(flag)
+	 self:launchkey_ccmaster(flag)
 	 self:launchcontrol_ccmaster(flag)
 	 self:midimix_ccmaster(flag)
       end
