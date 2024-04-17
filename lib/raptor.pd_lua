@@ -2866,6 +2866,11 @@ local rolling = 0
 -- status of the welcome message, per port
 local lp_welcome = {}
 
+-- these are forward declarations for the feedback, since we already need
+-- these variables in launchpad_fini and launchpad_master_change below
+local launchpad_master = nil
+local launchkey_master = nil
+
 function raptor:launchpad_init()
    if launchpad ~= 0 and self.master and self.id == self.master then
       -- iterate over all connected launchpads
@@ -2986,6 +2991,11 @@ function raptor:launchpad_fini(force)
 	 self:outlet(1, "sysex", {0, 32, 41, 2, id, 16, 0})
 	 ::skip::
       end
+      -- wind down some shared status so that we can correctly power up again
+      -- after a warm reset (fini without exiting Pd)
+      launchpad_master = nil
+      launchpad_last_page = {}
+      rolling = 0
    end
 end
 
@@ -3120,10 +3130,6 @@ function raptor:launchpad_fader_timer_cb4()
    self:launchpad_fader_timer_cb(4)
 end
 
-local launchpad_master = nil
--- forward declaration, since we need this variable below
-local launchkey_master = nil
-
 function raptor:lpmaster(id)
    if id then
       return id
@@ -3168,6 +3174,7 @@ function raptor:launchpad_master_change(old_id, new_id)
       --assert(not launchpad_master or old_master == launchpad_master)
       -- hand over to the new instance (i.e., self)
       launchpad_master = self.id
+      -- we also deal with the Launchkey here
       launchkey_master = self.id
       --print(string.format("hand over %d -> %d", old_master, new_master))
       for portno, id in pairs(launchpad_id) do
@@ -3177,6 +3184,7 @@ function raptor:launchpad_master_change(old_id, new_id)
 	 self:launchpad_pads(portno)
 	 self:launchpad_loop(self.arp.loopstate)
       end
+      -- we also deal with the Launchkey here
       self:launchkey_pads()
       self:launchkey_loop(self.arp.loopstate)
    end
@@ -3968,7 +3976,10 @@ function raptor:launchkey_fini(force)
       self:outlet(1, "ctl", {0, 117, 17})
       -- switch the Launchkey back to standalone mode
       self:outlet(1, "note", {12, 0, 32})
+      -- wind down some shared status so that we can correctly power up again
+      -- after a warm reset (fini without exiting Pd)
       launchkey_master = nil
+      rolling = 0
    end
 end
 
