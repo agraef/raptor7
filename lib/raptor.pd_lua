@@ -2917,7 +2917,7 @@ function raptor:launchpad_init()
 	    self:outlet(1, "ctl", {accent_arrows, i, ch})
 	 end
 	 -- initialize the launch grid from the midi map
-	 self:launchpad_map(self.midi_map, ch)
+	 self:launchpad_pads(portno)
 	 -- drum grid
 	 if id ~= 13 then -- not available on the Mini
 	    for i = 0, 63 do
@@ -3488,10 +3488,10 @@ end
 -- All actual feedback operations are to be executed in the launchpad_master
 -- instance, so that we don't send out identical messages from each instance.
 -- Besides launchpad_ccmaster(), which only updates its own button for the
--- ccmaster display on the LP Pro, the only exceptions are launchpad_map() and
--- launchpad_pulse(), which are both executed in the time master -- the former
--- because it is executed during startup, and the latter because it is the
--- pulse display which should reflect the Raptor parameter settings of the
+-- ccmaster display on the LP Pro, the only exceptions are launchpad_pads()
+-- and launchpad_pulse(), which are both executed in the time master -- the
+-- former because it is executed during startup, and the latter because it is
+-- the pulse display which should reflect the Raptor parameter settings of the
 -- time master instance.
 
 -- Turn off the startup animation (scrolling text, X and Mini only).
@@ -3748,27 +3748,6 @@ function raptor:launchpad_mapped(cc, ch, var)
       self:launchpad_iter(function(ch)
 	    self:outlet(1, "note", {num, color, ch})
       end)
-   end
-end
-
-function raptor:launchpad_map(midi_map, ch0)
-   -- This is only invoked once, during launchpad_init(), in the time master.
-   if launchpad ~= 0 then
-      local mapped = {}
-      for cc, map in pairs(midi_map) do
-	 if cc >= 128 then
-	    local num = cc-128
-	    for ch, v in pairs(map) do
-	       if ch == 33 and v then
-		  local var = type(v) == "table" and v[1] or v
-		  local color = self:get_lppadcolor(var)
-		  mapped[var] = num
-		  self:outlet(1, "note", {num, color, ch0})
-	       end
-	    end
-	 end
-      end
-      lp_mapped = mapped
    end
 end
 
