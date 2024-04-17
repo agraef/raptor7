@@ -79,6 +79,14 @@ local launchpad_n_pulses = 7
 -- bank (Volume, Pan, Send A, Send B, Extra; 0 means vertical, 1 horizontal).
 local launchpad_fader_orientation = { 0, 1, 1, 1, 0 }
 
+-- Display a funky startup animation (scrolling text, LP X and Mini only).
+local launchpad_welcome = "Raptor 7 ready"
+
+-- Additional parameters for the Launchkey.
+
+-- Initial text to show on the Launchkey LCD screen (n/a on the Mini).
+local launchkey_welcome = "Raptor 7 ready"
+
 -- Additional parameters for the DJ Control.
 
 -- This value determines how fast the playback position moves in response to
@@ -2855,6 +2863,9 @@ end
 -- shared transport state, needed for transport feedback (play button)
 local rolling = 0
 
+-- status of the welcome message, per port
+local lp_welcome = {}
+
 function raptor:launchpad_init()
    if launchpad ~= 0 and self.master and self.id == self.master then
       -- iterate over all connected launchpads
@@ -2920,6 +2931,11 @@ function raptor:launchpad_init()
 	 -- play/loop
 	 self:launchpad_play(rolling)
 	 self:launchpad_loop(self.arp.loopstate)
+	 if launchpad_welcome and id ~= 14 then
+	    local msg = launchpad_welcome
+	    self:outlet(1, "sysex", {0, 32, 41, 2, id, 7, 0, 14, 0, assigned, string.byte(msg, 1, string.len(msg))})
+	    lp_welcome[portno] = true
+	 end
 	 ::skip::
       end
    end
@@ -2976,7 +2992,12 @@ end
 function raptor:launchpad_note(atoms)
    if launchpad ~= 0 then
       local num, val, ch = table.unpack(atoms)
-      if (ch == 33 or ch == 49) and launchpad_trigger > 0 then
+      local portno = ch==33 and 3 or ch==49 and 4
+      if lp_welcome[portno] and launchpad_id and portno then
+	 self:launchpad_welcome_off(launchpad_id[portno], portno)
+	 lp_welcome[portno] = false
+      end
+      if portno and launchpad_trigger > 0 then
 	 -- channel 1 on port #3 or #4 (launch grid)
 	 local cc = num+128
 	 local var
@@ -3228,7 +3249,12 @@ end
 function raptor:launchpad_ctl(atoms)
    if launchpad ~= 0 then
       local val, num, ch = table.unpack(atoms)
-      if ch == 33 or ch == 49 then
+      local portno = ch==33 and 3 or ch==49 and 4
+      if lp_welcome[portno] and launchpad_id and portno then
+	 self:launchpad_welcome_off(launchpad_id[portno], portno)
+	 lp_welcome[portno] = false
+      end
+      if portno then
 	 -- channel 1 on port 3 or 4
 	 local portno = ch == 33 and 3 or 4
 	 local id = launchpad_id[portno]
@@ -3457,6 +3483,12 @@ end
 -- because it is executed during startup, and the latter because it is the
 -- pulse display which should reflect the Raptor parameter settings of the
 -- time master instance.
+
+-- Turn off the startup animation (scrolling text, X and Mini only).
+function raptor:launchpad_welcome_off(id, portno)
+   self:outlet(2, "float", {portno})
+   self:outlet(1, "sysex", {0, 32, 41, 2, id, 7})
+end
 
 -- This needs to be global data (set at LP initialization time from the MIDI
 -- map) shared by all instances, so that the current launchpad_master knows
@@ -3906,6 +3938,11 @@ function raptor:launchkey_init()
       -- play/loop
       self:launchkey_play(rolling)
       self:launchkey_loop(self.arp.loopstate)
+      if launchkey_welcome then
+	 local msg = launchkey_welcome
+	 self:outlet(2, "float", {2})
+	 self:outlet(1, "sysex", {0, 32, 41, 2, 15, 4, 1, string.byte(msg, 1, string.len(msg))})
+      end
    end
 end
 
