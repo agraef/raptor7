@@ -23,7 +23,7 @@ Raptor will run in any modern flavor of Pd. It has been tested with Miller Pucke
 
 There is no real installation process, just download the latest Raptor release from [GitHub](https://github.com/agraef/raptor7) and unpack it, or clone the current git source. If Pd has been set up properly, double-clicking the raptor7.pd file (or running something like `pd raptor7.pd` from the command line on Linux) should open the patch in Pd. If that gives you a bunch of error messages in the Pd console window, then you probably still need to install pd-lua and enable it in your startup libraries.
 
-The raptor7.pd patch can be invoked by itself, or as a subpatch in another patch. In the latter case, you can also specify the name of an "autostart" preset to be recalled on startup as an argument (see the raptors.pd "ensemble" patch included in the distribution for an example).
+The raptor7.pd patch can be invoked by itself, or as a subpatch in another main patch, also called an *ensemble* patch. In the latter case, you can optionally specify the name of an "autostart" preset to be recalled on startup as an argument (see the raptors.pd ensemble patch included in the distribution for an example). Note that in this case all embedded Raptor instances will keep running until you close the main ensemble patch. Closing the subpatch windows by themselves just removes them from the screen; the Raptor instances still keep running in the background.
 
 ## The Arpeggiator
 
@@ -132,7 +132,7 @@ The loop files themselves are just Lua tables, so you can also edit them in any 
 Raptor has a lot of parameters which you might want to work with during live performances. Fortunately, it's possible to map most of these using the built-in MIDI learn facility. You can assign MIDI control changes and note messages to any of the controls in the panel, as well as some of the controls in the time and looper subpatches, as follows:
 
 - Step 1: Click the `learn` message or the "MIDI Learn" rectangle in the main patch. The background of the "MIDI Learn" rectangle will turn a light green to indicate that you're in MIDI mapping mode.
-- Step 2: Click or move the control on the MIDI device. This can be any knob, fader, or button, but only controls generating MIDI CC or note messages are supported at this time.
+- Step 2: Click or move the control on the MIDI device. This can be any knob, fader, or button, but only controls generating MIDI CC (control change) or note messages are supported at this time.
 - Step 3: Click or wiggle the control in the time, looper, or panel subpatch that you want to bind the MIDI message to.
 
 In Step 3, you can also abort the operation or remove an existing binding instead; see *MIDI Learn Interactions* below. Moreover, you can reverse Step 2 and 3 if you prefer to choose the Raptor parameter before the MIDI control. That is, Step 2 and 3 become:
@@ -180,7 +180,7 @@ For now, the special device drivers included in Raptor all work nicely together,
 
 The toggles for the device drivers are in the upper half. In the lower half, you can configure some device-specific parameters for the Novation Launchpad and the Hercules DJ Control. You can submit your changes to Raptor at any time by pressing the `Submit` button, or revert to the factory settings with the `Defaults` button. This affects all running Raptor instances. You can also make your changes permanent by just saving the config patch, so that your custom settings will be reloaded the next time you launch Raptor.
 
-Note that disabling a driver doesn't make the device go away. Only the special processing of the device driver (including MIDI feedback, see below) will be suspended. The device itself will continue to function as a standard MIDI controller, thus it can still send MIDI data and initiate parameter changes via the MIDI learn facility, unless you really disconnect the device from Raptor's input.
+Note that disabling a driver doesn't make the device go away. Only the special processing of the device driver (including MIDI feedback, see below) will be suspended. The device itself will continue to function as a standard MIDI controller, thus it can still send MIDI data and initiate parameter changes via the MIDI learn facility, unless you really disconnect the device from Raptor's input. (The same is true after finalizing a device with the `fini` message see below.)
 
 #### Pickup Mode
 
@@ -188,9 +188,9 @@ At the bottom of the config patch you can find the fader/knob *pickup* mode togg
 
 #### Device Feedback
 
-Most controller implementations also provide at least a certain amount of device *feedback*, which needs a connection between the controller and Pd's corresponding MIDI *output* port, generally using the same port number as for the input. The amount of feedback varies from none or minimal (and optional) to rather extensive (but still optional). For the Launchpad devices, on the other hand, the feedback connection is mandatory, as the driver cannot function properly without it.
+Most controller implementations also provide at least a certain amount of device *feedback*, which needs a connection between the controller and Pd's corresponding MIDI *output* port, generally using the same port number as for the input. The amount of feedback varies from none or minimal (and optional) to rather extensive (but still optional). For the Launchpad devices, on the other hand, the feedback connection is mandatory, as the driver cannot function properly without it. The same is true for the Launchpad functionality of the Launchkey, if you've hooked it up to the second MIDI port.
 
-**CAVEAT:** Depending on the platform and particular Pd version, the driver may not always succeed in sending the MIDI data necessary to reset a device to its initial state when exiting Raptor. It is generally a good idea to close the patch before you quit Pd. If that doesn't seem to do the trick, there is a `fini` message in the main page which you can click to force device finalization before exiting Pd.
+**CAVEAT:** When using the Launchpad (or the Launchkey with feedback enabled), Raptor will try to send some MIDI feedback data to reset the device to its initial state when exiting. This only works reliably if you close the patch before you quit Pd, in Purr Data at least. In vanilla Pd, even that doesn't seem to work, so there is a `fini` message in the patch which you can click to force device finalization before exiting Pd. Note that if you're running multiple Raptor instances, finalization only happens in the time master (the instance which has the `M` toggle enabled in its time subpatch), so you want to close that patch or click `fini` there.
 
 #### Device Overview
 
@@ -227,7 +227,7 @@ The patchbay manages only your first four physical Pd MIDI input and output port
 
 #### Novation Launchpad
 
-The [Novation Launchpad][] is arguably the most popular grid controller for Ableton Live and similar DAWs. It's also the most versatile all-in-one controller solution for Raptor if you can live without the tactile feedback of physical faders and knobs. Raptor's Launchpad driver features a session view with lots of buttons which can be mapped as performance controls (especially on the Launchpad X and Pro where the pads are velocity-sensitive and can thus be used as "latching" faders), a drum rack, and five predefined fader banks using a similar layout as the Launchkey and Launch Control XL devices (discussed below).
+The [Novation Launchpad][] is arguably the most popular grid controller for Ableton Live and similar DAWs. It's also the most versatile all-in-one controller solution for Raptor if you can live without the tactile feedback of physical faders and knobs. Raptor's Launchpad driver features a session view with lots of buttons which can be mapped as performance controls (especially on the Launchpad X and Pro where the pads are velocity-sensitive and can thus be used as "latching" faders), a drum rack, and five predefined fader banks using a similar layout as the Launchkey and Launch Control XL devices (discussed below). And you can switch presets and Raptor instances with the up/down and left/right arrow keys, respectively.
 
 You'll need a recent Launchpad version. The present implementation should work with all Launchpads in Novation's current lineup, which at the time of this writing encompasses the Launchpad Pro and Mini (MK3), as well as the Launchpad X. The driver checks at startup which Launchpad model(s) you have connected and prints some information in the Pd console about the devices it recognized, and also warns you about unsupported Launchpad models.
 
@@ -241,11 +241,13 @@ Raptor reserves both ports 3 and 4 for use with the Launchpad, so that you can c
 
 [Novation Launchkey][] is Novation's lineup of keyboard controllers which are popular among musicians as affordable but capable Ableton Live controllers with keys. The Launchkey combines a standard MIDI keyboard (available in different sizes) with eight encoders and nine faders (on the larger models), and a Launchpad-like 2x8 grid of pads.
 
-You'll need one of the latest Launchkey devices (MK3 at the time of this writing). The Launchkey Mini MK3 has been tested, but the larger Launchkeys are also supposed to work (expect some bugs, though, since I haven't tested these yet). The Raptor driver requires that you connect both the first port (the "MIDI" port) of the Launchkey to Pd's first MIDI port for the keyboard input, and the second port (the "DAW" port) to Pd's second MIDI port, on both input and output, for the Launchpad-like functionality.
+You'll need one of the latest Launchkey devices (MK3 at the time of this writing). The Launchkey Mini MK3 and the Launchkey 37 MK3 have been tested, but the other MK3 Launchkey models are also supposed to work. The Raptor driver requires that you connect both the first port (the "MIDI" port) of the Launchkey to Pd's first MIDI port for the keyboard input, and the second port (the "DAW" port) to Pd's second MIDI port, on both input and output, for the Launchpad-like functionality.
 
 The accompanying MIDI map in data/launchkey.map has bindings for both the Launchkey's session/DAW and standalone modes. Thus, you can still use the Launchkey as a "dumb" MIDI keyboard without any Launchpad functionality, by disabling the driver in the `config` patch and/or disconnecting Launchkey's DAW port from Pd's second input and output port.
 
-In session a.k.a. DAW mode, the Launchkey becomes a little Launchpad with mappable pads, drum grid, and knobs for controlling five banks of Raptor controls; please check the map file for details. To these ends, the Launchkey can be switched into various different modes by pressing the Shift key together with one of the pads (Session, Drum, Device, Volume, Pan, Send A+B). By default, the device starts up with the Session and Volume modes activated. The transport buttons also work as expected, and you can select Raptor instances and switch presets with the arrow buttons like on the Launchpad.
+In session a.k.a. DAW mode, the Launchkey becomes a little Launchpad with mappable pads, drum grid, and knobs for controlling five banks of Raptor controls; please check the map file for details. To these ends, the Launchkey can be switched into various different modes by pressing the Shift key together with one of the pads. The driver supports the Session and Drum pad modes, as well as the Device, Volume, Pan, and Send A+B knob modes. (The fader modes are not supported at present, and there are no ready-made bindings for them in the provided MIDI map either. But of course you can just map the faders yourself using MIDI learn on the larger Launchkey models which have them.) By default, the device starts up with the Session and Volume modes activated. The transport buttons also work as expected, and you can select Raptor instances and switch presets with the arrow buttons like on the Launchpad.
+
+Moreover, all Launchkeys except the Mini also have a little LCD screen, which the Raptor driver uses to display information about mapped parameters and their values (when operating the knobs), as well as toggles and button presses (when operating the pads in Session mode). It also shows presets and selected Raptor instances if you change these with the arrow keys or in the patch itself.
 
 #### Novation Launch Control XL
 
