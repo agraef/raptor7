@@ -3959,7 +3959,7 @@ function raptor:launchkey_init2()
 end
 
 function raptor:launchkey_fini(force)
-   if force or launchkey ~= 0 then
+   if (force or launchpad ~= 0) and self.master and self.id == self.master then
       -- clear the display
       self:launchkey_welcome()
       -- session pads
