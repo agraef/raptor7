@@ -1921,6 +1921,9 @@ end
 
 local pdx = require 'pdx'
 
+-- The id of the global time master. This is shared between all instances.
+local time_master
+
 -- Parameter and preset tables. These are mostly the same as in the Ardour
 -- plugin. Note that some of the fields aren't used in the Pd implementation,
 -- which adds a few special flags of its own, see below.
@@ -2108,18 +2111,18 @@ function raptor:set(param, x)
       end
    end
    -- transport
-   local time_master = self.master and self.id == self.master
-   local master_check = self.assert_master or time_master
+   local tmaster = self:check_master()
+   local master_check = self.assert_master or tmaster
    -- we have to go to some lengths here to deal with the djcontrol which
    -- may set transport parameters independently for each deck
    if self.play ~= last_play then
       if master_check then
-	 if not time_master and self.transport ~= 0 then
+	 if not tmaster and self.transport ~= 0 then
 	    -- if we're not the real time master and transport is rolling,
 	    -- tell the old master to hand over at the next pulse in order to
 	    -- not disrupt playback (djcontrol; this can only happen if the
 	    -- PLAY button was clicked on the other deck)
-	    pd.send(string.format("%s-%s", self.master, "new-master"), "float", {tonumber(self.id)})
+	    pd.send(string.format("%s-%s", time_master, "new-master"), "float", {tonumber(self.id)})
 	 else
 	    -- we're the real time master, or transport is stopped; just
 	    -- start/stop the playback
@@ -2193,7 +2196,6 @@ function raptor:initialize(sel, atoms)
    self.tempo = 120
 
    -- transport
-   self.master = nil
    self.transport = 0
    self.play = 0
    self.pulse = 0
@@ -2332,6 +2334,10 @@ end
 function raptor:late_init2()
    -- launchkey initialization, part 2
    self:launchkey_init2()
+end
+
+function raptor:check_master()
+   return time_master and self.id == time_master
 end
 
 function raptor:check_ccmaster(var)
@@ -2882,13 +2888,12 @@ local rolling = 0
 -- status of the welcome message, per port
 local lp_welcome = {}
 
--- these are forward declarations for the feedback, since we already need
--- these variables in launchpad_fini and launchpad_master_change below
+-- forward declaration for the feedback, since we already need this variable
+-- in launchpad_fini and launchpad_master_change below
 local launchpad_master = nil
-local launchkey_master = nil
 
 function raptor:launchpad_init()
-   if launchpad ~= 0 and self.master and self.id == self.master then
+   if launchpad ~= 0 and self:check_master() then
       -- iterate over all connected launchpads
       for portno, id in pairs(launchpad_id) do
 	 local ch = portno==3 and 33 or portno==4 and 49
@@ -2963,7 +2968,7 @@ function raptor:launchpad_init()
 end
 
 function raptor:launchpad_fini(force)
-   if (force or launchpad ~= 0) and self.master and self.id == self.master then
+   if (force or launchpad ~= 0) and self:check_master() then
       -- iterate over all connected launchpads
       for portno, id in pairs(launchpad_id) do
 	 local ch = portno==3 and 33 or portno==4 and 49
@@ -3149,9 +3154,9 @@ end
 function raptor:lpmaster(id)
    if id then
       return id
-   elseif self.master then
+   elseif time_master then
       -- fall back to the time master
-      return self.master
+      return time_master
    else
       -- fall back to self
       return self.id
@@ -3190,8 +3195,6 @@ function raptor:launchpad_master_change(old_id, new_id)
       --assert(not launchpad_master or old_master == launchpad_master)
       -- hand over to the new instance (i.e., self)
       launchpad_master = self.id
-      -- we also deal with the Launchkey here
-      launchkey_master = self.id
       --print(string.format("hand over %d -> %d", old_master, new_master))
       for portno, id in pairs(launchpad_id) do
 	 self:launchpad_fader_timer_off(portno)
@@ -3200,10 +3203,6 @@ function raptor:launchpad_master_change(old_id, new_id)
 	 self:launchpad_pads(portno)
 	 self:launchpad_loop(self.arp.loopstate)
       end
-      -- we also deal with the Launchkey here
-      self:launchkey_pads()
-      self:launchkey_knobs()
-      self:launchkey_loop(self.arp.loopstate)
    end
 end
 
@@ -3638,7 +3637,7 @@ end
 function raptor:launchpad_pulse(w, val)
    -- we only do this on the time master, no matter what the current
    -- launchpad_master is
-   if  launchpad ~= 0 and self.master and self.id == self.master then
+   if  launchpad ~= 0 and self:check_master() then
       -- w is the weight, val the velocity, n the number of beats per bar to
       -- trigger, b the total number of beats.
       local n, b = launchpad_n_pulses, self.arp.beats
@@ -3670,7 +3669,7 @@ end
 function raptor:launchpad_play(state)
    -- This *must* be invoked in the time master, otherwise we get the wrong
    -- transport state.
-   if launchpad ~= 0 and self.master and self.id == self.master then
+   if launchpad ~= 0 and self:check_master() then
       -- This is shared across all instances and is also used by the launchkey
       -- driver.
       rolling = state
@@ -3918,8 +3917,10 @@ end
 -- default knob mode (1 == Volume)
 local lkmode = 1
 
+local launchkey_master = nil
+
 function raptor:launchkey_init()
-   if launchkey ~= 0 and self.master and self.id == self.master then
+   if launchkey ~= 0 and self:check_master() then
       -- switch the Launchkey into DAW/session mode
       self:outlet(1, "note", {12, 127, 32})
       -- set the default knob mode
@@ -3950,7 +3951,7 @@ function raptor:launchkey_init2()
    -- and be ignored. (At least that's what I saw on Linux with ALSA.)
    -- Therefore we have a secondary initialization phase here which gets
    -- executed at a later time.
-   if launchkey ~= 0 and self.master and self.id == self.master then
+   if launchkey ~= 0 and self:check_master() then
       -- initialize the display
       self:launchkey_welcome(launchkey_welcome)
       -- populate the param display
@@ -3959,7 +3960,7 @@ function raptor:launchkey_init2()
 end
 
 function raptor:launchkey_fini(force)
-   if (force or launchpad ~= 0) and self.master and self.id == self.master then
+   if (force or launchpad ~= 0) and self:check_master() then
       -- clear the display
       self:launchkey_welcome()
       -- session pads
@@ -4146,6 +4147,25 @@ function raptor:launchkey_master()
    return launchkey_master == self.id
 end
 
+function raptor:launchkey_master_change(old_id, new_id)
+   -- This gets invoked when the time master or ccmaster changes, in which
+   -- case we may need to update the launch grid accordingly.
+   -- we borrow self:lpmaster() from the Launchpad driver here
+   local old_master = self:lpmaster(old_id)
+   local new_master = self:lpmaster(new_id)
+   -- We only execute this in the new master, and there's nothing to do if the
+   -- master didn't change.
+   if new_master ~= old_master and self.id == new_master then
+      --assert(not launchkey_master or old_master == launchkey_master)
+      -- hand over to the new instance (i.e., self)
+      launchkey_master = self.id
+      --print(string.format("hand over %d -> %d", old_master, new_master))
+      self:launchkey_pads()
+      self:launchkey_knobs()
+      self:launchkey_loop(self.arp.loopstate)
+   end
+end
+
 function raptor:launchkey_welcome(msg)
    self:outlet(2, "float", {2})
    if msg then
@@ -4158,7 +4178,7 @@ end
 function raptor:launchkey_play(state)
    -- This *must* be invoked in the time master, otherwise we get the wrong
    -- transport state.
-   if launchkey ~= 0 and self.master and self.id == self.master then
+   if launchkey ~= 0 and self:check_master() then
       rolling = state
       local num = lk_mapped["play"]
       if num then
@@ -4617,7 +4637,7 @@ local djcontrol_button = {
 
 function raptor:djcontrol_state_init()
    -- change all buttons to their defaults
-   if djcontrol ~= 0 and self.master and self.id == self.master then
+   if djcontrol ~= 0 and self:check_master() then
       for k, b in pairs(djcontrol_button) do
 	 local state = (b.on and b.on or 127)*b.default
 	 -- The ccmaster button is actually a whole range of pads.
@@ -4637,7 +4657,7 @@ end
 
 function raptor:djcontrol_state_fini()
    -- turn all buttons off
-   if djcontrol ~= 0 and self.master and self.id == self.master then
+   if djcontrol ~= 0 and self:check_master() then
       for k, b in pairs(djcontrol_button) do
 	 local num_buttons = k == "ccmaster" and 8 or 1
 	 for offs = 0, num_buttons-1 do
@@ -4672,7 +4692,7 @@ function raptor:djcontrol_state(button, state, deck, offs)
 	    local b = djcontrol_button[button]
 	    pd.send(string.format("%s-djcontrol", self.id), "note", {b.num+offs, state*b.on, b.ch[deck]})
 	 end
-      elseif self.master and self.id == self.master then
+      elseif self:check_master() then
 	 -- global controls (backlights)
 	 local b = djcontrol_button[button]
 	 if b.on then
@@ -4829,7 +4849,7 @@ function raptor:djcontrol_note(atoms)
       return true
    elseif num == 5 then
       -- SYNC button: sync playback position to the time master
-      if val > 0 and self.id and self.master == self.id then
+      if val > 0 and self.check_master() then
 	 -- we're the time master, tell all instances about our playback
 	 -- position so that they can sync up to us
 	 local playing = self.transport ~= 0 and not shift
@@ -5806,8 +5826,9 @@ function raptor:in_1_ccmaster(atoms)
    end
    if id and self.id then
       if flag == 0 then
-	 -- launchpad fader page tie-in
+	 -- launchpad/key fader page tie-in
 	 self:launchpad_master_change(self.ccmaster, nil)
+	 self:launchkey_master_change(self.ccmaster, nil)
 	 -- omni
 	 self.ccmaster = nil
 	 -- give feedback on the panel
@@ -5819,8 +5840,9 @@ function raptor:in_1_ccmaster(atoms)
 	 self:launchcontrol_ccmaster(0)
 	 self:midimix_ccmaster(0)
       else
-	 -- launchpad fader page tie-in
+	 -- launchpad/key fader page tie-in
 	 self:launchpad_master_change(self.ccmaster, id)
+	 self:launchkey_master_change(self.ccmaster, id)
 	 -- only the given raptor is receiving
 	 self.ccmaster = id
 	 -- give feedback on the panel
@@ -5965,9 +5987,10 @@ function raptor:in_1_master(atoms)
    elseif type(id) ~= "string" then
       return
    end
-   -- launchpad fader page tie-in
-   self:launchpad_master_change(self.master, id)
-   self.master = id
+   -- launchpad/key fader page tie-in
+   self:launchpad_master_change(time_master, id)
+   self:launchkey_master_change(time_master, id)
+   time_master = id
 end
 
 -- djcontrol and launchpad tie-ins
