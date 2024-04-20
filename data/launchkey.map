@@ -1,25 +1,22 @@
 -- -*- mode: lua -*-
 
--- MIDI map for the Novation Launchkey Mini MK3 keyboard.
--- Albert Gräf <agggraef@gmail.com>, 13 April 2024
+-- MIDI map for the Novation Launchkey MK3 keyboards.
+-- Albert Gräf <agggraef@gmail.com>, 20 April 2024
 
 -- This contains the default MIDI map for the Launchkey driver, as well as
 -- some rudimentary bindings for the buttons and knobs in standalone mode
 -- (these are only active if the Launchkey driver is turned off). To use this,
--- load the map in Raptor and connect the Launchkey Mini to Pd's first MIDI
+-- load the map in Raptor and connect the Launchkey to Pd's first MIDI
 -- input. In addition, to use the built-in driver, also connect the second
 -- (DAW) port to Pd's second port, for both input and output. The map assumes
 -- the factory setup for the knobs (CC21-28).
-
--- This might also work for the bigger Launchkey MK3 devices, but I haven't
--- tested those yet.
 
 -- STANDALONE:
 
 -- The standalone map binds all buttons that can be accessed without session/
 -- DAW mode on a Mini MK3. Note that the bigger Launchkey MK3 models have a
 -- lot more mappable buttons, you're free to map those in addition to the
--- buttons listed below. The standalone map, as well as the driver's session
+-- buttons listed below. The standalone map, as well as the driver's DAW
 -- mode map described below, were chosen so that they will work on *any*
 -- Launchkey MK3 device, and the Mini MK3 is the most limited of these.
 
@@ -35,36 +32,39 @@
 -- 6 = meter numerator, 7 = meter denominator, 8 = division. These bindings
 -- will also work in session mode if you choose the Custom knob mode.
 
--- SESSION/DAW MODE:
+-- DAW MODE:
 
--- The session a.k.a. DAW mode binding works pretty much like the Launchpad
--- one (within the limitations of the device), with the knobs mapped to the
--- same four banks of Raptor controls under the corresponding knob modes
--- (Volume, Pan, Send A+B), and the 2x8 grid functioning either as launch or
--- drum pads, depending on the pad mode (Session or Drums). Just like on the
--- Launchpad, the pads are fully mappable in Session pad mode, and the default
--- binding matches the two bottom rows of the Launchpad's grid.
+-- The DAW mode binding works pretty much like the Launchpad one (within the
+-- limitations of the device), with the knobs mapped to the same five banks of
+-- Raptor controls under the corresponding knob modes (Volume, Pan, Send A+B,
+-- Device), and the 2x8 grid functioning either as launch or drum pads,
+-- depending on the pad mode (Session or Drums). Just like on the Launchpad,
+-- the pads are fully mappable in Session pad mode, and the default binding
+-- matches the two bottom rows of the Launchpad's grid.
 
 -- The arrow keys let you select Raptor instances (left, right) and presets
 -- (up, down). Note that on the Mini MK3 you'll have to press Shift to get
--- these. The transport buttons work as well (play, loop), and also light up
--- to reflect the current transport/loop playback state. The Stop button will
+-- these. On the larger models (Launchkey MK3 37 and up), holding the Device
+-- Select button brings up a strip of up to eight blue pads in the top row
+-- which you can use to select a Raptor instance at random; it also shows the
+-- currently selected instance with a pink color, like on the Launchpad Pro's
+-- bottom row. (These are all hard-wired bindings provided by the driver.)
+
+-- The transport buttons work as well (play, loop), and also light up
+-- to reflect the current transport/loop playback state (only on the Mini; on
+-- the larger models these buttons have no backlight). The Stop button will
 -- work in DAW mode as well (it stops the transport if it is currently
 -- rolling). This button is only available on the bigger Launchkey devices,
 -- but on the Mini you can press Shift+Play instead to get this function.
 
--- NOTE: In session mode, you'll have two more knob modes available: Custom
--- knob mode which for consistency works like in standalone mode (so it
--- replicates what you already have on the Volume bank), and Device knob mode
--- which is not used by the driver and is separate from Custom mode, so those
--- knobs can be mapped to whatever you want.
-
--- To come up with reasonable default bindings for the Device knobs, I mapped
--- them to the Raptor controls that I use most frequently (see the controls in
--- boldface in doc/raptor7-cheatsheet.pdf), so that I have all of these on tap
--- without having to switch back and forth between the four preconfigured
--- banks so often. YMMV, of course, so feel free to reassign these to whatever
--- controls *you* use most frequently.
+-- Last but not least, the larger models (Launchkey MK3 37 and up) also have a
+-- little LCD display which the driver uses to show important information: a
+-- sign-on message during startup; knob values (including pickup) while
+-- operating the knobs; pad functions while operating the pads; and presets
+-- and selected instances when you change them. Also, the Device Lock button
+-- can be used to recall information about the currently selected instance and
+-- preset (or "omni" if none is currently selected). (This button doesn't
+-- really lock anything in Raptor, it just displays information.)
 
 {
   -- standalone knob bindings, these work the same in session mode if you

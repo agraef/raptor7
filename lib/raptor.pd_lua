@@ -2372,6 +2372,21 @@ function raptor:finalize()
    end
    local i = self:get_instance()
    if i > 0 then
+      -- update the instance selection feedback on devices which need it
+      local k = #raptor.instances
+      for j = i+1, k do
+	 local state = raptor.instances[j] == self.ccmaster and 1 or 0
+	 local deck = raptor.decks[raptor.instances[j]]
+	 self:launchpad_ccmaster(state, j-1)
+	 self:launchkey_ccmaster_state(state, j-1)
+	 self:djcontrol_ccmaster(state, j-1, deck)
+      end
+      self:launchpad_ccmaster(0, k)
+      self:launchkey_ccmaster_state(0, k, 0)
+      local deck = raptor.decks[raptor.instances[k]]
+      self:djcontrol_ccmaster(0, k, deck)
+      self:launchcontrol_ccmaster(0)
+      self:midimix_ccmaster(0)
       -- remove ourself from the instances table
       table.remove(raptor.instances, i)
       -- also remove the assigned deck and preset information
@@ -3648,11 +3663,13 @@ function raptor:launchpad_pulse(w, val)
    end
 end
 
-function raptor:launchpad_ccmaster(state)
+function raptor:launchpad_ccmaster(state, i)
    -- This gets invoked in *every* instance, each instance only sets its own
    -- ccmaster button on or off (if any, those button are only on the LP Pro).
    if launchpad ~= 0 then
-      local i = self:get_instance()
+      if not i then
+	 i = self:get_instance()
+      end
       if i > 0 and i <= 8 then
 	 self:launchpad_iter(function(ch, portno, id)
 	       if id == 14 then
@@ -3942,6 +3959,10 @@ function raptor:launchkey_init()
       -- play/loop
       self:launchkey_play(rolling)
       self:launchkey_loop(self.arp.loopstate)
+      -- device select buttons
+      for i = 1, 8 do
+	 self:launchkey_ccmaster_state(0, i, 0)
+      end
    end
 end
 
@@ -3956,6 +3977,10 @@ function raptor:launchkey_init2()
       self:launchkey_welcome(launchkey_welcome)
       -- populate the param display
       self:launchkey_knobs()
+   end
+   if launchkey ~= 0 then
+      -- device select buttons
+      self:launchkey_ccmaster_state(0)
    end
 end
 
@@ -3981,6 +4006,10 @@ function raptor:launchkey_fini(force)
       -- play/loop
       self:outlet(1, "ctl", {0, 115, 32})
       self:outlet(1, "ctl", {0, 117, 32})
+      -- device select buttons
+      for i = 1, 8 do
+	 self:launchkey_ccmaster_state(0, i, 0)
+      end
       -- switch the Launchkey back to standalone mode
       self:outlet(1, "note", {12, 0, 32})
       -- wind down some shared status so that we can correctly power up again
@@ -3997,6 +4026,11 @@ function raptor:launchkey_note(atoms)
 	 -- drum pads, remap to channel 10
 	 atoms[3] = 10
 	 return atoms
+      elseif ch == 17 and num >= 64 and num <= 71 then
+	 -- device select button, we use this to change the ccmaster
+	 if val > 0 then
+	    self:in_1_ccmaster_set({num-63})
+	 end
       end
       -- everything else goes straight through to be MIDI-mapped
    end
@@ -4010,25 +4044,20 @@ local lk_knob = { [1] = 76, [2] = 20, [3] = 48, [4] = 12, [5] = 28 }
 
 function raptor:launchkey_ctl(atoms)
    -- Kludge: We need to mess with some of the CC data for buttons only on the
-   -- bigger LK models, even if the driver is off.
+   -- bigger LK models, even if the driver is off. Specifically, four of the
+   -- buttons on the LK 37+ (Capture MIDI, Quantise, Click, Undo), and the
+   -- nine faders on the LK 49+ partially overlap with some of our fader banks
+   -- (which can't be moved for compatibility with the Launch Control XL). At
+   -- present, the driver doesn't use these for anything, but we'd still like
+   -- to be able to map them, so we move them to the CC block 57-69 on channel
+   -- 32 which currently isn't used for anything else (fingers crossed).
    local val, num, ch = table.unpack(atoms)
-   if ch == 32 then
-      if num >= 74 and num <= 77 then
-	 -- Capture MIDI, Quantise, Click, Undo buttons: The driver currently
-	 -- doesn't do anything with these, but CC74-77 partially overlap with
-	 -- our assignments for the Volume bank (which can't be moved for
-	 -- compatibility with the Launch Control XL). We'd still like to be
-	 -- able to map these, so we move them over to CC119-122, where they
-	 -- will hopefully cause much less trouble.
-	 atoms[2] = num-74+119
-	 return atoms
-      elseif num >= 51 and num <= 52 then
-	 -- Device Select and Device Lock buttons: These get the same
-	 -- treatment, as they are already assigned to the Pan bank.
-	 -- Moved to CC123-124.
-	 atoms[2] = num-51+123
-	 return atoms
-      end
+   if ch == 32 and num >= 74 and num <= 77 then
+      atoms[2] = num-8
+      return atoms
+   elseif ch == 32 and num >= 53 and num <= 61 then
+      atoms[2] = num+4
+      return atoms
    end
    if launchkey ~= 0 then
       if ch == 17 or ch == 32 then
@@ -4039,6 +4068,22 @@ function raptor:launchkey_ctl(atoms)
 	    if val ~= lkmode and self:launchkey_master() then
 	       lkmode = val
 	       self:launchkey_knobs()
+	    end
+	 -- NOTE: Buttons 51 and 52 are only available on the larger LK models
+	 -- (37 and up), not on the Launchkey Mini.
+	 elseif num == 51 and ch == 32 then
+	    -- device select (no actual state change in Raptor, but device
+	    -- select mode is active while this key is pressed, and we do
+	    -- handle ccmaster selection on pads 64-71 on channel 17 and the
+	    -- corresponding feedback elsewhere)
+	 elseif num == 52 and ch == 32 then
+	    -- device lock (this doesn't actually lock anything in Raptor, it
+	    -- just redisplays the current ccmaster, or "omni" if there isn't
+	    -- one, i.e., we're in omni mode)
+	    if val>0 and self:launchkey_master() then
+	       local flag = self.ccmaster and 1 or 0
+	       --assert(flag == 0 or self.ccmaster == self.id)
+	       self:launchkey_ccmaster(flag)
 	    end
 	 elseif num >= 21 and num <= 28 and ch == 32 then
 	    -- knobs, remapped to the 4 CC banks
@@ -4245,6 +4290,17 @@ function raptor:launchkey_ccmaster(state)
 	 msg = string.format("%d %s", i, raptor.presets[self.id])
       end
       self:outlet(1, "sysex", {0, 32, 41, 2, 15, 4, 1, string.byte(msg, 1, string.len(msg))})
+   end
+end
+
+function raptor:launchkey_ccmaster_state(state, i, color)
+   if launchkey ~= 0 then
+      if not i then
+	 i = self:get_instance()
+      end
+      if i > 0 and i <= 8 then
+	 self:outlet(1, "note", {i+63, color or accent_arrows+8*state, 17})
+      end
    end
 end
 
@@ -4682,13 +4738,13 @@ function raptor:djcontrol_state(button, state, deck, offs)
       return
    end
    if djcontrol ~= 0 then
-      offs = offs and offs or 0
+      offs = offs or 0
       if deck then
 	 if deck == 0 then
 	    -- do both deck 1 and 2
 	    self:djcontrol_state(button, state, 1, offs)
 	    self:djcontrol_state(button, state, 2, offs)
-	 elseif deck > 0 then
+	 elseif deck > 0 and offs < 8 then
 	    local b = djcontrol_button[button]
 	    pd.send(string.format("%s-djcontrol", self.id), "note", {b.num+offs, state*b.on, b.ch[deck]})
 	 end
@@ -4705,13 +4761,15 @@ function raptor:djcontrol_state(button, state, deck, offs)
    end
 end
 
-function raptor:djcontrol_ccmaster(state)
-   local i = self:get_instance()
-   local deck = self.deck
+function raptor:djcontrol_ccmaster(state, i, deck)
+   if not i then
+      i = self:get_instance()
+      deck = self.deck
+   end
    if i > 0 then
       i = next(raptor.decks) == nil and i or self:locate_i_deck(i, deck)
       if i then
-	 self:djcontrol_state("ccmaster", state, deck, i-1)
+	 self:djcontrol_state("ccmaster", state, deck or 0, i-1)
       end
    end
 end
@@ -5837,6 +5895,7 @@ function raptor:in_1_ccmaster(atoms)
 	 self:djcontrol_ccmaster(0)
 	 self:launchpad_ccmaster(0)
 	 self:launchkey_ccmaster(0)
+	 self:launchkey_ccmaster_state(0)
 	 self:launchcontrol_ccmaster(0)
 	 self:midimix_ccmaster(0)
       else
@@ -5852,6 +5911,7 @@ function raptor:in_1_ccmaster(atoms)
 	 self:djcontrol_ccmaster(flag)
 	 self:launchpad_ccmaster(flag)
 	 self:launchkey_ccmaster(flag)
+	 self:launchkey_ccmaster_state(flag)
 	 self:launchcontrol_ccmaster(flag)
 	 self:midimix_ccmaster(flag)
       end
