@@ -4907,7 +4907,7 @@ function raptor:djcontrol_note(atoms)
       return true
    elseif num == 5 then
       -- SYNC button: sync playback position to the time master
-      if val > 0 and self.check_master() then
+      if val > 0 and self:check_master() then
 	 -- we're the time master, tell all instances about our playback
 	 -- position so that they can sync up to us
 	 local playing = self.transport ~= 0 and not shift
