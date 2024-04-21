@@ -887,6 +887,8 @@ Barlow indispensabilities), f 63;
 #X connect 5 1 6 0;
 #X connect 6 0 0 0;
 #X restore 114 100 pd launchpad;
+#X obj 200 20 r \$0-out1;
+#X obj 270 20 r \$0-out2;
 #X connect 0 0 1 0;
 #X connect 2 0 11 0;
 #X connect 3 0 0 1;
@@ -907,6 +909,8 @@ Barlow indispensabilities), f 63;
 #X connect 17 0 19 0;
 #X connect 18 0 19 1;
 #X connect 20 0 19 0;
+#X connect 21 0 5 0;
+#X connect 22 0 19 1;
 #X restore 20 370 pd output;
 #X obj 197 82 bng 25 250 50 0 \$0-play empty empty 17 7 0 10 #fcfcfc
 #000000 #000000;
@@ -1278,7 +1282,6 @@ d denotes a subdivision of the base pulse. (E.g. \, d=2 denotes duplets
 #X restore 130 220 pd meter-examples;
 #X text 246 193 #10;
 #X text 246 343 #20;
-#X msg 20 183 fini;
 #X connect 5 0 25 0;
 #X connect 5 1 25 1;
 #X connect 5 2 33 0;
@@ -1299,4 +1302,3 @@ d denotes a subdivision of the base pulse. (E.g. \, d=2 denotes duplets
 #X connect 24 1 5 1;
 #X connect 27 0 24 0;
 #X connect 28 0 24 0;
-#X connect 38 0 24 0;

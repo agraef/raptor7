@@ -2173,6 +2173,19 @@ function raptor:get_instance(id1)
    return 0 -- indicates not found or id not set
 end
 
+-- out-of-band event signaling, to circumvent finalization issues where our
+-- outlets might be gone already
+function raptor:out(i, sel, atoms)
+   local id = self.id
+   if id then
+      pd.send(string.format("%s-out%d", id, i), sel, atoms)
+   else
+      -- if the id hasn't been set yet, early on during initialization, it
+      -- should still be safe to output directly through the outlets
+      self:outlet(i, sel, atoms)
+   end
+end
+
 function raptor:initialize(sel, atoms)
    pdx.reload(self)
 
@@ -2316,8 +2329,8 @@ function raptor:late_init()
       -- devices, so that we can pick up the replies under the same port
       -- numbers and know which kind of device is connected to which port.
       for portno = 3, 4 do
-	 self:outlet(2, "float", {portno})
-	 self:outlet(1, "sysex", {126, 127, 6, 1})
+	 self:out(2, "float", {portno})
+	 self:out(1, "sysex", {126, 127, 6, 1})
       end
       -- initialize launchpad_id
       launchpad_id = {}
@@ -2328,7 +2341,7 @@ function raptor:late_init()
    -- djcontrol initialization
    self:djcontrol_state_init()
    -- kick off the timer for even later initializations
-   self.init2_clock:delay(300)
+   self.init2_clock:delay(500)
 end
 
 function raptor:late_init2()
@@ -2425,12 +2438,6 @@ end
 
 function raptor:in_1_djconfig(data)
    djcontrol_setup(data)
-end
-
-function raptor:in_1_fini()
-   self:launchpad_fini()
-   self:launchkey_fini()
-   self:djcontrol_state_fini()
 end
 
 -- pulses
@@ -2916,40 +2923,40 @@ function raptor:launchpad_init()
 	 if not ch then goto skip end
 	 local drumch = ch+8
 	 -- switch the Launchpad into DAW/session mode
-	 self:outlet(2, "float", {portno})
-	 self:outlet(1, "sysex", {0, 32, 41, 2, id, 16, 1})
+	 self:out(2, "float", {portno})
+	 self:out(1, "sysex", {0, 32, 41, 2, id, 16, 1})
 	 -- request the current layout, so that we get a sane default for
 	 -- self.launchpad_page
-	 self:outlet(1, "sysex", {0, 32, 41, 2, id, 0})
+	 self:out(1, "sysex", {0, 32, 41, 2, id, 0})
 	 -- light up all buttons
 	 local color = {accent_loop, 3, 1, 1, 1, 32, accent_arrows, accent_arrows}
 	 for i = 1, 8 do
 	    -- left- and rightmost columns (the former is only on the LPPro)
 	    if id == 14 then
-	       self:outlet(1, "ctl", {color[i], 10*i, ch})
-	       self:outlet(1, "ctl", {lpmini_colors[9-i], 10*i+9, ch})
+	       self:out(1, "ctl", {color[i], 10*i, ch})
+	       self:out(1, "ctl", {lpmini_colors[9-i], 10*i+9, ch})
 	    else
 	       -- LP X/Mini (these run from top to bottom, so we need to
 	       -- reverse the table on the fly)
-	       self:outlet(1, "ctl", {lpmini_colors[9-i], 10*i+9, ch})
+	       self:out(1, "ctl", {lpmini_colors[9-i], 10*i+9, ch})
 	    end
 	 end
 	 if id == 12 then
 	    -- Capture MIDI button on the Launchpad X
-	    self:outlet(1, "ctl", {accent_loop, 98, ch})
+	    self:out(1, "ctl", {accent_loop, 98, ch})
 	 end
 	 if id == 14 then -- LPPro only
 	    for i = 1, 8 do
 	       -- lower bottom row
-	       self:outlet(1, "ctl", {lppro_colors[i], i, ch})
+	       self:out(1, "ctl", {lppro_colors[i], i, ch})
 	       -- upper bottom row
-	       self:outlet(1, "ctl", {accent_arrows, i+100, ch})
+	       self:out(1, "ctl", {accent_arrows, i+100, ch})
 	    end
 	 end
 	 -- arrow buttons
 	 local lp_arrow_buttons = id==14 and lppro_arrow_buttons or lpmini_arrow_buttons
 	 for _, i in ipairs(lp_arrow_buttons) do
-	    self:outlet(1, "ctl", {accent_arrows, i, ch})
+	    self:out(1, "ctl", {accent_arrows, i, ch})
 	 end
 	 -- initialize the launch grid from the midi map
 	 self:launchpad_pads(portno)
@@ -2957,7 +2964,7 @@ function raptor:launchpad_init()
 	 if id ~= 13 then -- not available on the Mini
 	    for i = 0, 63 do
 	       local color = 8*(i//16)+33
-	       self:outlet(1, "note", {i+36, color, drumch})
+	       self:out(1, "note", {i+36, color, drumch})
 	    end
 	 end
 	 self.launchpad_drums[portno] = false
@@ -2974,7 +2981,7 @@ function raptor:launchpad_init()
 	 self:launchpad_loop(self.arp.loopstate)
 	 if launchpad_welcome and id ~= 14 then
 	    local msg = launchpad_welcome
-	    self:outlet(1, "sysex", {0, 32, 41, 2, id, 7, 0, 14, 0, assigned, string.byte(msg, 1, string.len(msg))})
+	    self:out(1, "sysex", {0, 32, 41, 2, id, 7, 0, 14, 0, assigned, string.byte(msg, 1, string.len(msg))})
 	    lp_welcome[portno] = true
 	 end
 	 ::skip::
@@ -2990,41 +2997,41 @@ function raptor:launchpad_fini(force)
 	 -- assert ch, but to be on the safe side...
 	 if not ch then goto skip end
 	 local drumch = ch+8
-	 self:outlet(2, "float", {portno})
+	 self:out(2, "float", {portno})
 	 -- turn off all buttons
 	 for i = 1, 8 do
 	    -- left- and rightmost columns (the former is only on the LPPro)
 	    if id == 14 then
-	       self:outlet(1, "ctl", {0, 10*i, ch})
+	       self:out(1, "ctl", {0, 10*i, ch})
 	    end
-	    self:outlet(1, "ctl", {0, 10*i+9, ch})
+	    self:out(1, "ctl", {0, 10*i+9, ch})
 	 end
 	 if id == 12 then
 	    -- Capture MIDI button on the Launchpad X
-	    self:outlet(1, "ctl", {0, 98, ch})
+	    self:out(1, "ctl", {0, 98, ch})
 	 end
 	 if id == 14 then -- LPPro only
 	    for i = 1, 8 do
 	       -- lower bottom row
-	       self:outlet(1, "ctl", {0, i, ch})
+	       self:out(1, "ctl", {0, i, ch})
 	       -- upper bottom row
-	       self:outlet(1, "ctl", {0, i+100, ch})
+	       self:out(1, "ctl", {0, i+100, ch})
 	    end
 	 end
 	 -- arrow buttons
 	 local lp_arrow_buttons = id==14 and lppro_arrow_buttons or lpmini_arrow_buttons
 	 for _, i in ipairs(lp_arrow_buttons) do
-	    self:outlet(1, "ctl", {0, i, ch})
+	    self:out(1, "ctl", {0, i, ch})
 	 end
 	 -- launch grid will be turned off automatically with the sysex
 	 -- drum grid
 	 if id ~= 13 then -- not available on the Mini
 	    for i = 0, 63 do
-	       self:outlet(1, "note", {i+36, 0, drumch})
+	       self:out(1, "note", {i+36, 0, drumch})
 	    end
 	 end
 	 -- switch the Launchpad back into standalone mode
-	 self:outlet(1, "sysex", {0, 32, 41, 2, id, 16, 0})
+	 self:out(1, "sysex", {0, 32, 41, 2, id, 16, 0})
 	 ::skip::
       end
       -- wind down some shared status so that we can correctly power up again
@@ -3525,8 +3532,8 @@ end
 
 -- Turn off the startup animation (scrolling text, X and Mini only).
 function raptor:launchpad_welcome_off(id, portno)
-   self:outlet(2, "float", {portno})
-   self:outlet(1, "sysex", {0, 32, 41, 2, id, 7})
+   self:out(2, "float", {portno})
+   self:out(1, "sysex", {0, 32, 41, 2, id, 7})
 end
 
 -- This needs to be global data (set at LP initialization time from the MIDI
@@ -3676,7 +3683,7 @@ function raptor:launchpad_ccmaster(state, i)
 		  -- LP Pro only. Neither the Mini nor the X have these button
 		  -- rows, and I found that at least on the Mini things go
 		  -- haywire when it receives CCs in the 101-108 range.
-		  self:outlet(1, "note", {i+100, accent_arrows+8*state, ch})
+		  self:out(1, "note", {i+100, accent_arrows+8*state, ch})
 	       end
 	 end)
       end
@@ -3694,10 +3701,10 @@ function raptor:launchpad_play(state)
 	    local num = lp_mapped["play"]
 	    local color = lppadcolor["play"][state+1]
 	    if num then
-	       self:outlet(1, "note", {num, color, ch})
+	       self:out(1, "note", {num, color, ch})
 	    end
 	    if id == 14 then
-	       self:outlet(1, "ctl", {color, 20, ch})
+	       self:out(1, "ctl", {color, 20, ch})
 	    end
       end)
    end
@@ -3709,12 +3716,12 @@ function raptor:launchpad_loop(state)
 	    local num = lp_mapped["loop"]
 	    local color = lppadcolor["loop"][state+1]
 	    if num then
-	       self:outlet(1, "note", {num, color, ch})
+	       self:out(1, "note", {num, color, ch})
 	    end
 	    if id == 14 then
-	       self:outlet(1, "ctl", {color, 10, ch})
+	       self:out(1, "ctl", {color, 10, ch})
 	    elseif id == 12 then
-	       self:outlet(1, "ctl", {color, 98, ch})
+	       self:out(1, "ctl", {color, 98, ch})
 	    end
       end)
    end
@@ -3939,22 +3946,22 @@ local launchkey_master = nil
 function raptor:launchkey_init()
    if launchkey ~= 0 and self:check_master() then
       -- switch the Launchkey into DAW/session mode
-      self:outlet(1, "note", {12, 127, 32})
+      self:out(1, "note", {12, 127, 32})
       -- set the default knob mode
-      self:outlet(1, "ctl", {lkmode, 9, 32})
+      self:out(1, "ctl", {lkmode, 9, 32})
       -- populate the session pads
       self:launchkey_pads()
       -- populate the drum pads
       for num = 36, 51 do
 	 local color = (num-36)//8*8+33
-	 self:outlet(1, "note", {num, color, 26})
+	 self:out(1, "note", {num, color, 26})
       end
       -- light the arrow buttons (32 = 25%, I guess)
       -- NOTE: Most of the smaller buttons have no backlight on the larger LK
       -- models; on the Mini they all do. Same applies to the transport
       -- buttons below (play, loop).
       for num = 102, 107 do
-	 self:outlet(1, "ctl", {32, num, 32})
+	 self:out(1, "ctl", {32, num, 32})
       end
       -- play/loop
       self:launchkey_play(rolling)
@@ -3990,28 +3997,28 @@ function raptor:launchkey_fini(force)
       self:launchkey_welcome()
       -- session pads
       for num = 96, 103 do
-	 self:outlet(1, "note", {num, 0, 17})
+	 self:out(1, "note", {num, 0, 17})
       end
       for num = 112, 119 do
-	 self:outlet(1, "note", {num, 0, 17})
+	 self:out(1, "note", {num, 0, 17})
       end
       -- drum pads
       for num = 36, 51 do
-	 self:outlet(1, "note", {num, 0, 26})
+	 self:out(1, "note", {num, 0, 26})
       end
       -- arrow buttons
       for num = 102, 107 do
-	 self:outlet(1, "ctl", {0, num, 32})
+	 self:out(1, "ctl", {0, num, 32})
       end
       -- play/loop
-      self:outlet(1, "ctl", {0, 115, 32})
-      self:outlet(1, "ctl", {0, 117, 32})
+      self:out(1, "ctl", {0, 115, 32})
+      self:out(1, "ctl", {0, 117, 32})
       -- device select buttons
       for i = 1, 8 do
 	 self:launchkey_ccmaster_state(0, i, 0)
       end
       -- switch the Launchkey back to standalone mode
-      self:outlet(1, "note", {12, 0, 32})
+      self:out(1, "note", {12, 0, 32})
       -- wind down some shared status so that we can correctly power up again
       -- after a warm reset (fini without exiting Pd)
       launchkey_master = nil
@@ -4212,11 +4219,11 @@ function raptor:launchkey_master_change(old_id, new_id)
 end
 
 function raptor:launchkey_welcome(msg)
-   self:outlet(2, "float", {2})
+   self:out(2, "float", {2})
    if msg then
-      self:outlet(1, "sysex", {0, 32, 41, 2, 15, 4, 0, string.byte(msg, 1, string.len(msg))})
+      self:out(1, "sysex", {0, 32, 41, 2, 15, 4, 0, string.byte(msg, 1, string.len(msg))})
    else
-      self:outlet(1, "sysex", {0, 32, 41, 2, 15, 6})
+      self:out(1, "sysex", {0, 32, 41, 2, 15, 6})
    end
 end
 
@@ -4228,9 +4235,9 @@ function raptor:launchkey_play(state)
       local num = lk_mapped["play"]
       if num then
 	 local color = self:get_lppadcolor("play", state)
-	 self:outlet(1, "note", {num, color, 17})
+	 self:out(1, "note", {num, color, 17})
       end
-      self:outlet(1, "ctl", {127*state, 115, 32})
+      self:out(1, "ctl", {127*state, 115, 32})
    end
 end
 
@@ -4239,9 +4246,9 @@ function raptor:launchkey_loop(state)
       local num = lk_mapped["loop"]
       if num then
 	 local color = self:get_lppadcolor("loop", state)
-	 self:outlet(1, "note", {num, color, 17})
+	 self:out(1, "note", {num, color, 17})
       end
-      self:outlet(1, "ctl", {127*state, 117, 32})
+      self:out(1, "ctl", {127*state, 117, 32})
    end
 end
 
@@ -4299,7 +4306,7 @@ function raptor:launchkey_ccmaster_state(state, i, color)
 	 i = self:get_instance()
       end
       if i > 0 and i <= 8 then
-	 self:outlet(1, "note", {i+63, color or accent_arrows+8*state, 17})
+	 self:out(1, "note", {i+63, color or accent_arrows+8*state, 17})
       end
    end
 end
@@ -4718,10 +4725,10 @@ function raptor:djcontrol_state_fini()
 	 local num_buttons = k == "ccmaster" and 8 or 1
 	 for offs = 0, num_buttons-1 do
 	    if type(b.ch) == "table" then
-	       self:outlet(1, "note", {b.num+offs, 0, b.ch[1]})
-	       self:outlet(1, "note", {b.num+offs, 0, b.ch[2]})
+	       self:out(1, "note", {b.num+offs, 0, b.ch[1]})
+	       self:out(1, "note", {b.num+offs, 0, b.ch[2]})
 	    else
-	       self:outlet(1, "note", {b.num+offs, 0, b.ch})
+	       self:out(1, "note", {b.num+offs, 0, b.ch})
 	    end
 	 end
       end
