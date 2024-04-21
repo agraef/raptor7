@@ -44,7 +44,7 @@
 
 -- The arrow keys let you select Raptor instances (left, right) and presets
 -- (up, down). Note that on the Mini MK3 you'll have to press Shift to get
--- these. On the larger models (Launchkey MK3 37 and up), holding the Device
+-- these. On the larger models (Launchkey 25 MK3 and up), holding the Device
 -- Select button brings up a strip of up to eight blue pads in the top row
 -- which you can use to select a Raptor instance at random; it also shows the
 -- currently selected instance with a pink color, like on the Launchpad Pro's
@@ -57,7 +57,7 @@
 -- rolling). This button is only available on the bigger Launchkey devices,
 -- but on the Mini you can press Shift+Play instead to get this function.
 
--- Last but not least, the larger models (Launchkey MK3 37 and up) also have a
+-- Last but not least, the larger models (Launchkey 25 MK3 and up) also have a
 -- little LCD display which the driver uses to show important information: a
 -- sign-on message during startup; knob values (including pickup) while
 -- operating the knobs; pad functions while operating the pads; and presets
