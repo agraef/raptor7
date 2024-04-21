@@ -84,6 +84,11 @@ local launchpad_welcome = "Raptor 7 ready"
 
 -- Additional parameters for the Launchkey.
 
+-- If you know the sysex id of your Launchkey (18 = LK MK3 88, 15 = any other
+-- LK MK3), you can put it below, otherwise we'll try to guess it with an
+-- identity inquiry sysex at startup.
+local launchkey_id = nil
+
 -- Initial text to show on the Launchkey LCD screen (n/a on the Mini).
 local launchkey_welcome = "Raptor 7 ready"
 
@@ -2324,10 +2329,6 @@ function raptor:late_init()
       self:launchpad_init()
    else
       -- device inquiry message (we'll pick up the result later)
-      -- NOTE: It's essential that we send these out on ports 3+4, which
-      -- should be connected to the *DAW ports* of different Launchpad
-      -- devices, so that we can pick up the replies under the same port
-      -- numbers and know which kind of device is connected to which port.
       for portno = 3, 4 do
 	 self:out(2, "float", {portno})
 	 self:out(1, "sysex", {126, 127, 6, 1})
@@ -2337,11 +2338,16 @@ function raptor:late_init()
       self.launchpad_idreq_clock:delay(500)
    end
    -- launchkey initialization
+   if not launchkey_id then
+      -- device inquiry message (we'll pick up the result later)
+      self:out(2, "float", {2})
+      self:out(1, "sysex", {126, 127, 6, 1})
+   end
    self:launchkey_init()
    -- djcontrol initialization
    self:djcontrol_state_init()
    -- kick off the timer for even later initializations
-   self.init2_clock:delay(500)
+   self.init2_clock:delay(600)
 end
 
 function raptor:late_init2()
@@ -3119,7 +3125,7 @@ end
 local launchpad_models = { [12] = "X", [13] = "Mini MK3", [14] = "Pro MK3" }
 
 local function launchpad_model_name(id)
-   return launchpad_models[id] and launchpad_models[id] or "??"
+   return launchpad_models[id] or "??"
 end
 
 local launchpad_check
@@ -3465,10 +3471,10 @@ end
 function raptor:launchpad_sysex(atoms, portno)
    if launchpad ~= 0 then
       -- check whether this is an identity reply message
-      do
+      if portno==3 or portno==4 then
 	 local idreq = {126, 0, 6, 2, 0, 32, 41, 0, 1}
 	 for i = 1, #idreq do
-	    if atoms[i] ~= idreq[i] and i~=2 and i~= 8 then
+	    if atoms[i] ~= idreq[i] and i~=2 and i~=8 then
 	       -- not for us, pass
 	       goto skip
 	    end
@@ -3486,6 +3492,8 @@ function raptor:launchpad_sysex(atoms, portno)
 	 else
 	    launchpad_id[portno] = id
 	 end
+      else
+	 return false
       end
       ::skip::
       -- check whether this is a Launchpad message
@@ -3943,6 +3951,12 @@ local lkmode = 1
 
 local launchkey_master = nil
 
+local launchkey_models = { [15] = "MK3", [18] = "MK3 88" }
+
+local function launchkey_model_name(id)
+   return launchkey_models[id] or "??"
+end
+
 function raptor:launchkey_init()
    if launchkey ~= 0 and self:check_master() then
       -- switch the Launchkey into DAW/session mode
@@ -3980,6 +3994,15 @@ function raptor:launchkey_init2()
    -- Therefore we have a secondary initialization phase here which gets
    -- executed at a later time.
    if launchkey ~= 0 and self:check_master() then
+      if launchkey_id then
+	 -- Detected a Launchkey device during startup. Unlike the Launchpad
+	 -- driver, we don't depend on this, but let's tell the user.
+	 print(string.format("Launchkey %s connected on port #2", launchkey_model_name(launchkey_id)))
+      else
+	 -- this should work in most cases, otherwise you can set the id in
+	 -- the LK config section
+	 launchkey_id = 15 -- LK Mini/25/37/49/61 MK3
+      end
       -- initialize the display
       self:launchkey_welcome(launchkey_welcome)
       -- populate the param display
@@ -4052,7 +4075,7 @@ local lk_knob = { [1] = 76, [2] = 20, [3] = 48, [4] = 12, [5] = 28 }
 function raptor:launchkey_ctl(atoms)
    -- Kludge: We need to mess with some of the CC data for buttons only on the
    -- bigger LK models, even if the driver is off. Specifically, four of the
-   -- buttons on the LK 37+ (Capture MIDI, Quantise, Click, Undo), and the
+   -- buttons on the LK 25+ (Capture MIDI, Quantise, Click, Undo), and the
    -- nine faders on the LK 49+ partially overlap with some of our fader banks
    -- (which can't be moved for compatibility with the Launch Control XL). At
    -- present, the driver doesn't use these for anything, but we'd still like
@@ -4077,7 +4100,7 @@ function raptor:launchkey_ctl(atoms)
 	       self:launchkey_knobs()
 	    end
 	 -- NOTE: Buttons 51 and 52 are only available on the larger LK models
-	 -- (37 and up), not on the Launchkey Mini.
+	 -- (25 and up), not on the Launchkey Mini.
 	 elseif num == 51 and ch == 32 then
 	    -- device select (no actual state change in Raptor, but device
 	    -- select mode is active while this key is pressed, and we do
@@ -4182,6 +4205,41 @@ function raptor:launchkey_ctl(atoms)
    return false
 end
 
+function raptor:launchkey_sysex(atoms, portno)
+   if launchkey ~= 0 then
+      -- check whether this is an identity reply message
+      if portno==2 then
+	 local idreq = {126, 0, 6, 2, 0, 32, 41, 0, 1}
+	 for i = 1, #idreq do
+	    if atoms[i] ~= idreq[i] and i~=2 and i~=8 then
+	       -- not for us, pass
+	       return false
+	    end
+	 end
+	 -- identity reply, this is the critical number:
+	 local rid = atoms[8]
+	 -- 02h = LK Mini, 34h-37h = LK 25-61, 40h = LK 88; we can all treat
+	 -- these the same, except the LK 88 which has a different sysex id
+	 local id = rid==0x64 and 18 or
+	    (rid==0x02 or rid>=0x34 and rid<=0x37) and 15
+	 if not id then
+	    pd.post(string.format("WARNING: unknown Launchkey device %xh on port #%d", rid, portno))
+	 elseif launchkey_id == id then
+	    -- another Launchkey, similar model (same sysex id), no problem
+	 elseif launchkey_id then
+	    pd.post(string.format("WARNING: Launchkey %s conflicts with Launchkey %s on port #%d", launchkey_model_name(id), launchkey_model_name(launchkey_id), portno))
+	 else
+	    launchkey_id = id
+	 end
+      else
+	 return false
+      end
+      return true
+   else
+      return false
+   end
+end
+
 -- feedback (similar to the Launchpad, but simpler)
 
 local lk_mapped
@@ -4221,9 +4279,9 @@ end
 function raptor:launchkey_welcome(msg)
    self:out(2, "float", {2})
    if msg then
-      self:out(1, "sysex", {0, 32, 41, 2, 15, 4, 0, string.byte(msg, 1, string.len(msg))})
+      self:out(1, "sysex", {0, 32, 41, 2, launchkey_id, 4, 0, string.byte(msg, 1, string.len(msg))})
    else
-      self:out(1, "sysex", {0, 32, 41, 2, 15, 6})
+      self:out(1, "sysex", {0, 32, 41, 2, launchkey_id, 6})
    end
 end
 
@@ -4254,12 +4312,12 @@ end
 
 function raptor:launchkey_param(i, var)
    --print(string.format("LK var %d: %s", i, var))
-   self:outlet(1, "sysex", {0, 32, 41, 2, 15, 7, i+55, string.byte(var, 1, string.len(var))})
+   self:outlet(1, "sysex", {0, 32, 41, 2, launchkey_id, 7, i+55, string.byte(var, 1, string.len(var))})
 end
 
 function raptor:launchkey_val(i, val)
    --print(string.format("LK val %d: %s", i, val))
-   self:outlet(1, "sysex", {0, 32, 41, 2, 15, 8, i+55, string.byte(val, 1, string.len(val))})
+   self:outlet(1, "sysex", {0, 32, 41, 2, launchkey_id, 8, i+55, string.byte(val, 1, string.len(val))})
 end
 
 function raptor:launchkey_padval(num, var)
@@ -4284,19 +4342,19 @@ function raptor:launchkey_padval(num, var)
       v = var
    end
    --print(v)
-   self:outlet(1, "sysex", {0, 32, 41, 2, 15, 4, 1, string.byte(v, 1, string.len(v))})
+   self:outlet(1, "sysex", {0, 32, 41, 2, launchkey_id, 4, 1, string.byte(v, 1, string.len(v))})
 end
 
 function raptor:launchkey_ccmaster(state)
    -- tooltip display for ccmaster switch
    local i = self:get_instance()
-   if launchkey ~= 0 and self:launchkey_master() and i > 0 then
+   if launchkey ~= 0 and self:launchkey_master() and launchkey_id and i > 0 then
       self:outlet(2, "float", {2})
       local msg = "omni"
       if state ~= 0 then
 	 msg = string.format("%d %s", i, raptor.presets[self.id])
       end
-      self:outlet(1, "sysex", {0, 32, 41, 2, 15, 4, 1, string.byte(msg, 1, string.len(msg))})
+      self:outlet(1, "sysex", {0, 32, 41, 2, launchkey_id, 4, 1, string.byte(msg, 1, string.len(msg))})
    end
 end
 
@@ -4313,10 +4371,10 @@ end
 
 function raptor:launchkey_preset(name)
    -- tooltip display for preset recall
-   if launchkey ~= 0 and self:launchkey_master() then
+   if launchkey ~= 0 and self:launchkey_master() and launchkey_id then
       local msg = string.format("preset %s", name)
       self:outlet(2, "float", {2})
-      self:outlet(1, "sysex", {0, 32, 41, 2, 15, 4, 1, string.byte(msg, 1, string.len(msg))})
+      self:outlet(1, "sysex", {0, 32, 41, 2, launchkey_id, 4, 1, string.byte(msg, 1, string.len(msg))})
    end
 end
 
@@ -5163,7 +5221,11 @@ function raptor:process_ctl(atoms)
 end
 
 function raptor:process_sysex(atoms, portno)
-   -- only the Launchpad processes sysex at this time
+   -- only Launchkey and Launchpad process sysex at this time
+   local res = launchkey ~= 0 and self:launchkey_sysex(atoms, portno)
+   if res then
+      return res
+   end
    local res = launchpad ~= 0 and self:launchpad_sysex(atoms, portno)
    if res then
       return res
