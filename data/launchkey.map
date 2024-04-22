@@ -8,21 +8,21 @@
 -- (these are only active if the Launchkey driver is turned off). To use this,
 -- load the map in Raptor and connect the Launchkey to Pd's first MIDI
 -- input. In addition, to use the built-in driver, also connect the second
--- (DAW) port to Pd's second port, for both input and output. The map assumes
+-- (DAW) port to Pd's second port, on both input and output. The map assumes
 -- the factory setup for the knobs (CC21-28).
 
 -- STANDALONE:
 
--- The standalone map binds all buttons that can be accessed without session/
--- DAW mode on a Mini MK3. Note that the bigger Launchkey MK3 models have a
--- lot more mappable buttons, you're free to map those in addition to the
--- buttons listed below. The standalone map, as well as the driver's DAW
--- mode map described below, were chosen so that they will work on *any*
--- Launchkey MK3 device, and the Mini MK3 is the most limited of these.
+-- The standalone map binds all buttons that can be accessed without DAW mode
+-- on a Mini MK3. Note that the bigger Launchkey MK3 models have a lot more
+-- mappable buttons, you're free to map those in addition to the buttons
+-- listed below. The standalone map, as well as the driver's DAW mode map
+-- described below, were chosen so that they will work on *any* Launchkey MK3
+-- device, and the Mini MK3 is the most limited of these.
 
 -- Bindings with Raptor functions given in parentheses:
 -- - The (unshifted) ">" and "Stop/Solo/Mute" buttons (latch, mute), these also
---   work in session mode.
+--   work in DAW mode.
 -- - The transport buttons (play, loop).
 -- - The (shifted) track left/right buttons (rewind, pulse).
 
@@ -30,7 +30,7 @@
 -- from left to right: 1 = pitch hi, 2 = pitch lo, 3 = pattern mode (random,
 -- up, down, etc.), 4 = pos/anacrusis (the "scrubbing" control), 5 = tempo,
 -- 6 = meter numerator, 7 = meter denominator, 8 = division. These bindings
--- will also work in session mode if you choose the Custom knob mode.
+-- will also work in DAW mode if you choose the first Custom knob mode.
 
 -- DAW MODE:
 
@@ -58,13 +58,38 @@
 -- but on the Mini you can press Shift+Play instead to get this function.
 
 -- Last but not least, the larger models (Launchkey 25 MK3 and up) also have a
--- little LCD display which the driver uses to show important information: a
+-- little LCD display which the driver uses to show useful information: a
 -- sign-on message during startup; knob values (including pickup) while
 -- operating the knobs; pad functions while operating the pads; and presets
 -- and selected instances when you change them. Also, the Device Lock button
 -- can be used to recall information about the currently selected instance and
 -- preset (or "omni" if none is currently selected). (This button doesn't
 -- really lock anything in Raptor, it just displays information.)
+
+-- DRUM GRID:
+
+-- DAW mode also enables Raptor's built-in drum grid. You get this by pressing
+-- Shift along with the "Drum" pad. Raptor uses the Launchkey's default drum
+-- grid layout featuring two side-by-side 2x4 grids which together form a 4x4
+-- grid, with note 36 on channel 10 in the lower left corner:
+
+-- 40 41 42 43 | 48 49 50 51
+-- 36 37 38 39 | 44 45 46 47
+
+-- As you can see, if you stitch together the left and right 2x4 groups, you
+-- get the usual 4x4 grid found on many drum pad devices. Raptor shows the
+-- right-hand 2x4 group in a darker color so that the layout becomes apparent.
+
+-- In Drum mode, you can scroll through the four available 4x4 grids with the
+-- up and down keys. These will give you the same four grids as on the
+-- Launchpad, using the same color scheme. All in all, this gives you 64
+-- different notes to play, which should be more than enough to cover an
+-- entire GM drum kit or whatever your synth or groovebox may provide. :)
+
+-- Note that while Drum mode is active, the up and down arrow keys are
+-- repurposed to switch between the four drum grids. To make them work for
+-- Raptor preset selection again, you need to switch away from Drum mode
+-- (e.g., to Session mode).
 
 {
   -- standalone knob bindings, these work the same in session mode if you
