@@ -38,7 +38,7 @@
 -- limitations of the device), with the knobs mapped to the same five banks of
 -- Raptor controls under the corresponding knob modes (Volume, Pan, Send A+B,
 -- Device), and the 2x8 grid functioning either as launch or drum pads,
--- depending on the pad mode (Session or Drums). Just like on the Launchpad,
+-- depending on the pad mode (Session or Drum). Just like on the Launchpad,
 -- the pads are fully mappable in Session pad mode, and the default binding
 -- matches the two bottom rows of the Launchpad's grid.
 
@@ -46,25 +46,52 @@
 -- (up, down). Note that on the Mini MK3 you'll have to press Shift to get
 -- these. On the larger models (Launchkey 25 MK3 and up), holding the Device
 -- Select button brings up a strip of up to eight blue pads in the top row
--- which you can use to select a Raptor instance at random; it also shows the
--- currently selected instance with a pink color, like on the Launchpad Pro's
--- bottom row. (These are all hard-wired bindings provided by the driver.)
+-- which you can use to select a Raptor instance at random; it also highlights
+-- the currently selected instance in pink, just like the strip of track
+-- selection buttons on the Launchpad Pro. (These are all hard-wired bindings
+-- provided by the driver.)
 
--- The transport buttons work as well (play, loop), and also light up
--- to reflect the current transport/loop playback state (only on the Mini; on
--- the larger models these buttons have no backlight). The Stop button will
--- work in DAW mode as well (it stops the transport if it is currently
--- rolling). This button is only available on the bigger Launchkey devices,
--- but on the Mini you can press Shift+Play instead to get this function.
+-- The transport buttons work as well (play, loop); on the Mini these also
+-- light up to reflect the current transport/loop playback state (on the
+-- larger models these buttons have no backlight). The Stop button will work
+-- in DAW mode as well (it stops the transport if it is currently rolling).
+-- This button is only available on the bigger Launchkey devices, but on the
+-- Mini you can press Shift+Play instead to get this function.
 
 -- Last but not least, the larger models (Launchkey 25 MK3 and up) also have a
--- little LCD display which the driver uses to show useful information: a
+-- little LCD screen which the driver uses to show useful information: a
 -- sign-on message during startup; knob values (including pickup) while
--- operating the knobs; pad functions while operating the pads; and presets
--- and selected instances when you change them. Also, the Device Lock button
--- can be used to recall information about the currently selected instance and
--- preset (or "omni" if none is currently selected). (This button doesn't
--- really lock anything in Raptor, it just displays information.)
+-- twiddling the knobs; pad functions while pushing the pads; and presets and
+-- instances whenever the selection changes. Also, the Device Lock button can
+-- be used to recall information about the currently selected instance and
+-- preset, or "omni" if no instance is currently selected. (This button
+-- doesn't really lock anything in Raptor, it just displays information.)
+
+-- DRUM GRID:
+
+-- DAW mode also enables Raptor's built-in drum grid. You get this by pressing
+-- Shift along with the "Drum" pad. Raptor uses the Launchkey's default drum
+-- grid layout featuring two side-by-side 2x4 grids which together form a 4x4
+-- matrix, with note 36 on channel 10 in the lower left corner:
+
+-- 40 41 42 43 | 48 49 50 51
+-- 36 37 38 39 | 44 45 46 47
+
+-- As you can see, if you stitch together the left and right 2x4 groups, you
+-- get the usual 4x4 grid found on many drum pad devices. Raptor shows the
+-- right-hand 2x4 group in a darker color so that the layout becomes apparent.
+
+-- In Drum mode, you can scroll through the six available 4x4 grids with the
+-- up and down keys. These will give you the same four grids as on the
+-- Launchpad, using the same color scheme, and two extra grids below that.
+-- All in all, this amounts to a total of 96 different notes to play, ranging
+-- from note 4 (E-1) to 99 (D#7), which should be more than enough to cover an
+-- entire GM drum kit or whatever your synth or groovebox may provide.
+
+-- Note that while Drum mode is active, the up and down arrow keys are
+-- repurposed to switch between the six drum grids. To make them work for
+-- Raptor preset selection again, you need to switch away from Drum mode
+-- (e.g., to Session mode).
 
 -- DRUM GRID:
 

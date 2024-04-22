@@ -3951,8 +3951,8 @@ local lkmode = 1
 -- default pad mode (2 == Session)
 local lkpmode = 2
 
--- in drum mode this sets the offset of the drum pads (0-3)
-local lkdrums = 0
+-- in drum mode this sets the offset of the drum pads (-2..3)
+local lkgrid = 0
 
 local launchkey_master = nil
 
@@ -3973,7 +3973,7 @@ function raptor:launchkey_init()
       -- populate the session pads
       self:launchkey_pads()
       -- initialize the drum pads
-      self:launchkey_drum_mode()
+      self:launchkey_drums()
       -- light the arrow buttons (32 = 25%, I guess)
       -- NOTE: Most of the smaller buttons have no backlight on the larger LK
       -- models; on the Mini they all do. Same applies to the transport
@@ -4063,7 +4063,7 @@ function raptor:launchkey_note(atoms)
       local num, val, ch = table.unpack(atoms)
       if ch == 26 then
 	 -- drum pads, remap to channel 10 and transpose
-	 atoms[1] = num + lkdrums*16
+	 atoms[1] = num + lkgrid*16
 	 atoms[3] = 10
 	 return atoms
       elseif ch == 17 and num >= 64 and num <= 71 then
@@ -4108,6 +4108,10 @@ function raptor:launchkey_ctl(atoms)
 	       lkpmode = val
 	       -- set the new mode on *all* connected Launchkeys
 	       self:out(1, "ctl", {lkpmode, 3, 32})
+	       if lkpmode == 1 then
+		  -- provide feedback when entering Drum mode
+		  self:launchkey_drums(true)
+	       end
 	    end
 	 elseif num == 9 and ch == 32 then
 	    -- knob mode, used to map the knobs to our usual 5 CC banks
@@ -4164,14 +4168,15 @@ function raptor:launchkey_ctl(atoms)
 		  self:in_1_ccmaster_next()
 	       elseif lkpmode == 1 then
 		  -- in drum mode, the up and down arrows shift the drumpads
-		  -- in increments of 16 pads
+		  -- in increments of 16 pads, for a total of 96 notes in six
+		  -- 4x4 grids ranging from 4-19 to 84-99
 		  if self:launchkey_master() then
-		     if num == up and lkdrums < 3 then
-			lkdrums = lkdrums+1
-		     elseif num == down and lkdrums > 0 then
-			lkdrums = lkdrums-1
+		     if num == up and lkgrid < 3 then
+			lkgrid = lkgrid+1
+		     elseif num == down and lkgrid > -2 then
+			lkgrid = lkgrid-1
 		     end
-		     self:launchkey_drum_mode()
+		     self:launchkey_drums(true)
 		  end
 	       elseif num == up then
 		  if self:check_ccmaster() then
@@ -4213,15 +4218,14 @@ function raptor:launchkey_ctl(atoms)
 	       elseif num == right then
 		     self:in_1_ccmaster_next()
 	       elseif lkpmode == 1 then
-		  -- in drum mode, the up and down arrows shift the drumpads
-		  -- in increments of 16 pads
+		  -- drum mode, up and down arrows
 		  if self:launchkey_master() then
-		     if num == up and lkdrums < 3 then
-			lkdrums = lkdrums+1
-		     elseif num == down and lkdrums > 0 then
-			lkdrums = lkdrums-1
+		     if num == up and lkgrid < 3 then
+			lkgrid = lkgrid+1
+		     elseif num == down and lkgrid > -2 then
+			lkgrid = lkgrid-1
 		     end
-		     self:launchkey_drum_mode()
+		     self:launchkey_drums(true)
 		  end
 	       elseif num == up then
 		  if self:check_ccmaster() then
@@ -4522,21 +4526,28 @@ function raptor:launchkey_mapped(cc, ch, var)
    end
 end
 
-function raptor:launchkey_drum_mode()
+function raptor:launchkey_drums(show)
    -- populate the drum pads, these change color according to the subset of 16
-   -- pads set with lkdrums
+   -- pads set with lkgrid
    for num = 36, 51 do
       local i = num-36 -- pad number 0-15
-      local j = i+lkdrums*16 -- add scroll (full grid 0-63)
-      -- The first term below is the same color spec as in the Launchpad drum
-      -- grid which represents the four 4x4 subgrids we have on tap. The
-      -- second term adds an accent (darker variant of the same color) to the
-      -- second group of eight in the Launchkey's default drum grid layout,
-      -- which would be above the first eight on the Launchpad grid. The color
-      -- coding hopefully makes it easier to figure out the notes of the drum
-      -- pads that you're actually playing.
+      local j = i+lkgrid*16 -- add scroll (grid -2 up to 3)
+      -- The first term below is basically the same color spec as in the
+      -- Launchpad drum grid which represents the six 4x4 subgrids we have on
+      -- tap (the four grids of the Launchpad, plus two extra 4x4 grids below
+      -- the range on the Launchpad). The second term adds an accent (darker
+      -- variant of the same color) to the second group of 2x4 in the
+      -- Launchkey's default drum grid layout, which would be above the first
+      -- 2x4 on the Launchpad. The color coding hopefully makes it easier to
+      -- find your way on the grid.
       local color = j//16*8+33 + i//8%2*2
       self:out(1, "note", {num, color, 26})
+   end
+   if show and self:launchkey_master() and launchkey_id then
+      local i = 36+lkgrid*16
+      local msg = string.format("drums %d: %d-%d", lkgrid, i, i+15)
+      self:outlet(2, "float", {2})
+      self:outlet(1, "sysex", {0, 32, 41, 2, launchkey_id, 4, 1, string.byte(msg, 1, string.len(msg))})
    end
 end
 
