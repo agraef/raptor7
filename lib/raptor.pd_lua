@@ -3948,6 +3948,11 @@ end
 
 -- default knob mode (1 == Volume)
 local lkmode = 1
+-- default pad mode (2 == Session)
+local lkpmode = 2
+
+-- in drum mode this sets the offset of the drum pads (0-3)
+local lkdrums = 0
 
 local launchkey_master = nil
 
@@ -3963,13 +3968,12 @@ function raptor:launchkey_init()
       self:out(1, "note", {12, 127, 32})
       -- set the default knob mode
       self:out(1, "ctl", {lkmode, 9, 32})
+      -- set the default pad mode
+      self:out(1, "ctl", {lkpmode, 3, 32})
       -- populate the session pads
       self:launchkey_pads()
-      -- populate the drum pads
-      for num = 36, 51 do
-	 local color = (num-36)//8*8+33
-	 self:out(1, "note", {num, color, 26})
-      end
+      -- initialize the drum pads
+      self:launchkey_drum_mode()
       -- light the arrow buttons (32 = 25%, I guess)
       -- NOTE: Most of the smaller buttons have no backlight on the larger LK
       -- models; on the Mini they all do. Same applies to the transport
@@ -3987,6 +3991,8 @@ function raptor:launchkey_init()
    end
 end
 
+local launchkey_check
+
 function raptor:launchkey_init2()
    -- NOTE: These sysex messages *must* be sent some time after the MIDI data
    -- which puts the Launchkey into DAW mode. Otherwise they may arrive early
@@ -3995,9 +4001,12 @@ function raptor:launchkey_init2()
    -- executed at a later time.
    if launchkey ~= 0 and self:check_master() then
       if launchkey_id then
-	 -- Detected a Launchkey device during startup. Unlike the Launchpad
-	 -- driver, we don't depend on this, but let's tell the user.
-	 print(string.format("Launchkey %s connected on port #2", launchkey_model_name(launchkey_id)))
+	 if not launchkey_check then
+	    -- Detected a Launchkey device during startup. Unlike the Launchpad
+	    -- driver, we don't depend on this, but let's tell the user.
+	    print(string.format("Launchkey %s connected on port #2", launchkey_model_name(launchkey_id)))
+	    launchkey_check = true
+	 end
       else
 	 -- this should work in most cases, otherwise you can set the id in
 	 -- the LK config section
@@ -4053,7 +4062,8 @@ function raptor:launchkey_note(atoms)
    if launchkey ~= 0 then
       local num, val, ch = table.unpack(atoms)
       if ch == 26 then
-	 -- drum pads, remap to channel 10
+	 -- drum pads, remap to channel 10 and transpose
+	 atoms[1] = num + lkdrums*16
 	 atoms[3] = 10
 	 return atoms
       elseif ch == 17 and num >= 64 and num <= 71 then
@@ -4092,11 +4102,20 @@ function raptor:launchkey_ctl(atoms)
    if launchkey ~= 0 then
       if ch == 17 or ch == 32 then
 	 if num == 3 and ch == 32 then
-	    -- pad mode, currently we don't use this
+	    -- pad mode, 1 == Drum, 2 == Session
+	    val = math.floor(val)
+	    if val ~= lkpmode and self:launchkey_master() then
+	       lkpmode = val
+	       -- set the new mode on *all* connected Launchkeys
+	       self:out(1, "ctl", {lkpmode, 3, 32})
+	    end
 	 elseif num == 9 and ch == 32 then
-	    -- knob mode, used to map the knobs to our usual 4 CC banks
+	    -- knob mode, used to map the knobs to our usual 5 CC banks
+	    val = math.floor(val)
 	    if val ~= lkmode and self:launchkey_master() then
 	       lkmode = val
+	       -- set the new mode on *all* connected Launchkeys
+	       self:out(1, "ctl", {lkmode, 9, 32})
 	       self:launchkey_knobs()
 	    end
 	 -- NOTE: Buttons 51 and 52 are only available on the larger LK models
@@ -4142,7 +4161,18 @@ function raptor:launchkey_ctl(atoms)
 	       if num == left then
 		     self:in_1_ccmaster_prev()
 	       elseif num == right then
-		     self:in_1_ccmaster_next()
+		  self:in_1_ccmaster_next()
+	       elseif lkpmode == 1 then
+		  -- in drum mode, the up and down arrows shift the drumpads
+		  -- in increments of 16 pads
+		  if self:launchkey_master() then
+		     if num == up and lkdrums < 3 then
+			lkdrums = lkdrums+1
+		     elseif num == down and lkdrums > 0 then
+			lkdrums = lkdrums-1
+		     end
+		     self:launchkey_drum_mode()
+		  end
 	       elseif num == up then
 		  if self:check_ccmaster() then
 		     local i = self.presetno or 1
@@ -4182,6 +4212,17 @@ function raptor:launchkey_ctl(atoms)
 		     self:in_1_ccmaster_prev()
 	       elseif num == right then
 		     self:in_1_ccmaster_next()
+	       elseif lkpmode == 1 then
+		  -- in drum mode, the up and down arrows shift the drumpads
+		  -- in increments of 16 pads
+		  if self:launchkey_master() then
+		     if num == up and lkdrums < 3 then
+			lkdrums = lkdrums+1
+		     elseif num == down and lkdrums > 0 then
+			lkdrums = lkdrums-1
+		     end
+		     self:launchkey_drum_mode()
+		  end
 	       elseif num == up then
 		  if self:check_ccmaster() then
 		     local i = self.presetno or 1
@@ -4478,6 +4519,24 @@ function raptor:launchkey_mapped(cc, ch, var)
       -- we borrow the color map from the Launchpad here
       local color = self:get_lppadcolor(var)
       self:outlet(1, "note", {num, color, ch})
+   end
+end
+
+function raptor:launchkey_drum_mode()
+   -- populate the drum pads, these change color according to the subset of 16
+   -- pads set with lkdrums
+   for num = 36, 51 do
+      local i = num-36 -- pad number 0-15
+      local j = i+lkdrums*16 -- add scroll (full grid 0-63)
+      -- The first term below is the same color spec as in the Launchpad drum
+      -- grid which represents the four 4x4 subgrids we have on tap. The
+      -- second term adds an accent (darker variant of the same color) to the
+      -- second group of eight in the Launchkey's default drum grid layout,
+      -- which would be above the first eight on the Launchpad grid. The color
+      -- coding hopefully makes it easier to figure out the notes of the drum
+      -- pads that you're actually playing.
+      local color = j//16*8+33 + i//8%2*2
+      self:out(1, "note", {num, color, 26})
    end
 end
 
