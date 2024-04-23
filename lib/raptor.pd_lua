@@ -4106,8 +4106,13 @@ function raptor:launchkey_ctl(atoms)
 	    val = math.floor(val)
 	    if val ~= lkpmode and self:launchkey_master() then
 	       lkpmode = val
-	       -- set the new mode on *all* connected Launchkeys
-	       self:out(1, "ctl", {lkpmode, 3, 32})
+	       -- Set the new mode on *all* connected Launchkeys. NOTE: We
+	       -- only do this for modes which are also supported on the Mini,
+	       -- lest a connected Mini would force us back to drum mode. The
+	       -- Mini modes are restricted to Session, Drum, and Custom 1-4.
+	       if lkpmode <= 2 or lkpmode >= 5 and lkpmode < 9 then
+		  self:out(1, "ctl", {lkpmode, 3, 32})
+	       end
 	       if lkpmode == 1 then
 		  -- provide feedback when entering Drum mode
 		  self:launchkey_drums(true)
