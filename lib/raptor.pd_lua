@@ -886,7 +886,7 @@ function arpeggio:new(m) -- constructor
       {
 	 -- some reasonable defaults (see also arpeggio:initialize below)
 	 debug = 0, idx = 0, chord = {}, pattern = {},
-	 latch = nil, down = -1, up = 1, mode = 0,
+	 latch = nil, down = -1, up = 1, mode = 0, raptor = 0,
 	 minvel = 60, maxvel = 120, velmod = 1,
 	 wmin = 0, wmax = 1,
 	 pmin = 0.3, pmax = 1, pmod = 0,
@@ -915,7 +915,7 @@ function arpeggio:initialize(m)
    self.chord = {}
    self.pattern = {}
    self.latch = nil
-   self.down, self.up, self.mode = -1, 1, 0
+   self.down, self.up, self.mode, self.raptor = -1, 1, 0, 0
    self.minvel, self.maxvel, self.velmod = 60, 120, 1
    self.pmin, self.pmax, self.pmod = 0.3, 1, 0
    self.wmin, self.wmax = 0, 1
