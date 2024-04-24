@@ -58,6 +58,16 @@
 -- This button is only available on the bigger Launchkey devices, but on the
 -- Mini you can press Shift+Play instead to get this function.
 
+-- While the Launchkey has no rhythm backlight like the Launchpads do, you can
+-- have the Launchkey produce a metronome click instead. (In the current
+-- implementation this requires that the synth on the first output port has a
+-- GM-compatible drumkit on channel 10 available.) The click can be turned on
+-- and off with the Click button available on the larger Launchkey models, and
+-- the number of clicks per bar can be set with the corresponding Launchpad
+-- setting in the config subpatch. Thus, when using both kinds of devices in
+-- concert, the Launchkey's metronome click will be in sync with the
+-- Launchpad's rhythm display.
+
 -- Last but not least, the larger models (Launchkey 25 MK3 and up) also have a
 -- little LCD screen which the driver uses to show useful information: a
 -- sign-on message during startup; knob values (including pickup) while
@@ -90,31 +100,6 @@
 
 -- Note that while Drum mode is active, the up and down arrow keys are
 -- repurposed to switch between the six drum grids. To make them work for
--- Raptor preset selection again, you need to switch away from Drum mode
--- (e.g., to Session mode).
-
--- DRUM GRID:
-
--- DAW mode also enables Raptor's built-in drum grid. You get this by pressing
--- Shift along with the "Drum" pad. Raptor uses the Launchkey's default drum
--- grid layout featuring two side-by-side 2x4 grids which together form a 4x4
--- grid, with note 36 on channel 10 in the lower left corner:
-
--- 40 41 42 43 | 48 49 50 51
--- 36 37 38 39 | 44 45 46 47
-
--- As you can see, if you stitch together the left and right 2x4 groups, you
--- get the usual 4x4 grid found on many drum pad devices. Raptor shows the
--- right-hand 2x4 group in a darker color so that the layout becomes apparent.
-
--- In Drum mode, you can scroll through the four available 4x4 grids with the
--- up and down keys. These will give you the same four grids as on the
--- Launchpad, using the same color scheme. All in all, this gives you 64
--- different notes to play, which should be more than enough to cover an
--- entire GM drum kit or whatever your synth or groovebox may provide. :)
-
--- Note that while Drum mode is active, the up and down arrow keys are
--- repurposed to switch between the four drum grids. To make them work for
 -- Raptor preset selection again, you need to switch away from Drum mode
 -- (e.g., to Session mode).
 

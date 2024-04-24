@@ -211,6 +211,16 @@
    labels are only on the Launchpad X, but the buttons will work the same also
    on the Mini and the Pro.)
 
+   FEEDBACK:
+
+   The Launchpad driver uses a lot of feedback in Session mode, in order to
+   show the current state of the mapped pads on the launch grid, and the
+   current fader positions if one of the corresponding views is active. It
+   also uses the Novation logo backlight in the upper right corner to create a
+   pulsing rhythm display similar to what the DJ Control driver does. The
+   rhythm display can be configured with the Launchpad settings in the config
+   subpatch, please check the README for details.
+
 ]]
 
 {
