@@ -92,6 +92,16 @@ local launchkey_id = nil
 -- Initial text to show on the Launchkey LCD screen (n/a on the Mini).
 local launchkey_welcome = "Raptor 7 ready"
 
+-- Metronome click for the Launchkey's Click function. This is a MIDI note
+-- number which will be sent on channel 10 of the first MIDI output port. The
+-- default of 54 is the Tambourine in a GM-compatible kit. You might need to
+-- adjust this for the instrument that you're using.
+local launchkey_click = 54
+
+-- The volume of the metronome, as a fraction of the absolute velocities (1
+-- means normal volume, 0 means off).
+local launchkey_volume = 0.7
+
 -- Additional parameters for the DJ Control.
 
 -- This value determines how fast the playback position moves in response to
@@ -2483,6 +2493,8 @@ function raptor:in_1_bang()
    self:djcontrol_pulse(w, vel)
    -- launchpad tie-in, flashes the Novation logo
    self:launchpad_pulse(w, vel)
+   -- launchkey tie-in, produces a metronome click if enabled
+   self:launchkey_pulse(w, vel)
    -- check if we're bypassed or muted
    if self.bypass ~= 0 or self.mute ~= 0 then
       return
@@ -2612,6 +2624,8 @@ function raptor:in_1_stop()
    -- turn off the pulse displays
    self:djcontrol_pulse(0, 0)
    self:launchpad_pulse(0, 0)
+   -- and the metronome click of the Launchkey
+   self:launchkey_pulse(0, 0)
 end
 
 -- reload -- update the internal state of an instance after global state
@@ -4082,17 +4096,20 @@ end
 -- the CCs (CC21-28) are passed straight through, so you can still map them.
 local lk_knob = { [1] = 76, [2] = 20, [3] = 48, [4] = 12, [5] = 28 }
 
+-- metronome click
+local lk_click = 0
+
 function raptor:launchkey_ctl(atoms)
    -- Kludge: We need to mess with some of the CC data for buttons only on the
-   -- bigger LK models, even if the driver is off. Specifically, four of the
-   -- buttons on the LK 25+ (Capture MIDI, Quantise, Click, Undo), and the
-   -- nine faders on the LK 49+ partially overlap with some of our fader banks
+   -- bigger LK models, even if the driver is off. Specifically, three of the
+   -- buttons on the LK 25+ (Capture MIDI, Quantise, Undo), and the nine
+   -- faders on the LK 49+ partially overlap with some of our fader banks
    -- (which can't be moved for compatibility with the Launch Control XL). At
    -- present, the driver doesn't use these for anything, but we'd still like
    -- to be able to map them, so we move them to the CC block 57-69 on channel
    -- 32 which currently isn't used for anything else (fingers crossed).
    local val, num, ch = table.unpack(atoms)
-   if ch == 32 and num >= 74 and num <= 77 then
+   if ch == 32 and num >= 74 and num <= 77 and num ~= 76 then
       atoms[2] = num-8
       return atoms
    elseif ch == 32 and num >= 53 and num <= 61 then
@@ -4126,6 +4143,18 @@ function raptor:launchkey_ctl(atoms)
 	       -- set the new mode on *all* connected Launchkeys
 	       self:out(1, "ctl", {lkmode, 9, 32})
 	       self:launchkey_knobs()
+	    end
+	 elseif num == 76 and ch == 32 then
+	    if val>0 and self:launchkey_master() then
+	       lk_click = 1-lk_click
+	       if lk_click == 0 then
+		  -- turn off the metronome click
+		  self:launchkey_pulse(0, 0)
+	       end
+	       if launchkey_id then
+		  local msg = string.format("metronome %s", lk_click == 0 and "off" or "on")
+		  self:outlet(1, "sysex", {0, 32, 41, 2, launchkey_id, 4, 1, string.byte(msg, 1, string.len(msg))})
+	       end
 	    end
 	 -- NOTE: Buttons 51 and 52 are only available on the larger LK models
 	 -- (25 and up), not on the Launchkey Mini.
@@ -4332,6 +4361,32 @@ function raptor:launchkey_welcome(msg)
       self:out(1, "sysex", {0, 32, 41, 2, launchkey_id, 4, 0, string.byte(msg, 1, string.len(msg))})
    else
       self:out(1, "sysex", {0, 32, 41, 2, launchkey_id, 6})
+   end
+end
+
+function raptor:launchkey_pulse(w, val)
+   if launchkey ~= 0 and self:check_master() then
+      local num = launchkey_click
+      if w == 0 and val == 0 then
+	 -- turn the metronome click off
+	 self:out(1, "note", {num, 0, 10})
+      elseif lk_click ~= 0 then
+	 -- turn off the previous click
+	 self:out(1, "note", {num, 0, 10})
+	 -- w is the weight, val the velocity, n the number of beats per bar
+	 -- to trigger, b the total number of beats. NOTE: We borrow the
+	 -- launchpad_n_pulses variable from the Launchpad config here, so
+	 -- that you can change this value from the GUI and so that the
+	 -- Launchkey's metronome click will always run in sync with the
+	 -- Launchpad's pulse display.
+	 local n, b = launchpad_n_pulses, self.arp.beats
+	 local state = w >= b-n and 1 or 0
+	 local vel = math.floor(val*state*launchkey_volume)
+	 if vel > 0 then
+	    -- the next click is due
+	    self:out(1, "note", {num, vel, 10})
+	 end
+      end
    end
 end
 
