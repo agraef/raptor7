@@ -58,11 +58,10 @@
 -- This button is only available on the bigger Launchkey devices, but on the
 -- Mini you can press Shift+Play instead to get this function.
 
--- Raptor's built-in metronome click can be turned on and off with the Click
--- button available on the larger Launchkey models. Note that the number of
--- clicks per bar can be set with the corresponding Launchpad setting in the
--- config subpatch. Thus, Raptor's metronome click will be in sync with the
--- Launchpad's rhythm display.
+-- Moreover, Raptor's built-in metronome click can be turned on and off with
+-- the Click button available on the larger Launchkey models. (There's no
+-- ready-made binding for this on the Launchkey Mini, but it should be a piece
+-- of cake to just map it to one of the session pads instead.)
 
 -- Last but not least, the larger models (Launchkey 25 MK3 and up) also have a
 -- little LCD screen which the driver uses to show useful information: a

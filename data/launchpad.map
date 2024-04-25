@@ -218,8 +218,9 @@
    current fader positions if one of the corresponding views is active. It
    also uses the Novation logo backlight in the upper right corner to create a
    pulsing rhythm display similar to what the DJ Control driver does. The
-   rhythm display can be configured with the Launchpad settings in the config
-   subpatch, please check the README for details.
+   rhythm display also ties in with Raptor's metronome click and can be
+   configured with the Launchpad settings in the config subpatch; please check
+   the README file for details.
 
 ]]
 

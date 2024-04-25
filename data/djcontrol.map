@@ -180,10 +180,10 @@
 
    NOTE: The encoder backlight could get rather busy with complex meters if
    we'd simply trigger all pulses, so we only do the n most salient pulses, as
-   determined by the pulse weights, where the value n is currently hard-coded.
-   I found that a value of 7 seems to work best with most common meters. YMMV,
-   so you can change that value with the config subpatch. Please check the
-   djcontrol_n_pulses variable in the source for further details.
+   determined by the pulse weights. I found that a value of 7 seems to work
+   best with most common meters. YMMV, so you can change that value with the
+   config subpatch. Please check the djcontrol_n_pulses variable in the source
+   for further details.
 
    MAPPED CONTROLS:
 
