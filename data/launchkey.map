@@ -58,14 +58,10 @@
 -- This button is only available on the bigger Launchkey devices, but on the
 -- Mini you can press Shift+Play instead to get this function.
 
--- While the Launchkey has no rhythm backlight like the Launchpads do, you can
--- have the Launchkey produce a metronome click instead. (In the current
--- implementation this requires that the synth on the first output port has a
--- GM-compatible drumkit on channel 10 available.) The click can be turned on
--- and off with the Click button available on the larger Launchkey models, and
--- the number of clicks per bar can be set with the corresponding Launchpad
--- setting in the config subpatch. Thus, when using both kinds of devices in
--- concert, the Launchkey's metronome click will be in sync with the
+-- Raptor's built-in metronome click can be turned on and off with the Click
+-- button available on the larger Launchkey models. Note that the number of
+-- clicks per bar can be set with the corresponding Launchpad setting in the
+-- config subpatch. Thus, Raptor's metronome click will be in sync with the
 -- Launchpad's rhythm display.
 
 -- Last but not least, the larger models (Launchkey 25 MK3 and up) also have a
@@ -169,6 +165,8 @@
   [26]  = { [32] = "hmax" },
   [27]  = { [32] = "pref" },
   [28]  = { [32] = "prefmod" },
+  -- metronome click (Click button)
+  [68]  = { [32] = { "click", true } },
   -- alternative bindings for latch/mute, same as in standalone
   -- NOTE: standalone bindings repeated here, so that they aren't overridden
   [104] = { [17] = { "latch", true }, [16] = { "latch", true } },
