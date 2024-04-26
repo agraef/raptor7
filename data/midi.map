@@ -1,0 +1,479 @@
+{ { [33] = { "bypass", true } }, { [33] = { "mute", true } }, { [33] = { "latch", true } },
+  [7] = { [17] = "gain" },
+  [8] = {
+    [18] = "tempo",
+    [19] = "tempo"
+  },
+  [10] = { [33] = { "loop", true } },
+  [11] = { [17] = "gate" },
+  [13] = {
+    [25] = "minvel",
+    [32] = "minvel",
+    [37] = "minvel",
+    [49] = "minvel"
+  },
+  [14] = {
+    [18] = "loopsize",
+    [19] = "loopsize",
+    [25] = "pmin",
+    [32] = "pmin",
+    [37] = "pmin",
+    [49] = "pmin"
+  },
+  [15] = {
+    [25] = "wmin",
+    [32] = "wmin",
+    [37] = "wmin",
+    [49] = "wmin"
+  },
+  [16] = {
+    [17] = "minvel",
+    [25] = "gate",
+    [32] = "gate",
+    [37] = "gate",
+    [49] = "gate"
+  },
+  [17] = {
+    [17] = "maxvel",
+    [25] = "hmin",
+    [32] = "hmin",
+    [37] = "hmin",
+    [49] = "hmin"
+  },
+  [18] = {
+    [17] = "velmod",
+    [25] = "pref",
+    [32] = "pref",
+    [37] = "pref",
+    [49] = "pref"
+  },
+  [19] = {
+    [17] = "pitchhi",
+    [25] = "smin",
+    [32] = "smin",
+    [33] = { "bypass", true },
+    [37] = "smin",
+    [49] = "smin"
+  },
+  [20] = {
+    [17] = "pmin",
+    [25] = "uniq",
+    [32] = "uniq",
+    [33] = { "play", true },
+    [37] = "uniq",
+    [49] = "uniq"
+  },
+  [21] = {
+    [1] = { "pitchhi", 1 },
+    [17] = "pmax",
+    [32] = "mode",
+    [37] = "mode",
+    [49] = "mode"
+  },
+  [22] = {
+    [1] = { "pitchlo", 1 },
+    [17] = "pmod",
+    [32] = "pos",
+    [37] = "pos",
+    [49] = "pos"
+  },
+  [23] = {
+    [1] = { "mode", 1 },
+    [17] = "pitchlo",
+    [32] = "gain",
+    [37] = "gain",
+    [49] = "gain"
+  },
+  [24] = {
+    [1] = { "pos", 1 },
+    [17] = "wmin",
+    [32] = "gate",
+    [37] = "gate",
+    [49] = "gate"
+  },
+  [25] = {
+    [1] = { "tempo", 1 },
+    [17] = "wmax",
+    [32] = "hmin",
+    [37] = "hmin",
+    [49] = "hmin"
+  },
+  [26] = {
+    [1] = { "meter-num", 1 },
+    [17] = "gain",
+    [32] = "hmax",
+    [37] = "hmax",
+    [49] = "hmax"
+  },
+  [27] = {
+    [1] = { "meter-denom", 1 },
+    [17] = "mode",
+    [32] = "pref",
+    [37] = "pref",
+    [49] = "pref"
+  },
+  [28] = {
+    [1] = { "division", 1 },
+    [17] = "gate",
+    [32] = "prefmod",
+    [37] = "prefmod",
+    [49] = "prefmod"
+  },
+  [29] = {
+    [17] = "gate",
+    [25] = "maxvel",
+    [32] = "maxvel",
+    [33] = { "latch", true },
+    [37] = "maxvel",
+    [49] = "maxvel"
+  },
+  [30] = {
+    [17] = "gatemod",
+    [25] = "pmax",
+    [32] = "pmax",
+    [37] = "pmax",
+    [49] = "pmax"
+  },
+  [31] = {
+    [17] = "pos",
+    [25] = "wmax",
+    [32] = "wmax",
+    [37] = "wmax",
+    [49] = "wmax"
+  },
+  [32] = {
+    [25] = "gate",
+    [32] = "gate",
+    [37] = "gate",
+    [49] = "gate"
+  },
+  [33] = {
+    [25] = "hmax",
+    [32] = "hmax",
+    [37] = "hmax",
+    [49] = "hmax"
+  },
+  [34] = {
+    [25] = "pref",
+    [32] = "pref",
+    [37] = "pref",
+    [49] = "pref"
+  },
+  [35] = {
+    [25] = "smax",
+    [32] = "smax",
+    [37] = "smax",
+    [49] = "smax"
+  },
+  [36] = {
+    [25] = "nmax",
+    [32] = "nmax",
+    [37] = "nmax",
+    [49] = "nmax"
+  },
+  [37] = { [49] = "velmod" },
+  [38] = { [49] = "pmod" },
+  [39] = {
+    [33] = { "mute", true },
+    [49] = "gain"
+  },
+  [40] = { [49] = "gatemod" },
+  [41] = { [49] = "hmod" },
+  [42] = { [49] = "prefmod" },
+  [43] = { [49] = "smod" },
+  [44] = { [49] = "nmod" },
+  [46] = { [17] = "hmin" },
+  [47] = { [17] = "hmax" },
+  [48] = {
+    [17] = "hmod",
+    [49] = "pitchhi"
+  },
+  [49] = {
+    [17] = "tempo",
+    [25] = "velmod",
+    [32] = "velmod",
+    [37] = "velmod",
+    [49] = "pitchlo"
+  },
+  [50] = {
+    [17] = "pref",
+    [25] = "pmod",
+    [32] = "pmod",
+    [37] = "pmod",
+    [49] = "mode"
+  },
+  [51] = {
+    [17] = "pref",
+    [25] = "gain",
+    [32] = "gain",
+    [37] = "gain",
+    [49] = "pos"
+  },
+  [52] = {
+    [17] = "prefmod",
+    [25] = "gatemod",
+    [32] = "gatemod",
+    [37] = "gatemod",
+    [49] = "tempo"
+  },
+  [53] = {
+    [17] = "meter-num",
+    [25] = "hmod",
+    [32] = "hmod",
+    [37] = "hmod",
+    [49] = "meter-num"
+  },
+  [54] = {
+    [17] = "smin",
+    [25] = "prefmod",
+    [32] = "prefmod",
+    [37] = "prefmod",
+    [49] = "meter-denom"
+  },
+  [55] = {
+    [17] = "smax",
+    [25] = "smod",
+    [32] = "smod",
+    [37] = "smod",
+    [49] = "division"
+  },
+  [56] = {
+    [17] = "smod",
+    [25] = "nmod",
+    [32] = "nmod",
+    [37] = "nmod"
+  },
+  [57] = { [17] = "meter-denom" },
+  [58] = { [17] = "uniq" },
+  [59] = { [17] = "nmax" },
+  [60] = { [17] = "nmod" },
+  [61] = { [17] = "division" },
+  [68] = {
+    [17] = { "play", true },
+    [32] = { "click", true }
+  },
+  [69] = { [17] = { "loop", true } },
+  [77] = {
+    [25] = "pitchhi",
+    [32] = "pitchhi",
+    [37] = "pitchhi"
+  },
+  [78] = {
+    [25] = "pitchlo",
+    [32] = "pitchlo",
+    [37] = "pitchlo"
+  },
+  [79] = {
+    [25] = "mode",
+    [32] = "mode",
+    [37] = "mode"
+  },
+  [80] = {
+    [17] = { "loop-load", true },
+    [25] = "pos",
+    [32] = "pos",
+    [37] = "pos"
+  },
+  [81] = {
+    [17] = { "loop-save", true },
+    [25] = "tempo",
+    [32] = "tempo",
+    [37] = "tempo"
+  },
+  [82] = {
+    [25] = "meter-num",
+    [32] = "meter-num",
+    [37] = "meter-num"
+  },
+  [83] = {
+    [25] = "meter-denom",
+    [32] = "meter-denom",
+    [37] = "meter-denom"
+  },
+  [84] = {
+    [25] = "division",
+    [32] = "division",
+    [37] = "division"
+  },
+  [98] = { [33] = { "loop", true } },
+  [102] = { [16] = { "pulse", true } },
+  [103] = { [16] = { "rewind", true } },
+  [104] = {
+    [16] = { "latch", true },
+    [17] = { "latch", true },
+    [25] = { "loop-next", true }
+  },
+  [105] = {
+    [16] = { "mute", true },
+    [17] = { "mute", true },
+    [25] = { "loop-prev", true }
+  },
+  [115] = {
+    [1] = { "rewind", true },
+    [16] = { "play", true },
+    [32] = { "play", true }
+  },
+  [116] = { [1] = { "pulse", true } },
+  [117] = {
+    [1] = { "click", true },
+    [16] = { "loop", true },
+    [32] = { "loop", true }
+  },
+  [118] = { [1] = { "play", true } },
+  [119] = { [1] = { "loop", true } },
+  [128] = {
+    [17] = { "latch", true },
+    [23] = { "raptor", true },
+    [49] = { "click", true }
+  },
+  [129] = {
+    [17] = { "mute", true },
+    [49] = { "uniq", true }
+  },
+  [130] = {
+    [17] = { "mute", true },
+    [49] = { "raptor", true }
+  },
+  [131] = {
+    [21] = { "loop", true },
+    [22] = { "loop", true },
+    [49] = { "rewind", true }
+  },
+  [132] = {
+    [17] = { "latch", true },
+    [49] = { "pulse", true }
+  },
+  [133] = { [49] = { "loop-prev", true } },
+  [134] = { [49] = { "loop-next", true } },
+  [135] = {
+    [17] = { "bypass", true },
+    [18] = { "play", true },
+    [19] = { "play", true },
+    [49] = { "play", true }
+  },
+  [136] = { [49] = { "mute", true } },
+  [137] = {
+    [17] = { "raptor", true },
+    [18] = { "loop-prev", true },
+    [19] = { "loop-prev", true },
+    [49] = { "latch", true }
+  },
+  [138] = {
+    [18] = { "loop-next", true },
+    [19] = { "loop-next", true },
+    [49] = { "bypass", true }
+  },
+  [139] = { [33] = { "click", true } },
+  [140] = {
+    [17] = { "rewind", true },
+    [18] = { "mute", true },
+    [19] = { "mute", true },
+    [33] = { "uniq", true }
+  },
+  [141] = {
+    [18] = { "loop-load", true },
+    [19] = { "loop-load", true },
+    [21] = { "loop-save", true },
+    [22] = { "loop-save", true },
+    [33] = { "raptor", true },
+    [49] = { "loop-load", true }
+  },
+  [142] = {
+    [33] = { "rewind", true },
+    [49] = { "loop-save", true }
+  },
+  [143] = {
+    [33] = { "pulse", true },
+    [49] = { "loop", true }
+  },
+  [144] = {
+    [17] = { "loop-load", true },
+    [33] = { "loop-prev", true }
+  },
+  [145] = { [33] = { "loop-next", true } },
+  [146] = {
+    [17] = { "loop-prev", true },
+    [33] = { "play", true }
+  },
+  [147] = { [17] = { "loop-save", true } },
+  [149] = {
+    [17] = { "loop-next", true },
+    [33] = { "mute", true }
+  },
+  [150] = {
+    [17] = { "loop", true },
+    [33] = { "latch", true }
+  },
+  [151] = { [33] = { "bypass", true } },
+  [152] = { [17] = { "play", true } },
+  [153] = { [17] = { "loop-prev", true } },
+  [154] = {
+    [17] = { "loop-next", true },
+    [33] = { "loop-load", true }
+  },
+  [155] = { [33] = { "loop-save", true } },
+  [156] = { [33] = { "loop", true } },
+  [163] = { [49] = { "gain", -1 } },
+  [164] = { [49] = { "gate", -1 } },
+  [169] = { [25] = { "mute", true } },
+  [170] = { [25] = { "latch", true } },
+  [171] = {
+    [25] = { "bypass", true },
+    [49] = { "gain", 1 }
+  },
+  [172] = {
+    [18] = { "loop", true },
+    [19] = { "loop", true },
+    [49] = { "gate", 1 }
+  },
+  [176] = {
+    [23] = { "mute", true },
+    [24] = { "mute", true }
+  },
+  [177] = {
+    [23] = { "latch", true },
+    [24] = { "latch", true }
+  },
+  [178] = {
+    [23] = { "bypass", true },
+    [24] = { "bypass", true }
+  },
+  [182] = { [33] = { "gain", -1 } },
+  [183] = { [33] = { "gate", -1 } },
+  [186] = { [25] = { "loop-load", true } },
+  [187] = { [25] = { "loop-save", true } },
+  [188] = { [25] = { "loop", true } },
+  [192] = { [33] = { "gain", 1 } },
+  [193] = { [33] = { "gate", 1 } },
+  [203] = { [25] = { "raptor", true } },
+  [204] = { [25] = { "rewind", true } },
+  [218] = { [25] = { "loop-prev", true } },
+  [219] = { [25] = { "loop-next", true } },
+  [220] = { [25] = { "play", true } },
+  [224] = { [17] = { "mute", true } },
+  [225] = { [17] = { "latch", true } },
+  [226] = { [17] = { "bypass", true } },
+  [229] = { [17] = { "loop-load", true } },
+  [230] = { [17] = { "loop-save", true } },
+  [231] = { [17] = { "loop", true } },
+  [234] = { [25] = { "mute", true } },
+  [235] = { [25] = { "latch", true } },
+  [236] = { [25] = { "bypass", true } },
+  [240] = { [17] = { "click", true } },
+  [241] = {
+    [17] = { "uniq", true },
+    [49] = { "latch", true }
+  },
+  [242] = {
+    [17] = { "raptor", true },
+    [49] = { "mute", true }
+  },
+  [243] = {
+    [17] = { "rewind", true },
+    [49] = { "bypass", true }
+  },
+  [244] = { [17] = { "pulse", true } },
+  [245] = { [17] = { "loop-prev", true } },
+  [246] = { [17] = { "loop-next", true } },
+  [247] = { [17] = { "play", true } }
+}

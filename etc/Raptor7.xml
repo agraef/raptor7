@@ -1,0 +1,223 @@
+<!DOCTYPE patchbay>
+<patchbay name="Raptor7" version="0.9.13">
+ <output-sockets>
+  <socket client="Model\ 12\ Pro" exclusive="off" name="Model 12 Pro 1+2" type="jack-audio">
+   <plug>capture_AUX0</plug>
+   <plug>capture_AUX1</plug>
+  </socket>
+  <socket client="qsynth" exclusive="off" name="qsynth 1" type="jack-audio">
+   <plug>left</plug>
+   <plug>right</plug>
+  </socket>
+  <socket client="pure_data_0" exclusive="off" name="pure_data_ 1" type="jack-audio">
+   <plug>output0</plug>
+   <plug>output1</plug>
+  </socket>
+  <socket client="Midi\ Through" exclusive="off" name="Midi Through" type="alsa-midi">
+   <plug>Midi\ Through\ Port\-0</plug>
+  </socket>
+  <socket client="APC\ mini\ mk2" exclusive="off" name="APC mini mk2" type="alsa-midi">
+   <plug>APC\ mini\ mk2\ APC\ mini\ mk2\ Contr</plug>
+   <plug>APC\ mini\ mk2\ APC\ mini\ mk2\ Notes</plug>
+  </socket>
+  <socket client="MPK\ mini\ Plus" exclusive="off" name="MPK mini Plus" type="alsa-midi">
+   <plug>MPK\ mini\ Plus\ MIDI\ 1</plug>
+   <plug>MPK\ mini\ Plus\ MIDI\ 2</plug>
+  </socket>
+  <socket client="Launchkey\ Mini\ MK3" exclusive="off" name="Launchkey Mini MK3" type="alsa-midi">
+   <plug>Launchkey\ Mini\ MK3\ Launchkey\ Mi</plug>
+  </socket>
+  <socket client="Launchkey\ MK3\ 37" exclusive="off" name="Launchkey MK3 37" type="alsa-midi">
+   <plug>Launchkey\ MK3\ 37\ LKMK3\ MIDI\ In</plug>
+   <plug>Launchkey\ MK3\ 37\ LKMK3\ DAW\ In</plug>
+  </socket>
+  <socket client="Launchpad\ Pro\ MK3" exclusive="off" name="Launchpad Pro MK3" type="alsa-midi">
+   <plug>Launchpad\ Pro\ MK3\ LPProMK3\ MIDI</plug>
+   <plug>Launchpad\ Pro\ MK3\ LPProMK3\ DAW</plug>
+  </socket>
+  <socket client="Launchpad\ X" exclusive="off" name="Launchpad X" type="alsa-midi">
+   <plug>Launchpad\ X\ LPX\ MIDI\ In</plug>
+   <plug>Launchpad\ X\ LPX\ DAW\ In</plug>
+  </socket>
+  <socket client="Launchpad\ Mini\ MK3" exclusive="off" name="Launchpad Mini MK3" type="alsa-midi">
+   <plug>Launchpad\ Mini\ MK3\ LPMiniMK3\ MI</plug>
+   <plug>Launchpad\ Mini\ MK3\ LPMiniMK3\ DA</plug>
+  </socket>
+  <socket client="Launch\ Control\ XL" exclusive="off" name="Launch Control XL" type="alsa-midi">
+   <plug>Launch\ Control\ XL\ Launch\ Contro</plug>
+  </socket>
+  <socket client="DJControl\ Inpulse\ 200\ Mk2" exclusive="off" name="DJControl Inpulse 200 Mk2" type="alsa-midi">
+   <plug>DJControl\ Inpulse\ 200\ Mk2\ MIDI\ </plug>
+  </socket>
+  <socket client="DJControl\ Inpulse\ 500" exclusive="off" name="DJControl Inpulse 500" type="alsa-midi">
+   <plug>DJControl\ Inpulse\ 500\ MIDI\ 1</plug>
+  </socket>
+  <socket client="STARRYPAD" exclusive="off" name="STARRYPAD" type="alsa-midi">
+   <plug>STARRYPAD\ MIDI\ 1</plug>
+  </socket>
+  <socket client="PACER" exclusive="off" name="PACER" type="alsa-midi">
+   <plug>PACER\ MIDI1</plug>
+  </socket>
+  <socket client="QmidiNet" exclusive="off" name="QmidiNet" type="alsa-midi">
+   <plug>port\ 0</plug>
+   <plug>port\ 1</plug>
+   <plug>port\ 2</plug>
+   <plug>port\ 3</plug>
+  </socket>
+  <socket client="Pure\ Data" exclusive="off" name="Pure Data" type="alsa-midi">
+   <plug>Pure\ Data\ Midi\-Out\ 1</plug>
+   <plug>Pure\ Data\ Midi\-Out\ 2</plug>
+   <plug>Pure\ Data\ Midi\-Out\ 3</plug>
+   <plug>Pure\ Data\ Midi\-Out\ 4</plug>
+  </socket>
+  <socket client="Pure\ Data" exclusive="off" name="Pure Data 2" type="alsa-midi">
+   <plug>Pure\ Data\ Midi\-Out\ 2</plug>
+  </socket>
+  <socket client="Pure\ Data" exclusive="off" name="Pure Data 3" type="alsa-midi">
+   <plug>Pure\ Data\ Midi\-Out\ 3</plug>
+  </socket>
+  <socket client="Pure\ Data" exclusive="off" name="Pure Data 4" type="alsa-midi">
+   <plug>Pure\ Data\ Midi\-Out\ 4</plug>
+  </socket>
+  <socket client="ardour" exclusive="off" name="ardour MIDI Clock" type="jack-midi">
+   <plug>MIDI\ Clock\ out</plug>
+  </socket>
+ </output-sockets>
+ <input-sockets>
+  <socket client="Model\ 12\ Pro" exclusive="off" name="Model 12 Pro 1+2" type="jack-audio">
+   <plug>playback_AUX0</plug>
+   <plug>playback_AUX1</plug>
+  </socket>
+  <socket client="ProFX\ 3\+4" exclusive="off" name="ProFX 3+4" type="jack-audio">
+   <plug>playback_FL</plug>
+   <plug>playback_FR</plug>
+  </socket>
+  <socket client="UMC404HD\ 192k\ Line\ A" exclusive="off" name="UMC404HD 192k Line A" type="jack-audio">
+   <plug>playback_FL</plug>
+   <plug>playback_FR</plug>
+  </socket>
+  <socket client="pure_data_0" exclusive="off" name="pure_data_ 1" type="jack-audio">
+   <plug>input0</plug>
+   <plug>input1</plug>
+  </socket>
+  <socket client="Midi\ Through" exclusive="off" name="Midi Through" type="alsa-midi">
+   <plug>Midi\ Through\ Port\-0</plug>
+  </socket>
+  <socket client="APC\ mini\ mk2" exclusive="off" name="APC mini mk2" type="alsa-midi">
+   <plug>APC\ mini\ mk2\ APC\ mini\ mk2\ Contr</plug>
+   <plug>APC\ mini\ mk2\ APC\ mini\ mk2\ Notes</plug>
+  </socket>
+  <socket client="MPK\ mini\ Plus" exclusive="off" name="MPK mini Plus" type="alsa-midi">
+   <plug>MPK\ mini\ Plus\ MIDI\ 1</plug>
+   <plug>MPK\ mini\ Plus\ MIDI\ 2</plug>
+  </socket>
+  <socket client="Launchkey\ Mini\ MK3" exclusive="off" name="Launchkey Mini MK3" type="alsa-midi">
+   <plug>Launchkey\ Mini\ MK3\ Launchkey\ Mi</plug>
+  </socket>
+  <socket client="Launchkey\ MK3\ 37" exclusive="off" name="Launchkey MK3 37" type="alsa-midi">
+   <plug>Launchkey\ MK3\ 37\ LKMK3\ MIDI\ In</plug>
+   <plug>Launchkey\ MK3\ 37\ LKMK3\ DAW\ In</plug>
+  </socket>
+  <socket client="Launchkey\ MK3\ 37" exclusive="off" name="Launchkey MK3 37 DAW" type="alsa-midi">
+   <plug>Launchkey\ MK3\ 37\ LKMK3\ DAW\ In</plug>
+  </socket>
+  <socket client="Launchpad\ Pro\ MK3" exclusive="off" name="Launchpad Pro MK3" type="alsa-midi">
+   <plug>Launchpad\ Pro\ MK3\ LPProMK3\ MIDI</plug>
+   <plug>Launchpad\ Pro\ MK3\ LPProMK3\ DAW</plug>
+  </socket>
+  <socket client="Launchpad\ Pro\ MK3" exclusive="off" name="Launchpad Pro MK3 DAW" type="alsa-midi">
+   <plug>Launchpad\ Pro\ MK3\ LPProMK3\ DAW</plug>
+  </socket>
+  <socket client="Launchpad\ X" exclusive="off" name="Launchpad X" type="alsa-midi">
+   <plug>Launchpad\ X\ LPX\ MIDI\ In</plug>
+   <plug>Launchpad\ X\ LPX\ DAW\ In</plug>
+  </socket>
+  <socket client="Launchpad\ X" exclusive="off" name="Launchpad X DAW" type="alsa-midi">
+   <plug>Launchpad\ X\ LPX\ DAW\ In</plug>
+  </socket>
+  <socket client="Launchpad\ Mini\ MK3" exclusive="off" name="Launchpad Mini MK3" type="alsa-midi">
+   <plug>Launchpad\ Mini\ MK3\ LPMiniMK3\ MI</plug>
+   <plug>Launchpad\ Mini\ MK3\ LPMiniMK3\ DA</plug>
+  </socket>
+  <socket client="Launchpad\ Mini\ MK3" exclusive="off" name="Launchpad Mini MK3 DAW" type="alsa-midi">
+   <plug>Launchpad\ Mini\ MK3\ LPMiniMK3\ DA</plug>
+  </socket>
+  <socket client="Launch\ Control\ XL" exclusive="off" name="Launch Control XL" type="alsa-midi">
+   <plug>Launch\ Control\ XL\ Launch\ Contro</plug>
+  </socket>
+  <socket client="DJControl\ Inpulse\ 200\ Mk2" exclusive="off" name="DJControl Inpulse 200 Mk2" type="alsa-midi">
+   <plug>DJControl\ Inpulse\ 200\ Mk2\ MIDI\ </plug>
+  </socket>
+  <socket client="DJControl\ Inpulse\ 500" exclusive="off" name="DJControl Inpulse 500" type="alsa-midi">
+   <plug>DJControl\ Inpulse\ 500\ MIDI\ 1</plug>
+  </socket>
+  <socket client="STARRYPAD" exclusive="off" name="STARRYPAD" type="alsa-midi">
+   <plug>STARRYPAD\ MIDI\ 1</plug>
+  </socket>
+  <socket client="QmidiNet" exclusive="off" name="QmidiNet" type="alsa-midi">
+   <plug>port\ 0</plug>
+   <plug>port\ 1</plug>
+   <plug>port\ 2</plug>
+   <plug>port\ 3</plug>
+  </socket>
+  <socket client="Pure\ Data" exclusive="off" name="Pure Data" type="alsa-midi">
+   <plug>Pure\ Data\ Midi\-In\ 1</plug>
+   <plug>Pure\ Data\ Midi\-In\ 2</plug>
+   <plug>Pure\ Data\ Midi\-In\ 3</plug>
+   <plug>Pure\ Data\ Midi\-In\ 4</plug>
+  </socket>
+  <socket client="Pure\ Data" exclusive="off" name="Pure Data 2" type="alsa-midi">
+   <plug>Pure\ Data\ Midi\-In\ 2</plug>
+  </socket>
+  <socket client="Pure\ Data" exclusive="off" name="Pure Data 1+2" type="alsa-midi">
+   <plug>Pure\ Data\ Midi\-In\ 1</plug>
+   <plug>Pure\ Data\ Midi\-In\ 2</plug>
+  </socket>
+  <socket client="Pure\ Data" exclusive="off" name="Pure Data 1+3" type="alsa-midi">
+   <plug>Pure\ Data\ Midi\-In\ 1</plug>
+   <plug>Pure\ Data\ Midi\-In\ 3</plug>
+  </socket>
+  <socket client="Pure\ Data" exclusive="off" name="Pure Data 1+4" type="alsa-midi">
+   <plug>Pure\ Data\ Midi\-In\ 1</plug>
+   <plug>Pure\ Data\ Midi\-In\ 4</plug>
+  </socket>
+  <socket client="FLUID\ Synth.*" exclusive="off" name="FLUID Synth" type="alsa-midi">
+   <plug>Synth\ input\ port\ .*</plug>
+  </socket>
+  <socket client="Midi\-Bridge" exclusive="off" name="Purr Data Jack MIDI In-2" type="jack-midi">
+   <plug>Pure\ Data\ .*\ Midi-In\ 2</plug>
+  </socket>
+ </input-sockets>
+ <slots/>
+ <cables>
+  <cable input="pure_data_ 1" output="Model 12 Pro 1+2" type="jack-audio"/>
+  <cable input="ProFX 3+4" output="qsynth 1" type="jack-audio"/>
+  <cable input="UMC404HD 192k Line A" output="qsynth 1" type="jack-audio"/>
+  <cable input="Model 12 Pro 1+2" output="qsynth 1" type="jack-audio"/>
+  <cable input="ProFX 3+4" output="pure_data_ 1" type="jack-audio"/>
+  <cable input="UMC404HD 192k Line A" output="pure_data_ 1" type="jack-audio"/>
+  <cable input="Model 12 Pro 1+2" output="pure_data_ 1" type="jack-audio"/>
+  <cable input="Pure Data" output="APC mini mk2" type="alsa-midi"/>
+  <cable input="Pure Data" output="MPK mini Plus" type="alsa-midi"/>
+  <cable input="Pure Data 1+2" output="Launchkey MK3 37" type="alsa-midi"/>
+  <cable input="Pure Data 1+3" output="Launchpad Pro MK3" type="alsa-midi"/>
+  <cable input="Pure Data 1+4" output="Launchpad X" type="alsa-midi"/>
+  <cable input="Pure Data 1+4" output="Launchpad Mini MK3" type="alsa-midi"/>
+  <cable input="Pure Data 2" output="Launch Control XL" type="alsa-midi"/>
+  <cable input="Pure Data 2" output="DJControl Inpulse 200 Mk2" type="alsa-midi"/>
+  <cable input="Pure Data 2" output="DJControl Inpulse 500" type="alsa-midi"/>
+  <cable input="Pure Data" output="STARRYPAD" type="alsa-midi"/>
+  <cable input="FLUID Synth" output="Pure Data" type="alsa-midi"/>
+  <cable input="APC mini mk2" output="Pure Data" type="alsa-midi"/>
+  <cable input="Launchkey MK3 37 DAW" output="Pure Data 2" type="alsa-midi"/>
+  <cable input="DJControl Inpulse 200 Mk2" output="Pure Data 2" type="alsa-midi"/>
+  <cable input="Launch Control XL" output="Pure Data 2" type="alsa-midi"/>
+  <cable input="DJControl Inpulse 500" output="Pure Data 2" type="alsa-midi"/>
+  <cable input="Launchpad Pro MK3 DAW" output="Pure Data 3" type="alsa-midi"/>
+  <cable input="Launchpad X DAW" output="Pure Data 4" type="alsa-midi"/>
+  <cable input="Launchpad Mini MK3 DAW" output="Pure Data 4" type="alsa-midi"/>
+  <cable input="Purr Data Jack MIDI In-2" output="ardour MIDI Clock" type="jack-midi"/>
+  <cable input="Pure Data 2" output="PACER" type="alsa-midi"/>
+ </cables>
+</patchbay>
+
