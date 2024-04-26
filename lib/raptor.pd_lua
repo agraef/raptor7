@@ -2730,6 +2730,7 @@ function raptor:update_state(remap)
       self:launchpad_iter(function(ch, portno) self:launchpad_pads(portno) end)
       self:launchkey_pads()
       self:launchkey_knobs()
+      self:launchkey_faders()
    end
 end
 
@@ -4009,10 +4010,12 @@ function raptor:launchpad_fader_bank(portno, b)
    end
 end
 
--- Launchkey (tested with Mini MK3)
+-- Launchkey (tested with LK MK3 Mini, 37, and 49)
 
 -- default knob mode (1 == Volume)
 local lkmode = 1
+-- default fader mode (2 == Device)
+local lkfmode = 2
 -- default pad mode (2 == Session)
 local lkpmode = 2
 
@@ -4031,8 +4034,9 @@ function raptor:launchkey_init()
    if launchkey ~= 0 and self:check_master() then
       -- switch the Launchkey into DAW/session mode
       self:out(1, "note", {12, 127, 32})
-      -- set the default knob mode
+      -- set the default knob and fader mode
       self:out(1, "ctl", {lkmode, 9, 32})
+      self:out(1, "ctl", {lkfmode, 10, 32})
       -- set the default pad mode
       self:out(1, "ctl", {lkpmode, 3, 32})
       -- populate the session pads
@@ -4081,6 +4085,7 @@ function raptor:launchkey_init2()
       self:launchkey_welcome(launchkey_welcome)
       -- populate the param display
       self:launchkey_knobs()
+      self:launchkey_faders()
    end
    if launchkey ~= 0 then
       -- device select buttons
@@ -4152,15 +4157,19 @@ function raptor:launchkey_ctl(atoms)
    -- bigger LK models, even if the driver is off. Specifically, four of the
    -- buttons on the LK 25+ (Capture MIDI, Quantise, Click, Undo), and the
    -- nine faders on the LK 49+ partially overlap with some of our fader banks
-   -- (which can't be moved for compatibility with the Launch Control XL). At
-   -- present, the driver doesn't use these for anything, but we'd still like
-   -- to be able to map them, so we move them to the CC block 57-69 on channel
-   -- 32 which currently isn't used for anything else (fingers crossed).
+   -- (which can't be moved for compatibility with the Launch Control XL). We
+   -- move them to the CC block 57-69 on channel 32 which currently isn't used
+   -- for anything else (fingers crossed), so that they can be remapped.
+   -- XXXFIXME: We can't be sure what the knobs and faders are mapped to in
+   -- any of the custom modes, so you'll need to make sure that these don't
+   -- conflict with any of our bindings, or just don't use them with Raptor.
    local val, num, ch = table.unpack(atoms)
    if ch == 32 and num >= 74 and num <= 77 then
       atoms[2] = num-8
       return atoms
-   elseif ch == 32 and num >= 53 and num <= 61 then
+   elseif ch == 32 and num >= 53 and num <= 61 and launchkey == 0 then
+      -- only remap these if the driver is inactive, otherwise the driver does
+      -- its own mapping, see below
       atoms[2] = num+4
       return atoms
    end
@@ -4192,6 +4201,16 @@ function raptor:launchkey_ctl(atoms)
 	       self:out(1, "ctl", {lkmode, 9, 32})
 	       self:launchkey_knobs()
 	    end
+	 elseif num == 10 and ch == 32 then
+	    -- fader mode, used to map the faders to the 4 available CC banks
+	    -- (same as the knob modes, except that mode 3 is not available)
+	    val = math.floor(val)
+	    if val ~= lkfmode and self:launchkey_master() then
+	       lkfmode = val
+	       -- set the new mode on *all* connected Launchkeys
+	       self:out(1, "ctl", {lkfmode, 10, 32})
+	       self:launchkey_faders()
+	    end
 	 -- NOTE: Buttons 51 and 52 are only available on the larger LK models
 	 -- (25 and up), not on the Launchkey Mini.
 	 elseif num == 51 and ch == 32 then
@@ -4209,10 +4228,28 @@ function raptor:launchkey_ctl(atoms)
 	       self:launchkey_ccmaster(flag)
 	    end
 	 elseif num >= 21 and num <= 28 and ch == 32 then
-	    -- knobs, remapped to the 4 CC banks
+	    -- knobs, remapped to the 5 CC banks
 	    local cc0 = lk_knob[lkmode]
 	    if cc0 then
 	       atoms[2] = cc0+num-20
+	    end
+	    return atoms
+	 elseif num >= 53 and num <= 61 and ch == 32 then
+	    if num <= 60 then
+	       -- 8 faders, remapped to the 4 CC banks (5 CC banks of the
+	       -- knobs, minus Pan mode which isn't available for the faders)
+	       local cc0 = lk_knob[lkfmode]
+	       if cc0 then
+		  atoms[2] = cc0+num-52
+	       else
+		  -- default remapping, so that the CCs don't overlap with our
+		  -- CC banks
+		  atoms[2] = num+4
+	       end
+	    else
+	       -- the 9th fader is special; it maps to CC7 (the volume
+	       -- control) no matter what mode you're in
+	       atoms[2] = 7
 	    end
 	    return atoms
 	 elseif num == 116 and ch == 32 then
@@ -4387,6 +4424,7 @@ function raptor:launchkey_master_change(old_id, new_id)
       --print(string.format("hand over %d -> %d", old_master, new_master))
       self:launchkey_pads()
       self:launchkey_knobs()
+      self:launchkey_faders()
       self:launchkey_loop(self.arp.loopstate)
    end
 end
@@ -4425,14 +4463,14 @@ function raptor:launchkey_loop(state)
    end
 end
 
-function raptor:launchkey_param(i, var)
+function raptor:launchkey_param(offs, i, var)
    --print(string.format("LK var %d: %s", i, var))
-   self:outlet(1, "sysex", {0, 32, 41, 2, launchkey_id, 7, i+55, string.byte(var, 1, string.len(var))})
+   self:outlet(1, "sysex", {0, 32, 41, 2, launchkey_id, 7, i-1+offs, string.byte(var, 1, string.len(var))})
 end
 
-function raptor:launchkey_val(i, val)
+function raptor:launchkey_val(offs, i, val)
    --print(string.format("LK val %d: %s", i, val))
-   self:outlet(1, "sysex", {0, 32, 41, 2, launchkey_id, 8, i+55, string.byte(val, 1, string.len(val))})
+   self:outlet(1, "sysex", {0, 32, 41, 2, launchkey_id, 8, i-1+offs, string.byte(val, 1, string.len(val))})
 end
 
 function raptor:launchkey_padval(num, var)
@@ -4493,27 +4531,35 @@ function raptor:launchkey_preset(name)
    end
 end
 
-function raptor:launchkey_knob(cc, ch, var, val, val2)
-   local k = lk_knob[lkmode]
-   if launchkey ~= 0 and self:launchkey_master() and ch == 32 and
-      cc >= k+1 and cc <= k+8 then
-      local i = param_i[var]
-      if i then
-	 self:outlet(2, "float", {2})
-	 if int_param[i] then
-	    val = string.format("%4d", val)
-	    val2 = val2 and string.format("%d", val2)
-	 else
-	    val = string.format("%5.2f", val)
-	    val2 = val2 and string.format("%0.2f", val2)
+function raptor:launchkey_ccval(cc, ch, var, val, val2)
+   function make_val(offs, k, val, val2)
+      if k and cc >= k+1 and cc <= k+8 then
+	 local i = param_i[var]
+	 if i then
+	    self:outlet(2, "float", {2})
+	    if int_param[i] then
+	       val = string.format("%4d", val)
+	       val2 = val2 and string.format("%d", val2)
+	    else
+	       val = string.format("%5.2f", val)
+	       val2 = val2 and string.format("%0.2f", val2)
+	    end
+	    -- val2 ~= nil means a failed pickup check, in that case we also
+	    -- indicate the target value that we need to catch up to
+	    if val2 then
+	       val = string.format("%s [%s]", val, val2)
+	    end
+	    self:launchkey_val(offs, cc-k, val)
 	 end
-	 -- val2 ~= nil means a failed pickup check, in that case we also
-	 -- indicate the target value that we need to catch up to
-	 if val2 then
-	    val = string.format("%s [%s]", val, val2)
-	 end
-	 self:launchkey_val(cc-k, val)
       end
+   end
+   if launchkey ~= 0 and self:launchkey_master() and ch == 32 then
+      -- knobs
+      local k = lk_knob[lkmode]
+      make_val(56, k, val, val2)
+      -- faders
+      local k = lk_knob[lkfmode]
+      make_val(80, k, val, val2)
    end
 end
 
@@ -4527,7 +4573,24 @@ function raptor:launchkey_knobs()
 	    local cc = k+i
 	    local var = self:map_get(cc, ch)
 	    if var then
-	       self:launchkey_param(i, var)
+	       self:launchkey_param(56, i, var)
+	    end
+	 end
+      end
+   end
+end
+
+function raptor:launchkey_faders()
+   if launchkey ~= 0 and self:launchkey_master() then
+      local k = lk_knob[lkfmode]
+      if k then
+	 local ch = 32
+	 self:outlet(2, "float", {2})
+	 for i = 1, 8 do
+	    local cc = k+i
+	    local var = self:map_get(cc, ch)
+	    if var then
+	       self:launchkey_param(80, i, var)
 	    end
 	 end
       end
@@ -5465,6 +5528,14 @@ function raptor:in_1_ctl(atoms)
       return
    elseif res then
       -- launchpad/launchkey: mapped CC gets processed as if it was on input
+      if portno == 2 and res[2] == 7 and #res==3 then
+	 -- kludge: need to do some special-casing to pass through CC7 here
+	 if self.assert_master or self:check_ccmaster() then
+	    self:outlet(1, "ctl", self:rechan(res))
+	 end
+	 self.assert_master = false
+	 return
+      end
       goto skip
    end
    if portno == 2 then
@@ -5945,12 +6016,12 @@ function raptor:from_midi(val, cc, ch)
 	       -- check pickup value for CCs
 	       if not self:pickup(cc, ch, var, eps == 0 or math.abs(self.param_val[i]-val) < eps) then
 		  -- tie-in with Launchkey parameter display
-		  self:launchkey_knob(cc, ch, var, val, self.param_val[i])
+		  self:launchkey_ccval(cc, ch, var, val, self.param_val[i])
 		  return var
 	       end
 	    end
 	    -- tie-in with Launchkey parameter display
-	    self:launchkey_knob(cc, ch, var, val)
+	    self:launchkey_ccval(cc, ch, var, val)
 	    return var, val, eps
 	 end
 	 return var
