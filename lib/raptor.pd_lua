@@ -4137,7 +4137,7 @@ function raptor:launchkey_note(atoms)
 	 atoms[3] = 10
 	 return atoms
       elseif ch == 17 and num >= 64 and num <= 71 then
-	 -- device select button, we use this to change the ccmaster
+	 -- device select buttons, we use these to change the ccmaster
 	 if val > 0 then
 	    self:in_1_ccmaster_set({num-63})
 	 end
@@ -4252,6 +4252,13 @@ function raptor:launchkey_ctl(atoms)
 	       atoms[2] = 7
 	    end
 	    return atoms
+	 elseif num >= 37 and num <= 44 and ch == 32 then
+	    -- track select buttons (LK 49+), we use these to set the
+	    -- ccmaster, as an alternative to device select mode which will
+	    -- work on all models but the Mini (LK 25+)
+	    if val > 0 then
+	       self:in_1_ccmaster_set({num-36})
+	    end
 	 elseif num == 116 and ch == 32 then
 	    -- Stop button (not on the Mini MK3): Raptor has no equivalent,
 	    -- but we can simulate this function with a press of the Play
@@ -4517,7 +4524,10 @@ function raptor:launchkey_ccmaster_state(state, i, color)
 	 i = self:get_instance()
       end
       if i > 0 and i <= 8 then
+	 -- device select pads
 	 self:out(1, "note", {i+63, color or accent_arrows+8*state, 17})
+	 -- track select buttons (LK 49+)
+	 self:out(1, "ctl", {color or accent_arrows+8*state, i+36, 17})
       end
    end
 end
