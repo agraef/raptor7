@@ -2716,6 +2716,23 @@ function raptor:get_preset(preset)
    return nil
 end
 
+-- Update all relevant feedback state in the (Launchpad, Launchkey) drivers
+-- after changes that might affect values and/or setup of knobs/faders and the
+-- launch grid. (Assume setup changes if remap == true.)
+function raptor:update_state(remap)
+   -- Launchpad fader pages (this doesn't actually generate any feedback on
+   -- the spot, this is deferred until the pages are shown).
+   self:launchpad_update_pages()
+   if remap then
+      -- These all generate actual feedback data, so we only want to do this
+      -- if necessary, i.e., if there might be any setup changes affecting the
+      -- parameters assigned to pads and knobs.
+      self:launchpad_iter(function(ch, portno) self:launchpad_pads(portno) end)
+      self:launchkey_pads()
+      self:launchkey_knobs()
+   end
+end
+
 function raptor:recall_preset(i)
    i = self:get_preset(i)
    if not i then return end
@@ -2761,8 +2778,8 @@ function raptor:recall_preset(i)
 	 end
       end
    end
-   -- LP feedback: reset the Launchpad fader pages if needed
-   self:launchpad_update_pages()
+   -- LP/LK feedback state
+   self:update_state()
    if not preset.params["outchan"] then
       -- force to 0
       set("outchan", 0)
@@ -3805,7 +3822,7 @@ function raptor:launchpad_pads(portno)
    -- This updates all the pads (and also rebuilds the lp_mapped table).
    local ch0 = portno==3 and 33 or portno==4 and 49
    -- assert ch0, but to be on the safe side...
-   if launchpad ~= 0 and ch0 then
+   if launchpad ~= 0 and ch0 and self:launchpad_master() then
       local mapped = {}
       for cc, map in pairs(self.midi_map) do
 	 if cc >= 128 then
@@ -5785,8 +5802,8 @@ function raptor:learn(show)
       self:map_mode(0)
       print(string.format("%s %smapped to %s%s", self:cctostring(), var and "re" or "", self.midi_learn_var, self:opttostring(tgl or pol)))
       self:save_map()
-      -- LP feedback: reset the Launchpad fader pages if needed
-      self:launchpad_update_pages()
+      -- LP/LK feedback state
+      self:update_state(true)
    elseif self.midi_learn_cc then
       local var = self:map_get(self.midi_learn_cc, self.midi_learn_ch)
       local tgl, pol = self.midi_learn_tgl, self.midi_learn_pol
@@ -5998,7 +6015,10 @@ function raptor:in_1_unlearn()
 	    done = true
 	 end
       end
-      if not done then
+      if done then
+	 -- LP/LK feedback state
+	 self:update_state(true)
+      else
 	 print("MIDI learn mode aborted")
       end
       self:map_mode(0)
@@ -6058,8 +6078,8 @@ function raptor:in_1_merge_map(atoms)
 	 print(string.format("added %d/%d mapping%s, %s conflict%s", p, k, p==1 and "" or "s", q>0 and tostring(q) or "no", q==1 and "" or "s"))
 	 if p > 0 then
 	    self:save_map()
-	    -- LP feedback: reset the Launchpad fader pages if needed
-	    self:launchpad_update_pages()
+	    -- LP/LK feedback state
+	    self:update_state(true)
 	 end
       else
 	 self:error("couldn't load " .. fname)
