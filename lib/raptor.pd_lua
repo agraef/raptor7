@@ -2023,7 +2023,7 @@ local params = {
    { type = "input", name = "loop-prev", min = 0, max = 1, default = 0, toggled = true, noload = true, looper = true, doc = "previous loop" },
    { type = "input", name = "loop-next", min = 0, max = 1, default = 0, toggled = true, noload = true, looper = true, doc = "next loop" },
    -- metronome click
-   { type = "input", name = "click", min = 0, max = 1, default = 0, toggled = true, noload = true, doc = "toggle the metronome click" },
+   { type = "input", name = "click", min = 0, max = 1, default = 0, toggled = true, noload = true, transport = true, doc = "toggle the metronome click" },
 }
 
 local n_params = #params
@@ -2077,6 +2077,7 @@ function raptor:set(param, x)
    -- not the arpeggiator
    local last_bypass = self.bypass
    local last_mute = self.mute
+   local last_click = self.click
    local last_play = self.play
    local last_pulse = self.pulse
    local last_pos = self.pos
@@ -2160,6 +2161,9 @@ function raptor:set(param, x)
    end
    if self.pulse ~= last_pulse and self.pulse >= 0 and self.id then
       pd.send(string.format("%s-%s", self.id, "pulse"), "bang", {})
+   end
+   if self.click ~= last_click and self.id then
+      pd.send(string.format("%s-%s", self.id, "click"), "set", {self.click})
    end
 end
 
@@ -3129,7 +3133,7 @@ function raptor:launchpad_note(atoms)
 	    -- value, if any
 	    if var then
 	       local v = self.param_val[i]
-	       if p and (not p.transport or not p.toggled or var == "play") and not p.looper then
+	       if p and (not p.transport or not p.toggled or var == "play" or var == "click") and not p.looper then
 		  if p.toggled then
 		     v = v~= 0 and "on" or "off"
 		  elseif p.integer or p.enum then
@@ -4419,7 +4423,7 @@ function raptor:launchkey_padval(num, var)
    local i = param_i[var]
    local p = i and params[i]
    local v = self.param_val[i]
-   if p and (not p.transport or not p.toggled or var == "play") and not p.looper then
+   if p and (not p.transport or not p.toggled or var == "play" or var == "click") and not p.looper then
       if p.toggled then
 	 v = v~= 0 and "on" or "off"
       elseif p.integer or p.enum then
