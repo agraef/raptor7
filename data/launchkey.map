@@ -35,12 +35,22 @@
 -- DAW MODE:
 
 -- The DAW mode binding works pretty much like the Launchpad one (within the
--- limitations of the device), with the knobs mapped to the same five banks of
--- Raptor controls under the corresponding knob modes (Volume, Pan, Send A+B,
--- Device), and the 2x8 grid functioning either as launch or drum pads,
--- depending on the pad mode (Session or Drum). Just like on the Launchpad,
--- the pads are fully mappable in Session pad mode, and the default binding
--- matches the two bottom rows of the Launchpad's grid.
+-- limitations of the device), with the knobs and faders mapped to the same
+-- five banks of Raptor controls under the corresponding knob modes (Volume,
+-- Pan, Send A+B, Device), and the 2x8 grid functioning either as launch or
+-- drum pads, depending on the pad mode (Session or Drum). Just like on the
+-- Launchpad, the pads are fully mappable in Session pad mode, and the default
+-- binding matches the two bottom rows of the Launchpad's grid.
+
+-- Note that the faders are only available on the Launchkey 49 MK3 and up. By
+-- default, the knobs are mapped to the Volume bank, while the faders are
+-- mapped to the Device bank. You can change this with the shifted mode pads
+-- for the knobs, and with the shifted track select buttons for the faders.
+-- There are some restrictions concerning the faders: They cannot be set to
+-- the same mode as the knobs, and Pan mode isn't available for the faders.
+-- Finally, the ninth fader is special: It maps to CC7 no matter which fader
+-- mode you're in, and can thus be used to control the volume of a synth
+-- connected to the first output port.
 
 -- The arrow keys let you select Raptor instances (left, right) and presets
 -- (up, down). Note that on the Mini MK3 you'll have to press Shift to get
@@ -48,8 +58,9 @@
 -- Select button brings up a strip of up to eight blue pads in the top row
 -- which you can use to select a Raptor instance at random; it also highlights
 -- the currently selected instance in pink, just like the strip of track
--- selection buttons on the Launchpad Pro. (These are all hard-wired bindings
--- provided by the driver.)
+-- selection buttons on the Launchpad Pro. On the Launchkey 49 MK3 and up, you
+-- can also use the track select buttons for this purpose. (These are all
+-- hard-wired bindings provided by the driver.)
 
 -- The transport buttons work as well (play, loop); on the Mini these also
 -- light up to reflect the current transport/loop playback state (on the
@@ -65,12 +76,12 @@
 
 -- Last but not least, the larger models (Launchkey 25 MK3 and up) also have a
 -- little LCD screen which the driver uses to show useful information: a
--- sign-on message during startup; knob values (including pickup) while
--- twiddling the knobs; pad functions while pushing the pads; and presets and
--- instances whenever the selection changes. Also, the Device Lock button can
--- be used to recall information about the currently selected instance and
--- preset, or "omni" if no instance is currently selected. (This button
--- doesn't really lock anything in Raptor, it just displays information.)
+-- sign-on message during startup; knob and fader values (including pickup)
+-- while twiddling the knobs and faders; pad functions while pushing the pads;
+-- and presets and instances whenever the selection changes. Also, the Device
+-- Lock button can be used to recall information about the currently selected
+-- instance and preset, or "omni" if no instance is currently selected. (This
+-- button doesn't lock anything in Raptor, it just displays information.)
 
 -- DRUM GRID:
 
