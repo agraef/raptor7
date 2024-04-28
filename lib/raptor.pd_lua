@@ -47,7 +47,7 @@ local metro_click = 54
 
 -- The volume of the metronome, as a fraction of the absolute velocities (1
 -- means normal volume, 0 means off).
-local metro_volume = 0.7
+local metro_volume = 1
 
 -- Special device support. At present, these all work together nicely, so we
 -- have them all enabled by default. But you can turn them on or off
