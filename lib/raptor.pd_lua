@@ -4128,6 +4128,10 @@ function raptor:launchkey_fini(force)
    end
 end
 
+-- pseudo device select mode which also works on the Mini (uses the
+-- Stop/Solo/Mute key and the bottom pad row in session mode)
+local lk_select = 0
+
 function raptor:launchkey_note(atoms)
    if launchkey ~= 0 then
       local num, val, ch = table.unpack(atoms)
@@ -4141,6 +4145,14 @@ function raptor:launchkey_note(atoms)
 	 if val > 0 then
 	    self:in_1_ccmaster_set({num-63})
 	 end
+	 return true
+      elseif lk_select ~= 0 and ch == 17 and num >= 112 and num <= 119 then
+	 -- same for pseudo device select mode, these use the lower pad row in
+	 -- session mode instead
+	 if val > 0 then
+	    self:in_1_ccmaster_set({num-111})
+	 end
+	 return true
       end
       -- everything else goes straight through to be MIDI-mapped
    end
@@ -4179,6 +4191,11 @@ function raptor:launchkey_ctl(atoms)
 	    -- pad mode, 1 == Drum, 2 == Session
 	    val = math.floor(val)
 	    if val ~= lkpmode and self:launchkey_master() then
+	       if lk_select ~= 0 then
+		  -- terminate pseudo device select mode if it is active
+		  lk_select = 0
+		  self:launchkey_pads()
+	       end
 	       lkpmode = val
 	       -- Set the new mode on *all* connected Launchkeys. NOTE: We
 	       -- only do this for modes which are also supported on the Mini,
@@ -4226,6 +4243,22 @@ function raptor:launchkey_ctl(atoms)
 	       local flag = self.ccmaster and 1 or 0
 	       --assert(flag == 0 or self.ccmaster == self.id)
 	       self:launchkey_ccmaster(flag)
+	    end
+	 elseif not self.shift and num == 105 and ch == 17 then
+	    -- pseudo device select mode which also works on the Mini (uses
+	    -- the Stop/Solo/Mute key and the bottom pad row in session mode)
+	    if self:launchkey_master() then
+	       lk_select = val>0 and 1 or 0
+	       if lk_select ~= 0 then
+		  -- switch to session mode if necessary
+		  if lkpmode ~= 2 then
+		     lkpmode = 2
+		     self:out(1, "ctl", {lkpmode, 3, 32})
+		  end
+		  self:launchkey_ccmaster_pads()
+	       else
+		  self:launchkey_pads()
+	       end
 	    end
 	 elseif num >= 21 and num <= 28 and ch == 32 then
 	    -- knobs, remapped to the 5 CC banks
@@ -4532,6 +4565,17 @@ function raptor:launchkey_ccmaster_state(state, i, color)
    end
 end
 
+function raptor:launchkey_ccmaster_pads()
+   if launchkey ~= 0 and self:launchkey_master() and lk_select ~= 0 then
+      for i = 1, 8 do
+	 local id = raptor.instances[i]
+	 local state = id and id == self.ccmaster and 1 or 0
+	 local color = id and accent_arrows+8*state or 0
+	 self:out(1, "note", {i+111, color, 17})
+      end
+   end
+end
+
 function raptor:launchkey_preset(name)
    -- tooltip display for preset recall
    if launchkey ~= 0 and self:launchkey_master() and launchkey_id then
@@ -4619,7 +4663,9 @@ function raptor:launchkey_pads()
 		  -- we borrow the color map from the Launchpad here
 		  local color = self:get_lppadcolor(var)
 		  mapped[var] = num
-		  self:outlet(1, "note", {num, color, ch})
+		  if num <= 103 or lk_select == 0 then
+		     self:outlet(1, "note", {num, color, ch})
+		  end
 	       end
 	    end
 	 end
@@ -6211,6 +6257,9 @@ function raptor:in_1_ccmaster(atoms)
    else
       -- no ids, assume omni
       self.ccmaster = nil
+   end
+   if lk_select ~= 0 then
+      self:launchkey_ccmaster_pads()
    end
 end
 

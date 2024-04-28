@@ -21,8 +21,7 @@
 -- device, and the Mini MK3 is the most limited of these.
 
 -- Bindings with Raptor functions given in parentheses:
--- - The (unshifted) ">" and "Stop/Solo/Mute" buttons (latch, mute), these also
---   work in DAW mode.
+-- - The (unshifted) ">" and "Stop/Solo/Mute" buttons (latch, mute).
 -- - The transport buttons (play, loop).
 -- - The (shifted) track left/right buttons (rewind, pulse).
 
@@ -54,13 +53,14 @@
 
 -- The arrow keys let you select Raptor instances (left, right) and presets
 -- (up, down). Note that on the Mini MK3 you'll have to press Shift to get
--- these. On the larger models (Launchkey 25 MK3 and up), holding the Device
--- Select button brings up a strip of up to eight blue pads in the top row
--- which you can use to select a Raptor instance at random; it also highlights
--- the currently selected instance in pink, just like the strip of track
--- selection buttons on the Launchpad Pro. On the Launchkey 49 MK3 and up, you
--- can also use the track select buttons for this purpose. (These are all
--- hard-wired bindings provided by the driver.)
+-- these. Also, holding the (unshifted) Stop/Solo/Mute button brings up a
+-- strip of up to eight blue pads in the bottom row in session mode which you
+-- can use to select a Raptor instance at random; it also highlights the
+-- currently selected instance in a different color, just like the strip of
+-- track selection buttons on the Launchpad Pro. On the larger Launchkey
+-- models, you can also use the Device Select button (LK 25+) with the top row
+-- of pads, or the track select buttons beneath the faders (LK 49+) for this
+-- purpose. (These are all hard-wired bindings provided by the driver.)
 
 -- The transport buttons work as well (play, loop); on the Mini these also
 -- light up to reflect the current transport/loop playback state (on the
@@ -120,9 +120,7 @@
   [26]  = { [1] = "meter-num" },
   [27]  = { [1] = "meter-denom" },
   [28]  = { [1] = "division" },
-  -- standalone button assignments (pulse/rewind only work in standalone mode,
-  -- the others also in session mode which also has alternative launch grid
-  -- bindings for all these functions)
+  -- standalone button assignments
   [102] = { [16] = { "pulse", true } },
   [103] = { [16] = { "rewind", true } },
   [104] = { [16] = { "latch", true } },
@@ -177,10 +175,6 @@
   [28]  = { [32] = "prefmod" },
   -- metronome click (Click button)
   [68]  = { [32] = { "click", true } },
-  -- alternative bindings for latch/mute, same as in standalone
-  -- NOTE: standalone bindings repeated here, so that they aren't overridden
-  [104] = { [17] = { "latch", true }, [16] = { "latch", true } },
-  [105] = { [17] = { "mute", true }, [16] = { "mute", true } },
   -- transport
   -- NOTE: standalone bindings repeated here, so that they aren't overridden
   [115] = { [32] = { "play", true }, [16] = { "play", true } },
