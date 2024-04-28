@@ -5614,16 +5614,14 @@ function raptor:in_1_ctl(atoms)
       return
    end
    self.assert_master = false
-   -- simple pass-through
-   if self:check_chan(atoms[3]) then
-      -- check for ccmaster to direct messages to the right instance
-      if self:check_ccmaster() then
-	 if atoms[2] == 7 and self.deck > 0 then
-	    -- volume CC, tie-in with cross fade control (djcontrol)
-	    self.djdata.vol[self.deck] = atoms[1]
-	 end
-	 self:outlet(1, "ctl", self:rechan(atoms))
+   -- simple pass-through; we do *not* check the MIDI channel here, but we do
+   -- check for ccmaster to direct messages to the right instance
+   if self:check_ccmaster() then
+      if atoms[2] == 7 and self.deck > 0 then
+	 -- volume CC, tie-in with cross fade control (djcontrol)
+	 self.djdata.vol[self.deck] = atoms[1]
       end
+      self:outlet(1, "ctl", self:rechan(atoms))
    end
 end
 
@@ -5644,40 +5642,40 @@ function raptor:in_1_pgm(atoms)
 	 if self:check_ccmaster() then
 	    self:in_1_preset({atoms[1]})
 	 end
-      elseif self:check_chan(atoms[2]) then
-	 if self:check_ccmaster() then
-	    self:outlet(1, "pgm", self:rechan(atoms))
-	 end
+      elseif self:check_ccmaster() then
+	 -- similar to CC, we don't require the input channel to match, but we
+	 -- do check ccmaster to direct the PC to the right instance(s)
+	 self:outlet(1, "pgm", self:rechan(atoms))
       end
    else
       self:in_1("pgm", atoms)
    end
 end
 
+-- The following three methods deal with voice messages which are generally
+-- associated with note data coming from a particular input, so at present we
+-- filter them by input channel before passing them through. We also filter
+-- them by ccmaster, though. Maybe doing both is overkill, but if a particular
+-- Raptor instance was selected then that's probably what the user wants.
+
 function raptor:in_1_bend(atoms)
-   if self:check_chan(atoms[2]) then
-      if self:check_ccmaster() then
-	 -- vanilla-bug-compatible range adjustment needed here
-	 atoms[1] = atoms[1] - 8192
-	 self:outlet(1, "bend", self:rechan(atoms))
-      end
+   if self:check_chan(atoms[2]) and self:check_ccmaster() then
+      -- vanilla-bug-compatible range adjustment needed here
+      atoms[1] = atoms[1] - 8192
+      self:outlet(1, "bend", self:rechan(atoms))
    end
 end
 
 function raptor:in_1_touch(atoms)
-   if self:check_chan(atoms[2]) then
-      if self:check_ccmaster() then
-	 self:outlet(1, "touch", self:rechan(atoms))
-      end
+   if self:check_chan(atoms[2]) and self:check_ccmaster() then
+      self:outlet(1, "touch", self:rechan(atoms))
    end
 end
 
 function raptor:in_1_polytouch(atoms)
-   if self:check_chan(atoms[3]) then
-      if self:check_ccmaster() then
-	 atoms[2] = atoms[2]+self.transp
-	 self:outlet(1, "polytouch", self:rechan(atoms))
-      end
+   if self:check_chan(atoms[3]) and self:check_ccmaster() then
+      atoms[2] = atoms[2]+self.transp
+      self:outlet(1, "polytouch", self:rechan(atoms))
    end
 end
 
