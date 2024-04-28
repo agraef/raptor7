@@ -41,10 +41,11 @@ Ranges are given in parentheses. Switches are denoted 0/1 (off/on). Continuous v
 
 ### MIDI Controls
 
-These controls let you change the MIDI program and the MIDI channels for input and output.
+These controls let you change the MIDI program and the MIDI channels for input and output. There's also an option for transposing note output.
 
 - pgm (0-128): Sets the MIDI program (instrument sound) of a connected synthesizer. pgm = 0 (the default) means no change, otherwise a MIDI program change message is sent to the output channel.
-- inchan, outchan (0-16): Sets the MIDI input and output channels. inchan = 0 (omni) means that notes on all channels will be received, otherwise MIDI input on all other channels will be ignored. outchan = 0 means that output goes to the input channel; otherwise it goes to the given MIDI channel. The default is inchan = outchan = 0, which means that MIDI input will be received on all channels and output goes to the last channel on which input was received.
+- inchan, outchan (0-16): Sets the MIDI input and output channels. inchan = 0 (omni) means that notes on all channels will be received. outchan = 0 means that output goes to the input channel; otherwise it goes to the given MIDI channel. The default is inchan = outchan = 0, which means that MIDI input will be received on all channels and output goes to the last channel on which input was received.
+- transp (-64 - 64): Transposes the output of the arpeggiator by the given number of semitones.
 
 ### Arpeggiator Modes
 
@@ -129,6 +130,10 @@ For each preset there are 100 slots (numbered 0-99) under which a loop can be sa
 
 The loop files themselves are just Lua tables, so you can also edit them in any text editor if needed, as long as you keep the Lua table syntax intact. Besides the actual note data, Raptor also records meter (including division) and tempo information in the loop file (you can find these at the end of the table). The meter and tempo will be restored when a loop file is loaded.
 
+### MIDI Pass-Through
+
+Raptor is an arpeggiator at its heart, so its primary purpose is to process MIDI note data. By default, other kinds of MIDI voice messages are simply passed through to the output. This includes CC (control change) data, unless it has been mapped to some Raptor parameter using the MIDI learn facility discussed below. Thus, by default any non-system messages (control change, program change, pitch bend, polyphonic aftertouch, and channel pressure) will be passed on to your synthesizer using the output channel set in the panel, and will affect sound synthesis according to the specifications of the device that you're using. Most hardware and software synthesizers should be able to process at least pitch bends, modulation (vibrato), volume, balance, and panning, for which many MIDI keyboards offer controls such as wheels, touch strips, knobs, and/or faders, which should all work fine with Raptor.
+
 ### MIDI Learn
 
 Raptor has a lot of parameters which you might want to work with during live performances. Fortunately, it's possible to map most of these using the built-in MIDI learn facility. You can assign MIDI control changes and note messages to any of the controls in the panel, as well as some of the controls in the time and looper subpatches, as follows:
@@ -164,7 +169,7 @@ If you're running multiple Raptor instances, normally MIDI controls will affect 
 
 In order to control a single Raptor instance instead, click the unlabeled button in the top left corner of the panel. The button turns blue to indicate that the instance was selected and is now receiving all control data. At most one instance can be selected at any one time, but you can switch instances at any time, and clicking the blue button in the selected instance again will switch Raptor back to omni control mode, in which all instances receive the control data. (The supported control surfaces discussed in *Special Device Drivers* below also offer controls which make instance selection quick and convenient.)
 
-Note that selecting Raptor instances only determines where the *control data* goes to. In contrast, MIDI *note data* is always received by all Raptor instances, subject to filtering by MIDI input channels which can be set in the panel (see *MIDI Controls* above). Thus you set the input channels to indicate which instances receive the note data from various input devices, but you select a Raptor instance to tell Raptor where you want all the control input to go.
+Note that selecting Raptor instances only determines where the *control data* goes to. In contrast, MIDI *note data* is always received by all Raptor instances, subject to filtering by MIDI input channels which can be set in the panel. Thus you set the input channels to indicate which instances receive the note data from various input devices, but you select a Raptor instance to tell Raptor where you want all the control input to go.
 
 #### Saving and Loading MIDI Maps
 
@@ -180,15 +185,11 @@ Beyond MIDI learn, Raptor also offers special support for some widespread contro
 
 #### Device Configuration
 
-For now, the special device drivers included in Raptor all work nicely together, so we have them all enabled by default. But you can easily turn them off using the `config` patch which you can find in Raptor's `init` subpatch. Click on the patch to open it. It contains the following dialog:
-
-<img src="doc/config.png" alt="config" style="zoom:85%;" />
-
-The toggles for the device drivers are in the upper half. In the lower half, you can configure some device-specific parameters for the Novation Launchpad and the Hercules DJ Control. You can submit your changes to Raptor at any time by pressing the `Submit` button, or revert to the factory settings with the `Defaults` button. This affects all running Raptor instances.
-
-You can also make your changes permanent by just saving the config patch, so that your custom settings will be reloaded the next time you launch Raptor.
+For now, the special device drivers included in Raptor all work nicely together, so we have them all enabled by default. But you can easily turn them off using the `config` patch which you can find in Raptor's `init` subpatch. Click on the patch to open it. It contains the dialog shown below. The toggles for the device drivers are in the upper half. In the lower half, you can configure some device-specific parameters for the Novation Launchpad and the Hercules DJ Control. You can submit your changes to Raptor at any time by pressing the `Submit` button, or revert to the factory settings with the `Defaults` button. This affects all running Raptor instances. You can also make your changes permanent by just saving the config patch, so that your custom settings will be reloaded the next time you launch Raptor.
 
 Note that disabling a driver doesn't make the device go away. Only the special processing of the device driver (including MIDI feedback, see below) will be suspended. The device itself will continue to function as a standard MIDI controller, thus it can still send MIDI data and initiate parameter changes via the MIDI learn facility, unless you really disconnect the device from Raptor's input.
+
+<img src="doc/config.png" alt="config" style="zoom:70%;" />
 
 #### Pickup Mode
 
@@ -304,11 +305,15 @@ There's not really much that can be done about this on the Raptor side, as the l
 
 We might add more comprehensive protocols such as MTC, MMC, or [Ableton Link][] some time. But MIDI clocks are simpler and work with pretty much any recording gear and software, so they will do for most purposes.
 
-### Looper Features
+### Looper
 
-Raptor's looper is (by design) quite basic. Its main purpose is to give you a simple way of putting a generated musical phrase on repeat while you have your hands free for soloing, diffusion (knob-twiddling), or capturing that precious pattern before it vanishes forever. Moreover, those .loop files are just Lua tables, so they can easily be edited in a text editor or processed in Lua. If you need more features, then I'd recommend running Raptor alongside a DAW tailored to live usage, such as Ableton Live or Bitwig Studio, or even just a standard DAW like Ardour or Reaper. In particular, this gives you the ability to also record the *input* to the arpeggiator, which makes it much easier to tweak the results later.
+Raptor's looper is (by design) quite basic. Its main purpose is to give you a simple way of putting a generated musical phrase on repeat while you have your hands free for playing along, diffusion (knob-twiddling), or capturing that precious pattern before it vanishes forever. Moreover, those .loop files are just Lua tables, so they can easily be edited in a text editor or processed in Lua. If you need more features, then I'd recommend running Raptor alongside a DAW tailored to live usage, such as Ableton Live or Bitwig Studio, or even just a standard DAW like Ardour or Reaper. In particular, this gives you the ability to also record the *input* to the arpeggiator, which makes it much easier to tweak the results later.
 
 Overdubbing and more advanced loop editing capabilities would be nice to have; but then again, if you want Ableton Live, you know where to get it. Other limitations in the current implementation are that at most 256 steps can be recorded, and loops are always quantized to whole bars. The former hopefully isn't a big deal in practice and can easily be changed in the source if needed, and the latter can always be solved by recording directly into a DAW instead.
+
+One aspect of the looper which can be a bit bewildering is that once loop playback starts, most of the panel parameters apparently stop working. That's not a bug, it *is* the looper's job to repeat the previously generated notes as they are. Since most parameters in the panel are just note generation parameters, changing them will *not* affect the looped sequence. Somewhat confusingly, this also includes the gain and gate parameters, which one might expect to affect loop playback. But in Raptor they don't because they are just note generation parameters like all the others. The only parameters which take effect immediately are the parameters affecting MIDI playback, such as output channel (`out`), program change (`pgm`), transposition (`transp`), as well as bypass, mute, and all non-note MIDI input data that is passed through while loop playback is in progress. All parameter and preset changes, and even note input will be recorded during loop playback, however. So as soon as you're ready, you can just stop the loop and switch back to live input in an instance, which enables smooth and seamless transitions.
+
+Thus, next time you're frantically twiddling knobs without hearing the expected changes, take a quick look at the loop toggle to make sure that you didn't forget to turn it off (you probably did).
 
 ### MIDI Learn
 
