@@ -191,7 +191,7 @@ end
 local first_config = {}
 
 local function controller_setup(data)
-   local id, config_launchkey, config_launchpad, config_launchcontrol, config_midimix, config_pacer, config_djcontrol, config_pickup = table.unpack(data)
+   local id, config_launchkey, config_launchpad, config_launchcontrol, config_midimix, config_pacer, config_djcontrol, config_pickup, config_click = table.unpack(data)
    local last_state = {have_control = have_control, launchpad = launchpad}
    if not first_config[id] then
       launchkey = launchkey*config_launchkey ~= 0 and 1 or 0
@@ -201,6 +201,7 @@ local function controller_setup(data)
       pacer = pacer*config_pacer ~= 0 and 1 or 0
       djcontrol = djcontrol*config_djcontrol ~= 0 and 1 or 0
       pickup_mode = pickup_mode*config_pickup ~= 0 and 1 or 0
+      metro_click = config_click and math.floor(config_click) or metro_click
       first_config[id] = true
    else
       launchkey = config_launchkey ~= 0 and 1 or 0
@@ -210,6 +211,7 @@ local function controller_setup(data)
       pacer = config_pacer ~= 0 and 1 or 0
       djcontrol = config_djcontrol ~= 0 and 1 or 0
       pickup_mode = config_pickup ~= 0 and 1 or 0
+      metro_click = config_click and math.floor(config_click) or metro_click
    end
    have_control = launchkey ~= 0 or launchpad ~= 0 or launchcontrol ~= 0 or
       midimix ~= 0 or pacer ~= 0 or djcontrol ~= 0
