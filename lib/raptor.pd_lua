@@ -3298,6 +3298,7 @@ function raptor:launchpad_master_change(old_id, new_id)
       --print(string.format("hand over %d -> %d", old_master, new_master))
       for portno, id in pairs(launchpad_id) do
 	 self:launchpad_fader_timer_off(portno)
+	 local page = launchpad_last_page[portno]
 	 --print(string.format("#%d (%d), page %s", portno, id, page and string.format("%d", page) or "none"))
 	 self:launchpad_fader_page(portno, page)
 	 self:launchpad_pads(portno)
