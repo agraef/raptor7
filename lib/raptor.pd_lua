@@ -2372,6 +2372,11 @@ end
 function raptor:late_init2()
    -- launchkey initialization, part 2
    self:launchkey_init2()
+   -- launchpad initialization, part 2 (this needs to run after the idreq timer)
+   if launchpad ~= 0 then
+      -- still need to initialize the device select buttons
+      self:launchpad_ccmaster(0)
+   end
 end
 
 function raptor:check_master()
@@ -2419,7 +2424,7 @@ function raptor:finalize()
 	 self:launchkey_ccmaster_state(state, j-1)
 	 self:djcontrol_ccmaster(state, j-1, deck)
       end
-      self:launchpad_ccmaster(0, k)
+      self:launchpad_ccmaster(0, k, 0)
       self:launchkey_ccmaster_state(0, k, 0)
       local deck = raptor.decks[raptor.instances[k]]
       self:djcontrol_ccmaster(0, k, deck)
@@ -3023,7 +3028,7 @@ function raptor:launchpad_init()
 	       -- lower bottom row
 	       self:out(1, "ctl", {lppro_colors[i], i, ch})
 	       -- upper bottom row
-	       self:out(1, "ctl", {accent_arrows, i+100, ch})
+	       self:launchpad_ccmaster(0, i, 0)
 	    end
 	 end
 	 -- arrow buttons
@@ -3088,7 +3093,7 @@ function raptor:launchpad_fini(force)
 	       -- lower bottom row
 	       self:out(1, "ctl", {0, i, ch})
 	       -- upper bottom row
-	       self:out(1, "ctl", {0, i+100, ch})
+	       self:launchpad_ccmaster(0, i, 0)
 	    end
 	 end
 	 -- arrow buttons
@@ -3746,7 +3751,7 @@ function raptor:launchpad_pulse(w, val)
    end
 end
 
-function raptor:launchpad_ccmaster(state, i)
+function raptor:launchpad_ccmaster(state, i, color)
    -- This gets invoked in *every* instance, each instance only sets its own
    -- ccmaster button on or off (if any, those button are only on the LP Pro).
    if launchpad ~= 0 then
@@ -3759,7 +3764,7 @@ function raptor:launchpad_ccmaster(state, i)
 		  -- LP Pro only. Neither the Mini nor the X have these button
 		  -- rows, and I found that at least on the Mini things go
 		  -- haywire when it receives CCs in the 101-108 range.
-		  self:out(1, "note", {i+100, accent_arrows+8*state, ch})
+		  self:out(1, "note", {i+100, color or accent_arrows+8*state, ch})
 	       end
 	 end)
       end
