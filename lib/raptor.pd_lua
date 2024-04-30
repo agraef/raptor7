@@ -77,7 +77,7 @@ local launchpad_id = nil
 -- a tooltip with the current binding in the console without triggering. A
 -- zero value completely disables the launch grid, so that none of the pads
 -- can be triggered or mapped using MIDI learn.
-local launchpad_trigger = 20
+local launchpad_trigger = 30
 
 -- Maximum number of most salient steps per bar to flash the Novation logo for
 -- the rhythm display. Just set this to 0 if you hate the blinkenlights. Works
@@ -3156,7 +3156,7 @@ function raptor:launchpad_note(atoms)
 	 elseif val > 0 then
 	    -- touch below trigger threshold; print the current mapping and
 	    -- value, if any
-	    if var then
+	    if var and self:launchpad_master() then
 	       local v = self.param_val[i]
 	       if p and (not p.transport or not p.toggled or var == "play" or var == "click") and not p.looper then
 		  if p.toggled then
