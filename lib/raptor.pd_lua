@@ -3637,12 +3637,12 @@ local lppadcolor = {
    ["loop"] = {accent_loop, accent_loop-8},
    ["click"] = {16, 17},
    ["raptor"] = {2, 3},
-   ["uniq"] = {2, 3},
+   ["uniq"] = {104, 79},
    ["rewind"] = 58,
    ["loop-prev"] = accent_arrows,
    ["loop-next"] = accent_arrows,
    ["play"] = {3, 25},
-   -- paraneters from fader bank 1
+   -- parameters from fader bank 1
    ["pitchhi"] = lpmini_colors[1],
    ["pitchlo"] = lpmini_colors[1],
    ["mode"] = lpmini_colors[1],
@@ -3651,7 +3651,7 @@ local lppadcolor = {
    ["meter-num"] = lpmini_colors[1],
    ["meter-denom"] = lpmini_colors[1],
    ["division"] = lpmini_colors[1],
-   -- paraneters from fader bank 2
+   -- parameters from fader bank 2
    ["velmod"] = lpmini_colors[2],
    ["pmod"] = lpmini_colors[2],
    ["gain"] = lpmini_colors[2],
@@ -3660,7 +3660,7 @@ local lppadcolor = {
    ["prefmod"] = lpmini_colors[2],
    ["smod"] = lpmini_colors[2],
    ["nmod"] = lpmini_colors[2],
-   -- paraneters from fader bank 3
+   -- parameters from fader bank 3
    ["minvel"] = lpmini_colors[3],
    ["pmin"] = lpmini_colors[3],
    ["wmin"] = lpmini_colors[3],
@@ -3670,7 +3670,7 @@ local lppadcolor = {
    ["smin"] = lpmini_colors[3],
    -- uniq is handled as a toggle, see above
    --["uniq"] = lpmini_colors[3],
-   -- paraneters from fader bank 4
+   -- parameters from fader bank 4
    ["maxvel"] = lpmini_colors[4],
    ["pmax"] = lpmini_colors[4],
    ["wmax"] = lpmini_colors[4],
