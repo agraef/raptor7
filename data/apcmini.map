@@ -1,0 +1,102 @@
+-- -*- mode: lua -*-
+
+-- MIDI map for the AKAI APC mini mk2.
+-- Albert Gräf <agggraef@gmail.com>, 1 May 2024
+
+-- NOTE: The driver will only work with the mk2 version of the device, the
+-- original APC mini is *not* supported. Set up the MIDI connections as
+-- follows:
+
+-- The APC mini mk2 "Notes" port goes into Pd's first input port for the notes
+-- input in NOTE mode (see below).
+
+-- The APC mini mk2 "Control" port needs to be hooked up to Pd's port 3 or 4;
+-- use the same port number on both input and output. Also make sure that you
+-- don't have a Launchpad connected to that port, as the two devices are
+-- incompatible and can't be used on the same MIDI port.
+
+-- Then load this map into Raptor and you should be set.
+
+-- Most of the special functionality can be accessed with the strip of eight
+-- "track" buttons and the SHIFT button right above the faders. Normally these
+-- buttons have the functions indicated by the labels, allowing you to select
+-- fader banks with the FADER CTRL buttons, presets (up/down arrow buttons),
+-- and Raptor instances (left/right arrow buttons). When you press the SHIFT
+-- button, the eight buttons change to a special selection mode in which you
+-- can select a Raptor instance among the first eight, with the current
+-- instance being hightlighted as long as you hold the SHIFT button. This is
+-- all hard-wired functionality provided by the driver.
+
+-- The scene launch buttons in the vertical strip on the right aren't used at
+-- present, so you're free to map them as you see fit. By pressing SHIFT along
+-- with the NOTE and DRUM buttons, you can switch between the default session
+-- mode and the built-in note and drum modes of the APC mini mk2. In DRUM
+-- mode, you have the same layout of four 4x4 grids in different colors as on
+-- the Launchpad, with note 36 in the lower-left corner.
+
+-- The map assigns the usual four banks of Raptor controls, and the same pads
+-- in session mode as the Launchpad. The FADER CTRL buttons can be used to
+-- select the active fader bank. These are the same four banks as on the
+-- Launchpad, Launch Control XL, and the MIDIMIX. You can find an overview of
+-- the preconfigured controls and pads in the doc/raptor7-cheatsheet.pdf file.
+
+-- Note that, as the APC mini only has four fader bank buttons, the fifth
+-- "Extra" bank of the Launchpad and Launchkey isn't available. However, the
+-- device has a ninth fader which the driver has hard-wired to CC7 (volume),
+-- like the ninth fader on the Launchkey, so that you can use it to control
+-- the master volume of your synth.
+
+{
+  -- send A (min value) faders
+  [13] = { [39] = "minvel" },
+  [14] = { [39] = "pmin" },
+  [15] = { [39] = "wmin" },
+  [16] = { [39] = "gate" },
+  [17] = { [39] = "hmin" },
+  [18] = { [39] = "pref" },
+  [19] = { [39] = "smin" },
+  [20] = { [39] = "uniq" },
+  -- send B (max value) faders
+  [29] = { [39] = "maxvel" },
+  [30] = { [39] = "pmax" },
+  [31] = { [39] = "wmax" },
+  [32] = { [39] = "gate" },
+  [33] = { [39] = "hmax" },
+  [34] = { [39] = "pref" },
+  [35] = { [39] = "smax" },
+  [36] = { [39] = "nmax" },
+  -- pan (bipolar mod) faders
+  [49] = { [39] = "velmod" },
+  [50] = { [39] = "pmod" },
+  [51] = { [39] = "gain" },
+  [52] = { [39] = "gatemod" },
+  [53] = { [39] = "hmod" },
+  [54] = { [39] = "prefmod" },
+  [55] = { [39] = "smod" },
+  [56] = { [39] = "nmod" },
+  -- volume faders
+  [77] = { [39] = "pitchhi" },
+  [78] = { [39] = "pitchlo" },
+  [79] = { [39] = "mode" },
+  [80] = { [39] = "pos" },
+  [81] = { [39] = "tempo" },
+  [82] = { [39] = "meter-num" },
+  [83] = { [39] = "meter-denom" },
+  [84] = { [39] = "division" },
+  -- predefined pads (session view)
+  -- 128, 129 unassigned
+  [130] = { [39] = { "raptor", true } },
+  [131] = { [39] = { "rewind", true } },
+  -- 132 unassigned
+  [133] = { [39] = { "loop-prev", true } },
+  [134] = { [39] = { "loop-next", true } },
+  [135] = { [39] = { "play", true } },
+  -- upper row
+  [136] = { [39] = { "mute", true } },
+  [137] = { [39] = { "latch", true } },
+  [138] = { [39] = { "bypass", true } },
+  -- 139, 140 unassigned
+  [141] = { [39] = { "loop-load", true } },
+  [142] = { [39] = { "loop-save", true } },
+  [143] = { [39] = { "loop", true } },
+}
