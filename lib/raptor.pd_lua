@@ -132,16 +132,16 @@ local djcontrol_n_pulses = 7
 
 -- make sure that this is set if any of the above is enabled
 local have_control = launchkey ~= 0 or launchpad ~= 0 or launchcontrol ~= 0 or
-   midimix ~= 0 or pacer ~= 0 or djcontrol ~= 0
+   midimix ~= 0 or apcmini ~= 0 or pacer ~= 0 or djcontrol ~= 0
 
 -- -------------------------------------------------------------------------
 
 -- For MIDI pass-through, we filter out MIDI data from port #2 by default, if
 -- any of the control surfaces is enabled, and also from port #3 and #4, if
--- the Launchpad is enabled, since it uses these ports. This prevents control
--- surface data from "leaking" and triggering spurious notes and control
--- changes in the arpeggiator or connected synthesizers. (You know the drill
--- if you ever hooked up a DAW controller to a synthesizer.)
+-- the Launchpad or the APC mini is enabled, since they use these ports. This
+-- prevents control surface data from "leaking" and triggering spurious notes
+-- and control changes in the arpeggiator or connected synthesizers. (You know
+-- the drill if you ever hooked up a DAW controller to a synthesizer.)
 
 -- The following value is a MIDI input port number and can be changed here if
 -- needed, or you can set it at runtime by sending raptor a 'thru' message.
@@ -152,8 +152,8 @@ local have_control = launchkey ~= 0 or launchpad ~= 0 or launchcontrol ~= 0 or
 -- total number of MIDI input ports) filters out data from all ports > 1.
 
 -- A reasonable default is 2 if any control surface is connected, and 4, if
--- the Launchpad is, which is what we use here.
-local midi_thru = not have_control and 1 or launchpad == 0 and 2 or 4
+-- the Launchpad or the APC mini is connected, which is what we use here.
+local midi_thru = not have_control and 1 or launchpad == 0 and apcmini == 0 and 2 or 4
 
 -- midimap_name: The name of the file in the data directory in which MIDI
 -- bindings are stored. You can change this if you frequently switch between
@@ -200,13 +200,14 @@ end
 local first_config = {}
 
 local function controller_setup(data)
-   local id, config_launchkey, config_launchpad, config_launchcontrol, config_midimix, config_pacer, config_djcontrol, config_pickup, config_click = table.unpack(data)
-   local last_state = {have_control = have_control, launchpad = launchpad}
+   local id, config_launchkey, config_launchpad, config_launchcontrol, config_midimix, config_apcmini, config_pacer, config_djcontrol, config_pickup, config_click = table.unpack(data)
+   local last_state = {have_control = have_control, launchpad = launchpad, apcmini = apcmini}
    if not first_config[id] then
       launchkey = launchkey*config_launchkey ~= 0 and 1 or 0
       launchpad = launchpad*config_launchpad ~= 0 and 1 or 0
       launchcontrol = launchcontrol*config_launchcontrol ~= 0 and 1 or 0
       midimix = midimix*config_midimix ~= 0 and 1 or 0
+      apcmini = apcmini*config_apcmini ~= 0 and 1 or 0
       pacer = pacer*config_pacer ~= 0 and 1 or 0
       djcontrol = djcontrol*config_djcontrol ~= 0 and 1 or 0
       pickup_mode = pickup_mode*config_pickup ~= 0 and 1 or 0
@@ -217,17 +218,18 @@ local function controller_setup(data)
       launchpad = config_launchpad ~= 0 and 1 or 0
       launchcontrol = config_launchcontrol ~= 0 and 1 or 0
       midimix = config_midimix ~= 0 and 1 or 0
+      apcmini = config_apcmini ~= 0 and 1 or 0
       pacer = config_pacer ~= 0 and 1 or 0
       djcontrol = config_djcontrol ~= 0 and 1 or 0
       pickup_mode = config_pickup ~= 0 and 1 or 0
       metro_click = config_click and math.floor(config_click) or metro_click
    end
    have_control = launchkey ~= 0 or launchpad ~= 0 or launchcontrol ~= 0 or
-      midimix ~= 0 or pacer ~= 0 or djcontrol ~= 0
+      midimix ~= 0 or apcmini ~= 0 or pacer ~= 0 or djcontrol ~= 0
    if last_state.have_control ~= have_control or
-      last_state.launchpad ~= launchpad then
+      last_state.launchpad ~= launchpad or last_state.apcmini ~= apcmini then
       -- reset the MIDI thru settings
-      midi_thru = not have_control and 1 or launchpad == 0 and 2 or 4
+      midi_thru = not have_control and 1 or launchpad == 0 and apcmini == 0 and 2 or 4
    end
 end
 
@@ -4828,11 +4830,8 @@ end
 
 function raptor:apcmini_fini(force)
    if (force or apcmini ~= 0) and self:check_master() then
-      local ch = (apcmini_portno-1)*16+1
-      -- track buttons
-      self:apcmini_mode(0)
-      -- pads
-      self:apcmini_pads(0)
+      -- clear track buttons and pads
+      self:apcmini_clear()
       -- wind down some shared status so that we can correctly power up again
       -- after a warm reset (fini without exiting Pd)
       apcmini_master = nil
@@ -5052,7 +5051,22 @@ function raptor:apcmini_loop(state)
    end
 end
 
+function raptor:apcmini_clear()
+   if apcmini_portno then
+      local ch = (apcmini_portno-1)*16
+      local ch1, ch7 = ch+1, ch+7
+      for i = 1, 8 do
+	 self:out(1, "note", {apc_button[i], 0, ch1})
+      end
+      for num = 0, 63 do
+	 self:out(1, "note", {num, 0, ch7})
+      end
+   end
+end
+
 function raptor:apcmini_mode(color)
+   -- color == 0 clears the track buttons, otherwise the buttons are set
+   -- according to the current state
    if apcmini ~= 0 and self:apcmini_master() then
       local ch = (apcmini_portno-1)*16+1
       if color then
@@ -5072,39 +5086,33 @@ function raptor:apcmini_mode(color)
    end
 end
 
-function raptor:apcmini_pads(color)
+function raptor:apcmini_pads()
    if apcmini ~= 0 and self:apcmini_master() then
       local ch = (apcmini_portno-1)*16
       local ch7, ch10 = ch+7, ch+10
       if apc_pmode == 0 then
-	 if color then
-	    for num = 0, 63 do
-	       self:out(1, "note", {num, color, ch7})
-	    end
-	 else
-	    local mapped = {}
-	    for cc, map in pairs(self.midi_map) do
-	       local num = cc-128
-	       if num >= 0 and num <= 63 then
-		  for ch, v in pairs(map) do
-		     if ch == 39 and v then
-			local var = type(v) == "table" and v[1] or v
-			-- we borrow the color map from the Launchpad here
-			local color = self:get_lppadcolor(var)
-			mapped[var] = num
-			self:outlet(1, "note", {num, color, ch7})
-		     end
+	 local mapped = {}
+	 for cc, map in pairs(self.midi_map) do
+	    local num = cc-128
+	    if num >= 0 and num <= 63 then
+	       for ch, v in pairs(map) do
+		  if ch == 39 and v then
+		     local var = type(v) == "table" and v[1] or v
+		     -- we borrow the color map from the Launchpad here
+		     local color = self:get_lppadcolor(var)
+		     mapped[var] = num
+		     self:outlet(1, "note", {num, color, ch7})
 		  end
 	       end
 	    end
-	    apc_mapped = mapped
 	 end
+	 apc_mapped = mapped
       elseif apc_pmode == 2 then
 	 for num = 0, 63 do
 	    local r, c = num//8, num%8
 	    local i = (c>=4 and 32 or 0) + r*4 + c%4
-	    local col = 8*(i//16)+33
-	    self:out(1, "note", {num+64, color or col, ch10})
+	    local color = 8*(i//16)+33
+	    self:out(1, "note", {num+64, color, ch10})
 	 end
       end
    end
