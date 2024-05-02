@@ -59,8 +59,17 @@ local launchkey = 1     -- Novation Launchkey
 local launchpad = 1     -- Novation Launchpad
 local launchcontrol = 1 -- Novation Launch Control XL
 local midimix = 1       -- AKAI Professional MIDIMIX
+local apcmini = 1       -- AKAI Professional APC mini (mk2)
 local pacer = 1         -- Nektar PACER
 local djcontrol = 1     -- Hercules DJ Control devices
+
+-- APC mini control port.
+
+-- This is detected at startup and must be 3 or 4. Only the APC mini mk2 is
+-- supported at present. Also note that you can't have a Launchpad on the same
+-- port, since the two are incompatible.
+
+local apcmini_portno
 
 -- Additional parameters for the Launchpad.
 
@@ -2329,8 +2338,8 @@ function raptor:initialize(sel, atoms)
    self.launchpad_clock[4] = pd.Clock:new():register(self, "launchpad_fader_timer_cb4")
 
    -- this fires once, some time *after* the driver initialization timer, to
-   -- complete the Launchpad initializations
-   self.launchpad_idreq_clock = pd.Clock:new():register(self, "launchpad_idreq_timer_cb")
+   -- complete the Launchpad and APCmini initializations
+   self.idreq_clock = pd.Clock:new():register(self, "idreq_timer_cb")
 
    -- this also fires once, to complete the Launchkey initializations
    self.init2_clock = pd.Clock:new():register(self, "late_init2")
@@ -2342,19 +2351,66 @@ function raptor:initialize(sel, atoms)
    return true
 end
 
+local idreq_check
+
+function raptor:idreq_timer_cb()
+   -- this will be checked by whatever instance gets here first
+   if not idreq_check then
+      -- disable the Launchpad driver if we didn't get the expected reply
+      if launchpad ~= 0 then
+	 if launchpad_id and next(launchpad_id) then
+	    for portno, id in pairs(launchpad_id) do
+	       print(string.format("Launchpad %s connected on port #%d", self:launchpad_model_name(id), portno))
+	    end
+	    self:launchpad_init()
+	 else
+	    print("No known Launchpad device detected, driver disabled")
+	    launchpad = 0
+	 end
+      end
+      -- check for the APCmini
+      if apcmini ~= 0 then
+	 if apcmini_portno then
+	    if apcmini_portno ~= 3 and apcmini_portno ~= 4 then
+	       -- invalid port
+	       print(string.format("APC mini: wrong port #%d, driver disabled", apcmini_portno))
+	       apcmini = 0
+	    elseif launchpad_id and launchpad_id[apcmini_portno] then
+	       -- Launchpad connected port
+	       print(string.format("APC mini: Launchpad on same port #%d, driver disabled", apcmini_portno))
+	       apcmini = 0
+	    else
+	       print(string.format("APC mini connected on port #%d", apcmini_portno))
+	       self:apcmini_init()
+	    end
+	 else
+	    print("No APC mini device detected, driver disabled")
+	    apcmini = 0
+	 end
+      end
+      idreq_check = true
+   end
+end
+
 function raptor:late_init()
-   -- launchpad initialization
-   if launchpad_id then
-      self:launchpad_init()
-   else
+   if not launchpad_id or not apcmini_portno then
       -- device inquiry message (we'll pick up the result later)
       for portno = 3, 4 do
 	 self:out(2, "float", {portno})
 	 self:out(1, "sysex", {126, 127, 6, 1})
       end
+      self.idreq_clock:delay(500)
+   end
+   -- APC mini initialization
+   if apcmini_portno then
+      self:apcmini_init()
+   end
+   -- launchpad initialization
+   if launchpad_id then
+      self:launchpad_init()
+   else
       -- initialize launchpad_id
       launchpad_id = {}
-      self.launchpad_idreq_clock:delay(500)
    end
    -- launchkey initialization
    if not launchkey_id then
@@ -2401,13 +2457,14 @@ function raptor:finalize()
    for i = 3, 4 do
       self.launchpad_clock[i]:destruct()
    end
-   self.launchpad_idreq_clock:destruct()
+   self.idreq_clock:destruct()
    self.init2_clock:destruct()
    self.init_clock:destruct()
    self.clock:destruct()
    self.recv:destruct()
    self:launchpad_fini()
    self:launchkey_fini()
+   self:apcmini_fini()
    self:djcontrol_state_fini()
    if self.ccmaster and self:check_ccmaster() then
       -- tell all running raptors that we're back to omni
@@ -2430,6 +2487,7 @@ function raptor:finalize()
       self:djcontrol_ccmaster(0, k, deck)
       self:launchcontrol_ccmaster(0)
       self:midimix_ccmaster(0)
+      self:apcmini_ccmaster(0)
       -- remove ourself from the instances table
       table.remove(raptor.instances, i)
       -- also remove the assigned deck and preset information
@@ -2441,6 +2499,7 @@ end
 -- controller setup
 
 function raptor:in_1_config(data)
+   local last_apcmini = apcmini
    local last_launchkey = launchkey
    local last_launchpad = launchpad
    controller_setup(data)
@@ -2458,6 +2517,14 @@ function raptor:in_1_config(data)
 	 self:launchkey_fini(true)
       else
 	 self:launchkey_init()
+      end
+   end
+   if last_apcmini ~= apcmini then
+      -- process APC mini status change
+      if apcmini == 0 then
+	 self:apcmini_fini(true)
+      else
+	 self:apcmini_init()
       end
    end
 end
@@ -2723,9 +2790,9 @@ function raptor:get_preset(preset)
    return nil
 end
 
--- Update all relevant feedback state in the (Launchpad, Launchkey) drivers
--- after changes that might affect values and/or setup of knobs/faders and the
--- launch grid. (Assume setup changes if remap == true.)
+-- Update all relevant feedback state in the (Launchpad, Launchkey, APC mini)
+-- drivers after changes that might affect values and/or setup of knobs/faders
+-- and the launch grid. (Assume setup changes if remap == true.)
 function raptor:update_state(remap)
    -- Launchpad fader pages (this doesn't actually generate any feedback on
    -- the spot, this is deferred until the pages are shown).
@@ -2738,6 +2805,7 @@ function raptor:update_state(remap)
       self:launchkey_pads()
       self:launchkey_knobs()
       self:launchkey_faders()
+      self:apcmini_pads()
    end
 end
 
@@ -3196,27 +3264,8 @@ end
 
 local launchpad_models = { [12] = "X", [13] = "Mini MK3", [14] = "Pro MK3" }
 
-local function launchpad_model_name(id)
+function raptor:launchpad_model_name(id)
    return launchpad_models[id] or "??"
-end
-
-local launchpad_check
-
-function raptor:launchpad_idreq_timer_cb()
-   -- disable the Launchpad driver if we didn't get the expected reply
-   -- this will be checked by whatever instance gets here first
-   if launchpad ~= 0 and not launchpad_check then
-      if launchpad_id and next(launchpad_id) then
-	 for portno, id in pairs(launchpad_id) do
-	    print(string.format("Launchpad %s connected on port #%d", launchpad_model_name(id), portno))
-	 end
-	 self:launchpad_init()
-      else
-	 print("No known Launchpad device detected, driver disabled")
-	 launchpad = 0
-      end
-      launchpad_check = true
-   end
 end
 
 -- This timer is used to detect long presses on the fader bank buttons. We
@@ -3561,7 +3610,7 @@ function raptor:launchpad_sysex(atoms, portno)
 	 elseif launchpad_id[portno] == id then
 	    -- another Launchpad, same model, this can be safely ignored
 	 elseif launchpad_id[portno] then
-	    pd.post(string.format("WARNING: Launchpad %s conflicts with Launchpad %s on port #%d", launchpad_model_name(id), launchpad_model_name(launchpad_id[portno]), portno))
+	    pd.post(string.format("WARNING: Launchpad %s conflicts with Launchpad %s on port #%d", self:launchpad_model_name(id), self:launchpad_model_name(launchpad_id[portno]), portno))
 	 else
 	    launchpad_id[portno] = id
 	 end
@@ -4748,6 +4797,389 @@ function raptor:launchkey_drums(show)
    end
 end
 
+-- APC mini mk2
+
+-- track buttons
+local apc_button = {0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6a, 0x6b}
+-- faders (mode 5 not implemented yet)
+local apc_fader = { [1] = 76, [2] = 48, [3] = 12, [4] = 28, [5] = 20 }
+-- fader mode 1-4
+local apc_mode = 1
+-- pad mode (0 == session, 1 == keys, 2 == drums)
+local apc_pmode = 0
+
+local apcmini_master = nil
+
+function raptor:apcmini_init()
+   if apcmini ~= 0 and self:check_master() then
+      -- switch to the default pad mode
+      self:outlet(2, "float", {apcmini_portno})
+      self:outlet(1, "sysex", {0x47, 0x7f, 0x4f, 0x62, 0x00, 0x01, apc_pmode})
+      local ch = (apcmini_portno-1)*16+1
+      -- track buttons
+      self:apcmini_mode()
+      -- pads
+      self:apcmini_pads()
+      -- play/loop
+      self:apcmini_play(rolling)
+      self:apcmini_loop(self.arp.loopstate)
+   end
+end
+
+function raptor:apcmini_fini(force)
+   if (force or apcmini ~= 0) and self:check_master() then
+      local ch = (apcmini_portno-1)*16+1
+      -- track buttons
+      self:apcmini_mode(0)
+      -- pads
+      self:apcmini_pads(0)
+      -- wind down some shared status so that we can correctly power up again
+      -- after a warm reset (fini without exiting Pd)
+      apcmini_master = nil
+      rolling = 0
+   end
+end
+
+function raptor:apcmini_note(atoms)
+   if apcmini ~= 0 then
+      local ch = (apcmini_portno-1)*16
+      local ch1, ch7, ch10 = ch+1, ch+7, ch+10
+      local num, val, ch = table.unpack(atoms)
+      if ch == ch10 and num >= 64 then
+	 -- drum pads, rearrange as four 4x4 sections
+	 num = num-64
+	 local r, c = num//8, num%8
+	 local i = (c>=4 and 32 or 0) + r*4 + c%4
+	 atoms[1] = i+36
+	 atoms[3] = 10
+	 return atoms
+      elseif ch == ch1 and num == 0x7a then
+	 -- shift status; this enables the instance selection mode
+	 self.shift = val > 0
+	 -- update the buttons
+	 if self.shift then
+	    self:apcmini_mode(0)
+	    self:apcmini_ccmaster_update()
+	 else
+	    self:apcmini_mode()
+	 end
+      elseif ch == ch1 and self.shift and num >= 0x64 and num <= 0x6b then
+	 -- instance selection mode
+	 if val>0 then
+	    self.apcmini_ccmaster_wait = true
+	    self:in_1_ccmaster_set({num-0x63})
+	 end
+      elseif ch == ch1 and num >= 0x64 and num <= 0x67 then
+	 -- fader modes
+	 if val>0 and self:apcmini_master() then
+	    local mode = math.floor(num-0x63)
+	    if mode ~= apc_mode then
+	       apc_mode = mode
+	       self:apcmini_mode()
+	    end
+	 end
+      elseif ch == ch1 and num >= 0x68 and num <= 0x69 then
+	 -- up/down arrow buttons (preset selection)
+	 if val>0 and self:check_ccmaster() then
+	    if num == 0x68 then
+	       local i = self.presetno or 1
+	       i = i-1
+	       self:recall_preset(i)
+	    else
+	       local i = self.presetno or 1
+	       i = i+1
+	       self:recall_preset(i)
+	    end
+	 end
+      elseif ch == ch1 and num >= 0x6a and num <= 0x6b then
+	 -- left/right arrow buttons (ccmaster selection)
+	 if val>0 then
+	    self.apcmini_ccmaster_wait = true
+	    if num == 0x6a then
+	       self:in_1_ccmaster_prev()
+	    else
+	       self:in_1_ccmaster_next()
+	    end
+	 end
+      elseif ch == ch1 then
+	 -- Everything else, including the session grid, should be on channel
+	 -- 1 on the APC mini port. We remap these to channel 39 to facilitate
+	 -- MIDI mapping and to prevent conflicts with the Launchpad.
+	 atoms[3] = 39
+	 return atoms
+      else
+	 return false
+      end
+      return true
+   end
+   return false
+end
+
+function raptor:apcmini_ctl(atoms)
+   if apcmini ~= 0 then
+      local ch = (apcmini_portno-1)*16
+      local ch1, ch7 = ch+1, ch+7
+      local val, num, ch = table.unpack(atoms)
+      if num >= 48 and num <= 56 and ch == ch1 then
+	 if num <= 55 then
+	    -- 8 faders, remapped to the 4 CC banks
+	    local cc0 = apc_fader[apc_mode]
+	    if cc0 then
+	       atoms[2] = cc0+num-47
+	    end
+	 else
+	    -- the 9th fader is special; it maps to CC7 (the volume control)
+	    -- no matter what mode we're in
+	    atoms[2] = 7
+	 end
+	 -- change MIDI channel to prevent conflicts with Launchpad
+	 atoms[3] = 39
+	 return atoms
+      end
+   end
+   return false
+end
+
+function raptor:apcmini_sysex(atoms, portno)
+   if apcmini ~= 0 then
+      -- check whether this is an identity reply message
+      if portno==3 or portno==4 then
+	 local function check_idreq()
+	    local idreq = {126, 0, 6, 2, 0x47, 0, 0}
+	    for i = 1, #idreq do
+	       if atoms[i] ~= idreq[i] and i~=2 and i~=6 then
+		  -- not for us, pass
+		  return false
+	       end
+	    end
+	    if not apcmini_portno then
+	       -- identity reply, this is the critical number:
+	       local rid = atoms[6]
+	       -- 0x4f is the APC mini mk2, 0x28 the mk1, we require the mk2
+	       if rid == 0x4f then
+		  apcmini_portno = portno
+	       elseif rid == 0x28 then
+		  print("Sorry, APC mini mk1 not supported!")
+	       end
+	    end
+	    return true
+	 end
+	 local function check_mode_change()
+	    local idreq = {0x47, 0x7f, 0x4f, 0x62, 0x00, 0x01, 0}
+	    for i = 1, #idreq do
+	       if atoms[i] ~= idreq[i] and i~=2 and i~=7 then
+		  -- not for us, pass
+		  return false
+	       end
+	    end
+	    if self:apcmini_master() then
+	       -- mode change, this is the value we're interested in:
+	       local mode = atoms[7]
+	       if mode >= 0 and mode <= 2 and mode ~= apc_pmode then
+		  apc_pmode = mode
+		  self:apcmini_pads()
+	       end
+	    end
+	    return true
+	 end
+	 return check_idreq() or check_mode_change()
+      else
+	 return false
+      end
+      return true
+   else
+      return false
+   end
+end
+
+-- feedback
+
+local apc_mapped
+
+function raptor:apcmini_master()
+   -- select the Raptor instance that gets to send all feedback
+   if apcmini_master then
+      -- already selected, move along
+   else
+      -- try the ccmaster, time master, and self, in that order
+      -- we borrow self:lpmaster() from the Launchpad driver here
+      apcmini_master = self:lpmaster(self.ccmaster)
+   end
+   -- check that we are the golden one
+   return apcmini_master == self.id
+end
+
+function raptor:apcmini_master_change(old_id, new_id)
+   -- This gets invoked when the time master or ccmaster changes, in which
+   -- case we may need to update the launch grid accordingly.
+   -- we borrow self:lpmaster() from the Launchpad driver here
+   local old_master = self:lpmaster(old_id)
+   local new_master = self:lpmaster(new_id)
+   -- We only execute this in the new master, and there's nothing to do if the
+   -- master didn't change.
+   if new_master ~= old_master and self.id == new_master then
+      --assert(not apcmini_master or old_master == apcmini_master)
+      -- hand over to the new instance (i.e., self)
+      apcmini_master = self.id
+      --print(string.format("hand over %d -> %d", old_master, new_master))
+      self:apcmini_pads()
+      self:apcmini_loop(self.arp.loopstate)
+   end
+end
+
+function raptor:apcmini_play(state)
+   -- This *must* be invoked in the time master, otherwise we get the wrong
+   -- transport state.
+   if apcmini ~= 0 and self:check_master() then
+      rolling = state
+      local ch = (apcmini_portno-1)*16+7
+      local num = apc_mapped["play"]
+      if num then
+	 local color = self:get_lppadcolor("play", state)
+	 self:out(1, "note", {num, color, ch})
+      end
+   end
+end
+
+function raptor:apcmini_loop(state)
+   if apcmini ~= 0 and self:apcmini_master() then
+      local ch = (apcmini_portno-1)*16+7
+      local num = apc_mapped["loop"]
+      if num then
+	 local color = self:get_lppadcolor("loop", state)
+	 self:out(1, "note", {num, color, ch})
+      end
+   end
+end
+
+function raptor:apcmini_mode(color)
+   if apcmini ~= 0 and self:apcmini_master() then
+      local ch = (apcmini_portno-1)*16+1
+      if color then
+	 if self:apcmini_master() then
+	    for i = 1, 8 do
+	       self:out(1, "note", {apc_button[i], color, ch})
+	    end
+	 end
+      else
+	 for i = 1, 4 do
+	    self:out(1, "note", {apc_button[i], i==apc_mode and 1 or 0, ch})
+	 end
+	 for i = 5, 8 do
+	    self:out(1, "note", {apc_button[i], 1, ch})
+	 end
+      end
+   end
+end
+
+function raptor:apcmini_pads(color)
+   if apcmini ~= 0 and self:apcmini_master() then
+      local ch = (apcmini_portno-1)*16
+      local ch7, ch10 = ch+7, ch+10
+      if apc_pmode == 0 then
+	 if color then
+	    for num = 0, 63 do
+	       self:out(1, "note", {num, color, ch7})
+	    end
+	 else
+	    local mapped = {}
+	    for cc, map in pairs(self.midi_map) do
+	       local num = cc-128
+	       if num >= 0 and num <= 63 then
+		  for ch, v in pairs(map) do
+		     if ch == 39 and v then
+			local var = type(v) == "table" and v[1] or v
+			-- we borrow the color map from the Launchpad here
+			local color = self:get_lppadcolor(var)
+			mapped[var] = num
+			self:outlet(1, "note", {num, color, ch7})
+		     end
+		  end
+	       end
+	    end
+	    apc_mapped = mapped
+	 end
+      elseif apc_pmode == 2 then
+	 for num = 0, 63 do
+	    local r, c = num//8, num%8
+	    local i = (c>=4 and 32 or 0) + r*4 + c%4
+	    local col = 8*(i//16)+33
+	    self:out(1, "note", {num+64, color or col, ch10})
+	 end
+      end
+   end
+end
+
+function raptor:apcmini_pad(var)
+   -- Generic pad feedback after param changes; this updates the toggles.
+   if apcmini ~= 0 and apc_mapped and self:apcmini_master() then
+      local num = apc_mapped[var]
+      if num then
+	 local tgl = self:tgl_lppadcolor(var)
+	 if tgl then
+	    local ch = (apcmini_portno-1)*16+7
+	    -- we borrow the color map from the Launchpad here
+	    local color = self:get_lppadcolor(var)
+	    self:outlet(1, "note", {num, color, ch})
+	 end
+      end
+   end
+end
+
+function raptor:apcmini_mapped(cc, ch, var)
+   local num = cc-128
+   if apcmini ~= 0 and ch == 39 and num >= 0 and num <= 63 and
+      self:apcmini_master() then
+      -- update the apc_mapped table
+      if var then
+	 apc_mapped[var] = num
+      else
+	 -- need to look for any mappings of num and get rid of them
+	 for var1, num1 in pairs(apc_mapped) do
+	    if num1 == num then
+	       apc_mapped[var1] = nil
+	    end
+	 end
+      end
+      -- we borrow the color map from the Launchpad here
+      local color = self:get_lppadcolor(var)
+      local ch = (apcmini_portno-1)*16+7
+      self:outlet(1, "note", {num, color, ch})
+   end
+end
+
+function raptor:apcmini_ccmaster(state)
+   if apcmini ~= 0 then
+      local i = self:get_instance()
+      if i > 0 and i <= 8 then
+	 self.apcmini_ccmaster_state = {i, state}
+      else
+	 self.apcmini_ccmaster_state = nil
+      end
+      if self.apcmini_ccmaster_wait then
+	 -- Update pending, do it now. NOTE: The button updates need to be
+	 -- deferred until the new ccmaster state is actually available.
+	 -- That's because the ccmaster update runs through Pd's messaging
+	 -- system, which isn't instantaneous.
+	 self:apcmini_ccmaster_update()
+	 self.apcmini_ccmaster_wait = false
+      end
+   end
+end
+
+function raptor:apcmini_ccmaster_update()
+   if apcmini ~= 0 then
+      if self.shift then
+	 local ch = (apcmini_portno-1)*16+1
+	 if self.apcmini_ccmaster_state then
+	    local i, state = table.unpack(self.apcmini_ccmaster_state)
+	    local num = apc_button[i]
+	    self:outlet(1, "note", {num, state, ch})
+	 end
+      end
+   end
+end
+
 -- Launch Control XL
 
 -- This assumes factory preset #1 on MIDI channel 9. It uses the device hold
@@ -5413,9 +5845,13 @@ function raptor:process_note(atoms)
    -- The device drivers always listen on ports 2-4 only, so we can bypass the
    -- entire chain for all other port numbers.
    if portno >= 2 and portno <= 4 then
-      -- Launchpad only listens on ports 3+4.
+      -- Launchpad and APC mini only listen on ports 3+4.
       if portno == 3 or portno == 4 then
-	 local res = launchpad ~= 0 and self:launchpad_note(atoms)
+	 local res = apcmini ~= 0 and self:apcmini_note(atoms)
+	 if res then
+	    return res
+	 end
+	 res = launchpad ~= 0 and self:launchpad_note(atoms)
 	 if res then
 	    return res
 	 end
@@ -5426,7 +5862,7 @@ function raptor:process_note(atoms)
 	 if res then
 	    return res
 	 end
-	 local res = launchcontrol ~= 0 and self:launchcontrol_note(atoms)
+	 res = launchcontrol ~= 0 and self:launchcontrol_note(atoms)
 	 if res then
 	    return res
 	 end
@@ -5455,9 +5891,13 @@ function raptor:process_ctl(atoms)
    -- The device drivers always listen on ports 2-4 only, so we can bypass the
    -- entire chain for all other port numbers.
    if portno >= 2 and portno <= 4 then
-      -- Launchpad only listens on ports 3+4.
+      -- Launchpad and APC mini only listen on ports 3+4.
       if portno == 3 or portno == 4 then
-	 local res = launchpad ~= 0 and self:launchpad_ctl(atoms)
+	 local res = apcmini ~= 0 and self:apcmini_ctl(atoms)
+	 if res then
+	    return res
+	 end
+	 res = launchpad ~= 0 and self:launchpad_ctl(atoms)
 	 if res then
 	    return res
 	 end
@@ -5488,12 +5928,16 @@ function raptor:process_ctl(atoms)
 end
 
 function raptor:process_sysex(atoms, portno)
-   -- only Launchkey and Launchpad process sysex at this time
+   -- only APCmini, Launchkey and Launchpad process sysex at this time
    local res = launchkey ~= 0 and self:launchkey_sysex(atoms, portno)
    if res then
       return res
    end
    local res = launchpad ~= 0 and self:launchpad_sysex(atoms, portno)
+   if res then
+      return res
+   end
+   local res = apcmini ~= 0 and self:apcmini_sysex(atoms, portno)
    if res then
       return res
    end
@@ -5588,12 +6032,12 @@ function raptor:in_1_ctl(atoms)
    local ch = atoms[3] or 1
    local portno = (ch-1)//16+1
    local res = self:process_ctl(atoms)
-   if res and type(res) ~= "table" then
-      return
-   elseif res then
-      -- launchpad/launchkey: mapped CC gets processed as if it was on input
-      if portno == 2 and res[2] == 7 and #res==3 then
-	 -- kludge: need to do some special-casing to pass through CC7 here
+   if res and type(res) == "table" then
+      -- launchpad/launchkey/apcmini: table result is mapped CC which gets
+      -- processed as if it was on input
+      if (portno == 2 or portno == 3) and res[2] == 7 and #res==3 then
+	 -- Do some special-casing for the ninth fader on the Launchkey (49+)
+	 -- and the APC mini mk2. We pass through CC7 here.
 	 if self.assert_master or self:check_ccmaster() then
 	    self:outlet(1, "ctl", self:rechan(res))
 	 end
@@ -5601,6 +6045,8 @@ function raptor:in_1_ctl(atoms)
 	 return
       end
       goto skip
+   elseif res then
+      return
    end
    if portno == 2 then
       res = djcontrol ~= 0 and self:djcontrol_ctl(atoms)
@@ -5897,9 +6343,11 @@ function raptor:map_set(cc, ch, var, opt)
    else
       map[ch] = var
    end
-   -- launchpad/launchkey tie-in: light up buttons on the grid when they're bound
+   -- launchpad/launchkey/apcmini tie-in: light up buttons on the grid when
+   -- they're bound
    self:launchpad_mapped(cc, ch, var)
    self:launchkey_mapped(cc, ch, var)
+   self:apcmini_mapped(cc, ch, var)
 end
 
 function raptor:map_find(var)
@@ -6097,7 +6545,7 @@ function raptor:check_midi_map(val, cc, ch)
       -- We don't do the pickup check for the Launchpad (ports 3+4), as its
       -- faders are by definition always in sync, and doing the pickup check
       -- would also interfere with the device feedback.
-      self:pickup_check(ch <= 32 or ch > 64)
+      self:pickup_check(ch <= 32 or ch > 64 or ch == 39) -- 39 == APC mini
       var, val = self:from_midi(val, cc, ch)
       if val then
 	 -- apply existing mapping
@@ -6232,6 +6680,7 @@ function raptor:in_1_ccmaster(atoms)
 	 -- launchpad/key fader page tie-in
 	 self:launchpad_master_change(self.ccmaster, nil)
 	 self:launchkey_master_change(self.ccmaster, nil)
+	 self:apcmini_master_change(self.ccmaster, nil)
 	 -- omni
 	 self.ccmaster = nil
 	 -- give feedback on the panel
@@ -6243,10 +6692,12 @@ function raptor:in_1_ccmaster(atoms)
 	 self:launchkey_ccmaster_state(0)
 	 self:launchcontrol_ccmaster(0)
 	 self:midimix_ccmaster(0)
+	 self:apcmini_ccmaster(0)
       else
 	 -- launchpad/key fader page tie-in
 	 self:launchpad_master_change(self.ccmaster, id)
 	 self:launchkey_master_change(self.ccmaster, id)
+	 self:apcmini_master_change(self.ccmaster, id)
 	 -- only the given raptor is receiving
 	 self.ccmaster = id
 	 -- give feedback on the panel
@@ -6259,6 +6710,7 @@ function raptor:in_1_ccmaster(atoms)
 	 self:launchkey_ccmaster_state(flag)
 	 self:launchcontrol_ccmaster(flag)
 	 self:midimix_ccmaster(flag)
+	 self:apcmini_ccmaster(flag)
       end
    else
       -- no ids, assume omni
@@ -6398,6 +6850,7 @@ function raptor:in_1_master(atoms)
    -- launchpad/key fader page tie-in
    self:launchpad_master_change(time_master, id)
    self:launchkey_master_change(time_master, id)
+   self:apcmini_master_change(time_master, id)
    time_master = id
 end
 
@@ -6407,6 +6860,7 @@ function raptor:in_1_transport_state(atoms)
    self:djcontrol_play(atoms[1])
    self:launchpad_play(atoms[1])
    self:launchkey_play(atoms[1])
+   self:apcmini_play(atoms[1])
 end
 
 function raptor:in_1_sync(atoms)
@@ -6537,12 +6991,14 @@ function raptor:param(var, val)
 	       self:djcontrol_loop(self.arp.loopstate)
 	       self:launchpad_loop(self.arp.loopstate)
 	       self:launchkey_loop(self.arp.loopstate)
+	       self:apcmini_loop(self.arp.loopstate)
 	    end
 	    -- launchpad fader bank feedback
 	    self:launchpad_fader_val(var)
 	    -- launchpad/launchkey pad feedback
 	    self:launchpad_pad(var)
 	    self:launchkey_pad(var)
+	    self:apcmini_pad(var)
 	 end
       end
    end
@@ -6573,6 +7029,7 @@ function raptor:in_1(sel, atoms)
 	 self:djcontrol_loop(self.arp.loopstate)
 	 self:launchpad_loop(self.arp.loopstate)
 	 self:launchkey_loop(self.arp.loopstate)
+	 self:apcmini_loop(self.arp.loopstate)
       end
    else
       local i = param_i[sel]
