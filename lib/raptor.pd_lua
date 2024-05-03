@@ -4906,9 +4906,9 @@ function raptor:apcmini_note(atoms)
 	 end
       elseif ch == ch1 then
 	 -- Everything else, including the session grid, should be on channel
-	 -- 1 on the APC mini port. We remap these to channel 39 to facilitate
+	 -- 1 on the APC mini port. We remap these to channel 49 to facilitate
 	 -- MIDI mapping and to prevent conflicts with the Launchpad.
-	 atoms[3] = 39
+	 atoms[3] = 49
 	 return atoms
       else
 	 return false
@@ -4936,7 +4936,7 @@ function raptor:apcmini_ctl(atoms)
 	    atoms[2] = 7
 	 end
 	 -- change MIDI channel to prevent conflicts with Launchpad
-	 atoms[3] = 39
+	 atoms[3] = 49
 	 return atoms
       end
    end
@@ -5125,7 +5125,7 @@ function raptor:apcmini_pads()
 	    local num = cc-128
 	    if num >= 0 and num <= 63 then
 	       for ch, v in pairs(map) do
-		  if ch == 39 and v then
+		  if ch == 49 and v then
 		     local var = type(v) == "table" and v[1] or v
 		     -- we borrow the color map from the Launchpad here
 		     local color = self:get_lppadcolor(var)
@@ -5165,7 +5165,7 @@ end
 
 function raptor:apcmini_mapped(cc, ch, var)
    local num = cc-128
-   if apcmini ~= 0 and ch == 39 and num >= 0 and num <= 63 and
+   if apcmini ~= 0 and ch == 49 and num >= 0 and num <= 63 and
       self:apcmini_master() then
       -- update the apc_mapped table
       if var then
@@ -6582,7 +6582,7 @@ function raptor:check_midi_map(val, cc, ch)
       -- We don't do the pickup check for the Launchpad (ports 3+4), as its
       -- faders are by definition always in sync, and doing the pickup check
       -- would also interfere with the device feedback.
-      self:pickup_check(ch <= 32 or ch > 64 or ch == 39) -- 39 == APC mini
+      self:pickup_check(ch <= 32 or ch > 64 or ch == 49) -- 49 == APC mini
       var, val = self:from_midi(val, cc, ch)
       if val then
 	 -- apply existing mapping

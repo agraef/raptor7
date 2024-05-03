@@ -4,8 +4,8 @@
 -- Albert Gräf <agggraef@gmail.com>, 1 May 2024
 
 -- NOTE: The driver will only work with the mk2 version of the device, the
--- original APC mini is *not* supported. Set up the MIDI connections as
--- follows:
+-- original APC mini is *not* supported. You need to set up the MIDI
+-- connections as follows:
 
 -- The APC mini mk2 "Notes" port goes into Pd's first input port for the notes
 -- input in NOTE mode (see below).
@@ -27,76 +27,99 @@
 -- instance being hightlighted as long as you hold the SHIFT button. This is
 -- all hard-wired functionality provided by the driver.
 
--- The scene launch buttons in the vertical strip on the right aren't used at
--- present, so you're free to map them as you see fit. By pressing SHIFT along
--- with the NOTE and DRUM buttons, you can switch between the default session
--- mode and the built-in note and drum modes of the APC mini mk2. In DRUM
--- mode, you have the same layout of four 4x4 grids in different colors as on
--- the Launchpad, with note 36 in the lower-left corner.
-
--- The map assigns the usual four banks of Raptor controls, and the same pads
--- in session mode as the Launchpad. The FADER CTRL buttons can be used to
--- select the active fader bank. These are the same four banks as on the
--- Launchpad, Launch Control XL, and the MIDIMIX. You can find an overview of
--- the preconfigured controls and pads in the doc/raptor7-cheatsheet.pdf file.
+-- The map assigns the same two bottom rows of pads in session mode as on the
+-- Launchpad, and four fader banks which can be switched with the FADER CTRL
+-- buttons. These are the same four banks as on the Launchpad, Launch Control
+-- XL, and the MIDIMIX. You can find an overview of the preconfigured controls
+-- and pads in the doc/raptor7-cheatsheet.pdf file.
 
 -- Note that, as the APC mini only has four fader bank buttons, the fifth
 -- "Extra" bank of the Launchpad and Launchkey isn't available. However, the
 -- device has a ninth fader which the driver has hard-wired to CC7 (volume),
--- like the ninth fader on the Launchkey, so that you can use it to control
--- the master volume of your synth.
+-- like the ninth fader on the Launchkey (49+), so that you can use it to
+-- control the master volume of your synth.
+
+-- The (unshifted) SOLO, MUTE, and REC ARM buttons are assigned to latch,
+-- mute, and bypass. (These functions are available as pads in the session
+-- view, but it's convenient to also have them on tap in the other modes when
+-- you're playing notes or drums, see below.) The other scene launch buttons
+-- in the vertical strip on the right aren't predefined at present, so you're
+-- free to map them as you see fit.
+
+-- By pressing SHIFT along with the NOTE and DRUM buttons, you can switch
+-- between the default session mode and the built-in note and drum modes of
+-- the APC mini mk2. In DRUM mode, you have the same layout of four 4x4 grids
+-- in different colors as on the Launchpad, with note 36 in the lower-left
+-- corner. (Also note that while holding the SHIFT key, the NOTE and DRUM
+-- buttons will light up if the corresponding mode is active, thereby
+-- indicating the button you need to press to return to session mode.)
+
+-- CAVEAT: The driver only supports a single APC mini mk2 device at present.
+-- But you can run the APC mini in tandem with a Launchpad, if you connect
+-- them to different ports. The way that both drivers do their MIDI mapping,
+-- the Launchpad bindings are on Pd channels 33 and 37, while the APC mini
+-- bindings are on channel 49, so that they don't interfere with each other.
+-- Therefore we recommend that in this case you connect the Launchpad to port
+-- 3 and the APC mini on port 4. By these means both devices should also work
+-- in "standalone" mode, with the corresponding drivers turned off. (I have
+-- not tested this. Both devices are much less useful without driver support,
+-- so I wouldn't know why you'd want to run such a setup, but YMMV.)
 
 {
   -- send A (min value) faders
-  [13] = { [39] = "minvel" },
-  [14] = { [39] = "pmin" },
-  [15] = { [39] = "wmin" },
-  [16] = { [39] = "gate" },
-  [17] = { [39] = "hmin" },
-  [18] = { [39] = "pref" },
-  [19] = { [39] = "smin" },
-  [20] = { [39] = "uniq" },
+  [13] = { [49] = "minvel" },
+  [14] = { [49] = "pmin" },
+  [15] = { [49] = "wmin" },
+  [16] = { [49] = "gate" },
+  [17] = { [49] = "hmin" },
+  [18] = { [49] = "pref" },
+  [19] = { [49] = "smin" },
+  [20] = { [49] = "uniq" },
   -- send B (max value) faders
-  [29] = { [39] = "maxvel" },
-  [30] = { [39] = "pmax" },
-  [31] = { [39] = "wmax" },
-  [32] = { [39] = "gate" },
-  [33] = { [39] = "hmax" },
-  [34] = { [39] = "pref" },
-  [35] = { [39] = "smax" },
-  [36] = { [39] = "nmax" },
+  [29] = { [49] = "maxvel" },
+  [30] = { [49] = "pmax" },
+  [31] = { [49] = "wmax" },
+  [32] = { [49] = "gate" },
+  [33] = { [49] = "hmax" },
+  [34] = { [49] = "pref" },
+  [35] = { [49] = "smax" },
+  [36] = { [49] = "nmax" },
   -- pan (bipolar mod) faders
-  [49] = { [39] = "velmod" },
-  [50] = { [39] = "pmod" },
-  [51] = { [39] = "gain" },
-  [52] = { [39] = "gatemod" },
-  [53] = { [39] = "hmod" },
-  [54] = { [39] = "prefmod" },
-  [55] = { [39] = "smod" },
-  [56] = { [39] = "nmod" },
+  [49] = { [49] = "velmod" },
+  [50] = { [49] = "pmod" },
+  [51] = { [49] = "gain" },
+  [52] = { [49] = "gatemod" },
+  [53] = { [49] = "hmod" },
+  [54] = { [49] = "prefmod" },
+  [55] = { [49] = "smod" },
+  [56] = { [49] = "nmod" },
   -- volume faders
-  [77] = { [39] = "pitchhi" },
-  [78] = { [39] = "pitchlo" },
-  [79] = { [39] = "mode" },
-  [80] = { [39] = "pos" },
-  [81] = { [39] = "tempo" },
-  [82] = { [39] = "meter-num" },
-  [83] = { [39] = "meter-denom" },
-  [84] = { [39] = "division" },
+  [77] = { [49] = "pitchhi" },
+  [78] = { [49] = "pitchlo" },
+  [79] = { [49] = "mode" },
+  [80] = { [49] = "pos" },
+  [81] = { [49] = "tempo" },
+  [82] = { [49] = "meter-num" },
+  [83] = { [49] = "meter-denom" },
+  [84] = { [49] = "division" },
   -- predefined pads (session view)
   -- 128, 129 unassigned
-  [130] = { [39] = { "raptor", true } },
-  [131] = { [39] = { "rewind", true } },
+  [130] = { [49] = { "raptor", true } },
+  [131] = { [49] = { "rewind", true } },
   -- 132 unassigned
-  [133] = { [39] = { "loop-prev", true } },
-  [134] = { [39] = { "loop-next", true } },
-  [135] = { [39] = { "play", true } },
+  [133] = { [49] = { "loop-prev", true } },
+  [134] = { [49] = { "loop-next", true } },
+  [135] = { [49] = { "play", true } },
   -- upper row
-  [136] = { [39] = { "mute", true } },
-  [137] = { [39] = { "latch", true } },
-  [138] = { [39] = { "bypass", true } },
+  [136] = { [49] = { "mute", true } },
+  [137] = { [49] = { "latch", true } },
+  [138] = { [49] = { "bypass", true } },
   -- 139, 140 unassigned
-  [141] = { [39] = { "loop-load", true } },
-  [142] = { [39] = { "loop-save", true } },
-  [143] = { [39] = { "loop", true } },
+  [141] = { [49] = { "loop-load", true } },
+  [142] = { [49] = { "loop-save", true } },
+  [143] = { [49] = { "loop", true } },
+  -- SOLO, MUTE, REC ARM buttons
+  [241] = { [49] = { "latch", true } },
+  [242] = { [49] = { "mute", true } },
+  [243] = { [49] = { "bypass", true } },
 }
