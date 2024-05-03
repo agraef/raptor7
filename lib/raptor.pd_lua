@@ -4803,6 +4803,8 @@ end
 
 -- track buttons
 local apc_button = {0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6a, 0x6b}
+-- scene buttons
+local apc_scene = {0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x76, 0x77}
 -- faders (mode 5 not implemented yet)
 local apc_fader = { [1] = 76, [2] = 48, [3] = 12, [4] = 28, [5] = 20 }
 -- fader mode 1-4
@@ -4859,8 +4861,10 @@ function raptor:apcmini_note(atoms)
 	 if self.shift then
 	    self:apcmini_mode(0)
 	    self:apcmini_ccmaster_update()
+	    self:apcmini_pmode()
 	 else
 	    self:apcmini_mode()
+	    self:apcmini_pmode(0)
 	 end
       elseif ch == ch1 and self.shift and num >= 0x64 and num <= 0x6b then
 	 -- instance selection mode
@@ -4977,6 +4981,9 @@ function raptor:apcmini_sysex(atoms, portno)
 	       if mode >= 0 and mode <= 2 and mode ~= apc_pmode then
 		  apc_pmode = mode
 		  self:apcmini_pads()
+		  if self.shift then
+		     self:apcmini_pmode()
+		  end
 	       end
 	    end
 	    return true
@@ -5054,12 +5061,18 @@ end
 function raptor:apcmini_clear()
    if apcmini_portno then
       local ch = (apcmini_portno-1)*16
-      local ch1, ch7 = ch+1, ch+7
+      local ch1, ch7, ch10 = ch+1, ch+7, ch+10
       for i = 1, 8 do
 	 self:out(1, "note", {apc_button[i], 0, ch1})
       end
+      for i = 1, 8 do
+	 self:out(1, "note", {apc_scene[i], 0, ch1})
+      end
       for num = 0, 63 do
 	 self:out(1, "note", {num, 0, ch7})
+      end
+      for num = 64, 127 do
+	 self:out(1, "note", {num, 0, ch10})
       end
    end
 end
@@ -5070,10 +5083,8 @@ function raptor:apcmini_mode(color)
    if apcmini ~= 0 and self:apcmini_master() then
       local ch = (apcmini_portno-1)*16+1
       if color then
-	 if self:apcmini_master() then
-	    for i = 1, 8 do
-	       self:out(1, "note", {apc_button[i], color, ch})
-	    end
+	 for i = 1, 8 do
+	    self:out(1, "note", {apc_button[i], color, ch})
 	 end
       else
 	 for i = 1, 4 do
@@ -5081,6 +5092,24 @@ function raptor:apcmini_mode(color)
 	 end
 	 for i = 5, 8 do
 	    self:out(1, "note", {apc_button[i], 1, ch})
+	 end
+      end
+   end
+end
+
+function raptor:apcmini_pmode(color)
+   -- color == 0 clears the scene buttons, otherwise the buttons are set
+   -- according to the current state
+   if apcmini ~= 0 and self:apcmini_master() then
+      local ch = (apcmini_portno-1)*16+1
+      if color then
+	 for i = 6, 7 do
+	    self:out(1, "note", {apc_scene[i], color, ch})
+	 end
+      else
+	 for i = 6, 7 do
+	    local state = 8-apc_pmode == i and 1 or 0
+	    self:out(1, "note", {apc_scene[i], state, ch})
 	 end
       end
    end
