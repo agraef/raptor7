@@ -193,11 +193,11 @@ Beyond MIDI learn, Raptor also offers special support for some widespread contro
 
 #### Device Configuration
 
-For now, the special device drivers included in Raptor all work nicely together, so we have them all enabled by default. But you can easily turn them off using the `config` patch which you can find in Raptor's `init` subpatch. Click on the patch to open it. It contains the dialog shown below. The toggles for the device drivers are in the upper half. In the lower half, you can configure some device-specific parameters for the Novation Launchpad and the Hercules DJ Control. You can submit your changes to Raptor at any time by pressing the `Submit` button, or revert to the factory settings with the `Defaults` button. This affects all running Raptor instances. You can also make your changes permanent by just saving the config patch, so that your custom settings will be reloaded the next time you launch Raptor.
+For now, the special device drivers included in Raptor work together quite nicely, so we have them all enabled by default. But you can easily turn them off using the `config` patch which you can find in Raptor's `init` subpatch. Click on the patch to open it. It contains the dialog shown below. The toggles for the device drivers are in the upper half. In the lower half, you can configure some device-specific parameters for the Novation Launchpad and the Hercules DJ Control. You can submit your changes to Raptor at any time by pressing the `Submit` button, or revert to the factory settings with the `Defaults` button. This affects all running Raptor instances. You can also make your changes permanent by just saving the config patch, so that your custom settings will be reloaded the next time you launch Raptor.
 
 Note that disabling a driver doesn't make the device go away. Only the special processing of the device driver (including MIDI feedback, see below) will be suspended. The device itself will continue to function as a standard MIDI controller, thus it can still send MIDI data and initiate parameter changes via the MIDI learn facility, unless you really disconnect the device from Raptor's input.
 
-<img src="doc/config.png" alt="config" style="zoom:70%;" />
+<img src="doc/config.png" alt="config" style="zoom:80%;" />
 
 #### Pickup Mode
 
@@ -213,14 +213,15 @@ One interesting form of feedback provided by the Novation Launchpad and Hercules
 
 The following table summarizes the currently supported controllers and lists their MIDI port numbers, feedback capabilities, and the names of the accompanying MIDI map files in the data subdirectory. More details can be found in the subsections below.
 
-| Device                     | I/O Port #    | Feedback                   | MIDI Map          |
-| -------------------------- | ------------- | -------------------------- | ----------------- |
-| Novation Launchpad         | **3** / **4** | required, 2 separate ports | launchpad.map     |
-| Novation Launchkey         | 1* + 2        | yes (recommended)          | launchkey.map     |
-| Novation Launch Control XL | 2             | yes (optional)             | launchcontrol.map |
-| AKAI Professional MIDIMIX  | 2             | yes (optional)             | midimix.map       |
-| Nektar PACER               | 2*            | no                         | pacer.map         |
-| Hercules DJ Control        | 2             | yes (recommended)          | djcontrol.map     |
+| Device                         | I/O Port #       | Feedback                   | MIDI Map          |
+| ------------------------------ | ---------------- | -------------------------- | ----------------- |
+| Novation Launchpad             | **3**/**4**      | required, 2 separate ports | launchpad.map     |
+| Novation Launchkey             | 1* + 2           | yes (recommended)          | launchkey.map     |
+| Novation Launch Control XL     | 2                | yes (optional)             | launchcontrol.map |
+| AKAI Professional MIDIMIX      | 2                | yes (optional)             | midimix.map       |
+| AKAI Professional APC mini mk2 | **3**/**4** + 1* | yes (recommended)          | apcmini.map       |
+| Nektar PACER                   | 2*               | no                         | pacer.map         |
+| Hercules DJ Control            | 2                | yes (recommended)          | djcontrol.map     |
 
 \* = input only
 
@@ -234,7 +235,7 @@ You can find the patchbay in the init subpatch of the main Raptor patch. Click o
 
 There are two routing matrices, inputs on the left and outputs on the right. You can also recall the default setup, or save and later reload your own custom setup with the buttons at the bottom of the subpatch. Your custom setup will also be recalled when Raptor launches.
 
-The columns 1-4 in each routing matrix denote your first four physical Pd MIDI ports, while the rows correspond to your virtual ports for your primary keyboard/synth I/O, labeled "Keys/Synth #1", as well as three controller I/O ports labeled "Control #2" to "Control #4". In the current implementation, Control #3 and #4 are both reserved for Launchpad devices, while Control #2 is to be used with all the other drivers.
+The columns 1-4 in each routing matrix denote your first four physical Pd MIDI ports, while the rows correspond to your virtual ports for your primary keyboard/synth I/O, labeled "Keys/Synth #1", as well as three controller I/O ports labeled "Control #2" to "Control #4". In the current implementation, Control #3 and #4 are both reserved for Launchpad and APC mini devices, while Control #2 is to be used with all the other drivers.
 
 Note that each physical port 1-4 can only be connected to a single virtual port, or be disconnected from the virtual ports by clicking in the topmost row labeled "-Off-". Also note that the "-Off-" option doesn't really disconnect a device from Pd, it only disconnects a port from Raptor's internal processing.
 
@@ -254,7 +255,7 @@ On the Launchpad, Raptor's five fader banks have distinct colors: 1 Volume - red
 
 Note that the button labels on the Launchpad Pro and X do not really indicate the type of parameters the faders are bound to, so you'll have to consult the cheat sheet to find out what the actual controls are. The fader positions shown on the device will always reflect the current parameter values in the Raptor patch. If you're running multiple Raptor instances, that will be the values in the selected Raptor instance, or the values of the time master, if no Raptor instance is selected. The values are also updated live while switching instances, or if a value is changed in the patch (or via some other connected controller).
 
-**IMPORTANT:** In contrast to the other controllers, this device needs to be connected to its own MIDI port, port 3 or 4, on *both* input and output, so that the device is properly recognized by the driver. Raptor reserves both ports 3 and 4 for use with the Launchpad, so that you can connect two different devices at the same time and have them work nicely together. This is necessary since the Launchpad driver needs to maintain a certain amount of state information about each device. It is possible to connect two or more devices *of the same model* to the same port, however, and have them operate in lockstep. But different models must *always* be connected to different ports. That's because there are some variations (or outright incompatibilities) of Novation's MIDI protocol for different models that the driver needs to accommodate. The driver will warn you at startup if it detects any such conflicts. In this case the conflicting models will have their session mode disabled, but you can still use them as standard MIDI controllers for MIDI note and CC input.
+**IMPORTANT:** In contrast to most of the other controllers, this device needs to be connected to its own MIDI port, port 3 or 4, on *both* input and output, so that the device is properly recognized by the driver. Raptor reserves both ports 3 and 4 for use with the Launchpad, so that you can connect two different devices at the same time and have them work nicely together. This is necessary since the Launchpad driver needs to maintain a certain amount of state information about each device. It is possible to connect two or more devices *of the same model* to the same port, however, and have them operate in lockstep. But different models must *always* be connected to different ports. That's because there are some variations (or outright incompatibilities) of Novation's MIDI protocol for different models that the driver needs to accommodate. The driver will warn you at startup if it detects any such conflicts. In this case the conflicting models will have their session mode disabled, but you can still use them as standard MIDI controllers for MIDI note and CC input.
 
 #### Novation Launchkey
 
@@ -286,6 +287,18 @@ Note that both types of bindings are only in effect as long as you press the "De
 The [AKAI MIDIMIX][] is a popular (and more budget-friendly) alternative to the Launch Control XL with a very similar layout. Raptor's support consists of a MIDI mapping and some hard-wired bindings for switching Raptor instances. These assume that the device uses the factory configuration. A description of the mapping, which aims to be as similar as possible to the Launch Control XL, can be found in the *midimix.map* file in the data directory. To use this mapping, load the map file and make sure that the MIDIMIX is connected to Pd's second MIDI input.
 
 The MIDIMIX lacks a dedicated device select button, so the SOLO button is used for selecting Raptor instances instead. To do this, press (and hold) the SOLO button, while you push the BANK LEFT and RIGHT buttons to cycle through the Raptor instances, or the buttons labeled 1-8 in the bottom row, right above the faders, to directly change to the corresponding instance (or switch back to "omni" if the given instance was already selected). If the controller is connected to Pd's second output port, Raptor will highlight the selected instance on the 1-8 button row while the SOLO button is pressed.
+
+#### AKAI Professional APC mini mk2
+
+The [AKAI APC mini mk2][] is to the Launchpad what the MIDIMIX is to the Launch Control XL: A more budget-friendly alternative providing similar, if more limited, functionality. It doesn't appear to be as popular as the Launchpads, but it's still a good controller, easy to use, and works very well as a control surface for Raptor, too. The 8x8 pads, while not velocity-sensitive, have full RGB coloring, and the device also has nine physical faders below the launch grid, which some might even prefer over the virtual faders of the Launchpad.
+
+Note that the mk2 version of the device is required; the original APC mini is incompatible and thus not supported by this implementation. Similar to the Launchpad, you need to connect the Control port of the APC mini mk2 to either port 3 or 4, on both input and output. Also make sure that you don't already have a Launchpad on the same pair of ports, as the two devices are incompatible. If you want to utilize the built-in note mode of the device, you'll also have to connect the Notes port to Pd's first input port. (The driver supports only a single APC mini mk2 at present, but you can still run a Launchpad in tandem with it if you connect the Launchpad to the other port.)
+
+Usage is pretty much the same as with the Launchpad, please check the MIDI map in data/apcmini.map for details. You have the same four fader banks as on the Launchpad, Launch Control XL, and the MIDIMIX. Use the FADER CTRL buttons to switch between these. You may want to refer to the cheat sheet in [doc/raptor7-cheatsheet.pdf][] for an overview of controls in the fader banks (as well as the default pad assignments in session view, discussed below). The ninth fader is hard-wired to the volume controller (CC7), like on the bigger Launchkey controllers, and can be used to control the master volume of your synth.
+
+As usual, the arrow buttons can be used to select presets (up, down) and Raptor instances (left, right). If you press the SHIFT button, you can use the same eight buttons to directly change to the corresponding instance (or switch back to "omni" if the given instance was already selected), with the currently selected instance being highlighted as long as you hold the SHIFT button.
+
+The driver switches the device to session mode at startup. The session grid has the same default pad assignments in the two bottom rows as the Launchpad, using the same color-coding, and the entire grid is mappable. You can also switch between session mode and the built-in note and drum modes of the APC mini mk2 by pressing SHIFT along with the NOTE and DRUM buttons in the strip of scene launch buttons on the right. In DRUM mode, you have the same layout of four 4x4 grids in different colors as on the Launchpad, with note 36 in the lower-left corner.
 
 #### Nektar PACER
 
@@ -331,7 +344,7 @@ Raptor's MIDI learn facility, while simple to use, is fairly basic as well. It's
 
 Also, there's no support for macro controls yet. It would make some sense to add this now that we have the capability to configure inverted mappings. But it would also make the interaction with the MIDI learn facility more complicated, so some effort will be needed to keep things as simple as possible when we add this.
 
-On the positive side, Raptor's MIDI map files are just Lua tables and their structure is fairly simple, so it's not too hard to process them in Lua, or even generate the data from map file formats of other programs.
+On the positive side, Raptor's MIDI map files are just Lua tables and their structure is fairly simple, so it shouldn't be too hard to process them in Lua, or even generate the data from map file formats of other programs.
 
 ### Controller Support
 
@@ -359,6 +372,7 @@ Device management is another area where Raptor still has room for improvements. 
 [Novation Launchkey]: https://novationmusic.com/launchkey
 [Novation Launch Control XL]: https://novationmusic.com/products/launch-control-xl
 [AKAI MIDIMIX]: https://www.akaipro.com/midimix
+[AKAI APC mini mk2]: https://www.akaipro.com/apc-mini-mk2.html
 [Nektar PACER]: https://nektartech.com/pacer-midi-daw-footswitch-controller/
 [Ableton Link]: https://www.ableton.com/link/
 [bug report]: https://github.com/agraef/raptor7/issues
