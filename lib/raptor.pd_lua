@@ -3060,6 +3060,15 @@ local lp_welcome = {}
 -- status of the drum grid, per port
 local lp_drums = {}
 
+-- status of fixed length, quantise, and tempo overlays, per port (LP Pro)
+-- these are bound to the Fixed Length, Quantise, and Duplicate/Double buttons
+local lp_fixed_length = {}
+local lp_quantise = {}
+local lp_tempo = {}
+
+-- some tempo presets for the tempo overlay
+local lp_tempo_presets = {60, 80, 90, 100, 110, 120, 140, 160}
+
 -- forward declaration for the feedback, since we already need this variable
 -- in launchpad_fini and launchpad_master_change below
 local launchpad_master = nil
@@ -3079,7 +3088,7 @@ function raptor:launchpad_init()
 	 -- self.launchpad_page
 	 self:out(1, "sysex", {0, 32, 41, 2, id, 0})
 	 -- light up all buttons
-	 local color = {accent_loop, 3, 1, 1, 1, 32, accent_arrows, accent_arrows}
+	 local color = {accent_loop, 3, accent_loop, 2, assigned, 32, accent_arrows, accent_arrows}
 	 for i = 1, 8 do
 	    -- left- and rightmost columns (the former is only on the LPPro)
 	    if id == 14 then
@@ -3424,6 +3433,31 @@ function raptor:launchpad_fader_page(portno, page)
    end
 end
 
+-- helper functions to create a temporary overlay for the ccmaster display on
+-- the track select buttons (LP Pro only)
+
+function raptor:lp_set_overlay(j, color)
+   -- j is the button to highlight with the given color
+   color = color or 3
+   for i = 1, 8 do
+      local color = j == i and color or 0
+      self:launchpad_ccmaster(0, i, color)
+   end
+end
+
+function raptor:lp_reset_overlay()
+   -- recreate the ccmaster display
+   for i = 1, 8 do
+      local id = raptor.instances[i]
+      if id then
+	 local state = id == self.ccmaster and 1 or 0
+	 self:launchpad_ccmaster(state, i)
+      else
+	 self:launchpad_ccmaster(0, i, 0)
+      end
+   end
+end
+
 function raptor:launchpad_ctl(atoms)
    if launchpad ~= 0 then
       local val, num, ch = table.unpack(atoms)
@@ -3520,9 +3554,79 @@ function raptor:launchpad_ctl(atoms)
 	       -- as the button is released (which we just detected)
 	       self:launchpad_fader_page(portno)
 	    end
+	 elseif num == 30 then
+	    -- LP Pro: fixed length overlay, sets loop size
+	    if self:launchpad_master() then
+	       lp_fixed_length[portno] = val > 0
+	       if val > 0 then
+		  local i = param_i["loopsize"]
+		  i = i and self.param_val[i] or 0
+		  self:lp_set_overlay(i, accent_loop)
+	       else
+		  self:lp_reset_overlay()
+	       end
+	    end
+	 elseif num == 40 then
+	    -- LP Pro: quantise overlay, sets division in the time master
+	    if self:check_master() then
+	       lp_quantise[portno] = val > 0
+	       if val > 0 then
+		  local i = param_i["division"]
+		  i = i and self.param_val[i] or 0
+		  self:lp_set_overlay(i)
+	       else
+		  self:lp_reset_overlay()
+	       end
+	    end
+	 elseif num == 50 then
+	    -- LP Pro: tempo overlay, sets tempo in the time master
+	    if self:check_master() then
+	       lp_tempo[portno] = val > 0
+	       if val > 0 then
+		  local i = param_i["tempo"]
+		  local bpm = math.floor(i and self.param_val[i] or 0)
+		  i = 0
+		  for j = 1, 8 do
+		     if lp_tempo_presets[j] == bpm then
+			i = j
+			break
+		     end
+		  end
+		  self:lp_set_overlay(i, assigned)
+	       else
+		  self:lp_reset_overlay()
+	       end
+	    end
 	 elseif num >= 101 and num <= 108 then
 	    if val > 0 then
-	       self:in_1_ccmaster_set({num-100})
+	       if lp_fixed_length[portno] then
+		  -- LP Pro: fixed length overlay, sets loop size
+		  if self:check_ccmaster() then
+		     local i = num-100
+		     self:param("loopsize", i)
+		     if self:launchpad_master() then
+			self:lp_set_overlay(i, accent_loop)
+		     end
+		  end
+	       elseif lp_quantise[portno] then
+		  -- LP Pro: quantise overlay, sets division
+		  local i = num-100
+		  if i <= 7 then
+		     self:param("division", i)
+		     if self:launchpad_master() then
+			self:lp_set_overlay(i)
+		     end
+		  end
+	       elseif lp_tempo[portno] then
+		  -- LP Pro: tempo overlay, sets tempo from presets
+		  local i = num-100
+		  self:param("tempo", lp_tempo_presets[i])
+		  if self:launchpad_master() then
+		     self:lp_set_overlay(i, assigned)
+		  end
+	       else
+		  self:in_1_ccmaster_set({num-100})
+	       end
 	    end
 	 else
 	    -- arrow buttons: up, down, left, right
