@@ -2291,7 +2291,6 @@ function raptor:initialize(sel, atoms)
    self.lp_alt_cc = {}
    self.launchpad_faders = {}
    self.launchpad_page = {}
-   self.launchpad_drums = {}
 
    -- midi learn
    self.midi_map = {}
@@ -3058,6 +3057,9 @@ local rolling = 0
 -- status of the welcome message, per port
 local lp_welcome = {}
 
+-- status of the drum grid, per port
+local lp_drums = {}
+
 -- forward declaration for the feedback, since we already need this variable
 -- in launchpad_fini and launchpad_master_change below
 local launchpad_master = nil
@@ -3115,7 +3117,7 @@ function raptor:launchpad_init()
 	       self:out(1, "note", {i+36, color, drumch})
 	    end
 	 end
-	 self.launchpad_drums[portno] = false
+	 lp_drums[portno] = false
 	 if id == 14 then
 	    -- LP Pro: Set up the four fader banks in advance. On the LP
 	    -- Mini/X this is done on the fly, because there's only a single
@@ -3472,8 +3474,8 @@ function raptor:launchpad_ctl(atoms)
 	 if num == notes_num then
 	    if val > 0 and self:launchpad_master() then
 	       -- toggles drum mode
-	       self.launchpad_drums[portno] = not self.launchpad_drums[portno]
-	       local flag = self.launchpad_drums[portno] and 1 or 0
+	       lp_drums[portno] = not lp_drums[portno]
+	       local flag = lp_drums[portno] and 1 or 0
 	       self:outlet(2, "float", {portno})
 	       if id == 14 then
 		  -- Launchpad Pro MK3. This isn't what the prog manual
