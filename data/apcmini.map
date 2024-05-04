@@ -29,9 +29,10 @@
 
 -- The map assigns the same two bottom rows of pads in session mode as on the
 -- Launchpad, and four fader banks which can be switched with the FADER CTRL
--- buttons. These are the same four banks as on the Launchpad, Launch Control
--- XL, and the MIDIMIX. You can find an overview of the preconfigured controls
--- and pads in the doc/raptor7-cheatsheet.pdf file.
+-- buttons. These are the same four banks (albeit using different CCs) as on
+-- the Launchpad, Launch Control XL, and the MIDIMIX. See the
+-- doc/raptor7-cheatsheet.pdf file for an overview of the preconfigured
+-- controls and pads.
 
 -- Note that, as the APC mini only has four fader bank buttons, the fifth
 -- "Extra" bank of the Launchpad and Launchkey isn't available. However, the
@@ -61,9 +62,9 @@
 -- bindings are on channel 49, so that they don't interfere with each other.
 -- Therefore we recommend that in this case you connect the Launchpad to port
 -- 3 and the APC mini on port 4. By these means both devices should also work
--- in "standalone" mode, with the corresponding drivers turned off. (I have
--- not tested this. Both devices are much less useful without driver support,
--- so I wouldn't know why you'd want to run such a setup, but YMMV.)
+-- in "standalone" mode, with the corresponding drivers turned off. (Both
+-- devices are much less useful without driver support, so I wouldn't know why
+-- you'd want to run such a setup, but YMMV.)
 
 {
   -- send A (min value) faders
@@ -85,23 +86,23 @@
   [35] = { [49] = "smax" },
   [36] = { [49] = "nmax" },
   -- pan (bipolar mod) faders
-  [49] = { [49] = "velmod" },
-  [50] = { [49] = "pmod" },
-  [51] = { [49] = "gain" },
-  [52] = { [49] = "gatemod" },
-  [53] = { [49] = "hmod" },
-  [54] = { [49] = "prefmod" },
-  [55] = { [49] = "smod" },
-  [56] = { [49] = "nmod" },
+  [37] = { [49] = "velmod" },
+  [38] = { [49] = "pmod" },
+  [39] = { [49] = "gain" },
+  [40] = { [49] = "gatemod" },
+  [41] = { [49] = "hmod" },
+  [42] = { [49] = "prefmod" },
+  [43] = { [49] = "smod" },
+  [44] = { [49] = "nmod" },
   -- volume faders
-  [77] = { [49] = "pitchhi" },
-  [78] = { [49] = "pitchlo" },
-  [79] = { [49] = "mode" },
-  [80] = { [49] = "pos" },
-  [81] = { [49] = "tempo" },
-  [82] = { [49] = "meter-num" },
-  [83] = { [49] = "meter-denom" },
-  [84] = { [49] = "division" },
+  [48] = { [49] = "pitchhi" },
+  [49] = { [49] = "pitchlo" },
+  [50] = { [49] = "mode" },
+  [51] = { [49] = "pos" },
+  [52] = { [49] = "tempo" },
+  [53] = { [49] = "meter-num" },
+  [54] = { [49] = "meter-denom" },
+  [55] = { [49] = "division" },
   -- predefined pads (session view)
   -- 128, 129 unassigned
   [130] = { [49] = { "raptor", true } },
