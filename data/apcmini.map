@@ -28,24 +28,23 @@
 -- all hard-wired functionality provided by the driver.
 
 -- The map assigns the same two bottom rows of pads in session mode as on the
--- Launchpad, and four fader banks which can be switched with the FADER CTRL
--- buttons. These are the same four banks (albeit using different CCs) as on
--- the Launchpad, Launch Control XL, and the MIDIMIX. See the
--- doc/raptor7-cheatsheet.pdf file for an overview of the preconfigured
--- controls and pads.
+-- Launchpad, and five fader banks which can be switched with the FADER CTRL
+-- buttons. These are the same five banks (albeit using different CCs) as on
+-- the Launchpad and Launchkey. See the doc/raptor7-cheatsheet.pdf file for an
+-- overview of the preconfigured controls and pads.
 
 -- Note that, as the APC mini only has four fader bank buttons, the fifth
--- "Extra" bank of the Launchpad and Launchkey isn't available. However, the
+-- "Extra" bank is accessed by turning all FADER CTRL buttons *off*. Also, the
 -- device has a ninth fader which the driver has hard-wired to CC7 (volume),
 -- like the ninth fader on the Launchkey (49+), so that you can use it to
 -- control the master volume of your synth.
 
 -- The (unshifted) SOLO, MUTE, and REC ARM buttons are assigned to latch,
--- mute, and bypass. (These functions are available as pads in the session
--- view, but it's convenient to also have them on tap in the other modes when
--- you're playing notes or drums, see below.) The other scene launch buttons
--- in the vertical strip on the right aren't predefined at present, so you're
--- free to map them as you see fit.
+-- mute, and bypass. (These functions are also available as pads in the
+-- session view, but it's convenient to also have them on tap in the other
+-- modes when you're playing notes or drums, see below.) The other scene
+-- launch buttons in the vertical strip on the right aren't predefined at
+-- present, so you're free to map them as you see fit.
 
 -- By pressing SHIFT along with the NOTE and DRUM buttons, you can switch
 -- between the default session mode and the built-in note and drum modes of
@@ -57,14 +56,11 @@
 
 -- CAVEAT: The driver only supports a single APC mini mk2 device at present.
 -- But you can run the APC mini in tandem with a Launchpad, if you connect
--- them to different ports. The way that both drivers do their MIDI mapping,
--- the Launchpad bindings are on Pd channels 33 and 37, while the APC mini
--- bindings are on channel 49, so that they don't interfere with each other.
--- Therefore we recommend that in this case you connect the Launchpad to port
--- 3 and the APC mini on port 4. By these means both devices should also work
--- in "standalone" mode, with the corresponding drivers turned off. (Both
--- devices are much less useful without driver support, so I wouldn't know why
--- you'd want to run such a setup, but YMMV.)
+-- them to different ports. We recommend that in this case you connect the
+-- Launchpad to port 3 and the APC mini to port 4. By these means both devices
+-- should also work in "standalone" mode, with the corresponding drivers
+-- turned off. (Both devices are much less useful without driver support, so I
+-- wouldn't know why you'd want to run such a setup, but YMMV.)
 
 {
   -- send A (min value) faders
@@ -103,6 +99,15 @@
   [53] = { [49] = "meter-num" },
   [54] = { [49] = "meter-denom" },
   [55] = { [49] = "division" },
+  -- "extra" bank (selection of most frequently used controls)
+  [21]  = { [49] = "mode" },
+  [22]  = { [49] = "pos" },
+  [23]  = { [49] = "gain" },
+  [24]  = { [49] = "gate" },
+  [25]  = { [49] = "hmin" },
+  [26]  = { [49] = "hmax" },
+  [27]  = { [49] = "pref" },
+  [28]  = { [49] = "prefmod" },
   -- predefined pads (session view)
   -- 128, 129 unassigned
   [130] = { [49] = { "raptor", true } },

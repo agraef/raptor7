@@ -4805,11 +4805,10 @@ end
 local apc_button = {0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6a, 0x6b}
 -- scene buttons
 local apc_scene = {0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x76, 0x77}
--- faders (mode 5 not implemented yet)
--- NOTE: CC numbers of bank 1 and 2 differ from Launch Control/Launchpad/
+-- faders: CC numbers of bank 1 and 2 differ from Launch Control/Launchpad/
 -- Launchkey so that the raw faders CC48-55 match up with bank 1 (Volume)
 local apc_fader = { [1] = 47, [2] = 36, [3] = 12, [4] = 28, [5] = 20 }
--- fader mode 1-4
+-- fader mode 1-5
 local apc_mode = 1
 -- pad mode (0 == session, 1 == keys, 2 == drums)
 local apc_pmode = 0
@@ -4880,8 +4879,11 @@ function raptor:apcmini_note(atoms)
 	    local mode = math.floor(num-0x63)
 	    if mode ~= apc_mode then
 	       apc_mode = mode
-	       self:apcmini_mode()
+	    else
+	       -- all buttons off => mode 5 (the extra bank)
+	       apc_mode = 5
 	    end
+	    self:apcmini_mode()
 	 end
       elseif ch == ch1 and num >= 0x68 and num <= 0x69 then
 	 -- up/down arrow buttons (preset selection)
