@@ -173,12 +173,21 @@
    device, so the button assignments may vary. (However, we try to ensure that
    all available functionality is available on *all* devices in some way.)
 
-   Here is a brief rundown of the available functions:
+   Here is a rundown of the available functions:
 
    The "Play" and "Capture MIDI" buttons on the Launchpad Pro, as well as the
    "Capture MIDI" button on the Launchpad X, are bound to Raptor's play and
    loop functions, respectively. If you don't have these then you can use the
    corresponding pads in the session view instead (see above).
+
+   The "Duplicate/Double", "Quantise", and "Fixed Length" buttons on the
+   Launchpad Pro act like shift buttons which bring up an overlay for the
+   strip of track select buttons which is normally used to select Raptor
+   instances (see below). The three overlays available at present let you
+   select tempo (presets 1-8), division (1-7), and loop size (1-8). To use
+   this, press the button for the overlay that you want, make your selection
+   with the eight track buttons, then release the button to return the track
+   buttons to their default function.
 
    The "Note" button on the Launchpad X toggles between the note and drumrack
    views in note mode. On the Launchpad Pro, you have the same function on the
@@ -195,8 +204,8 @@
    (i.e., transposition in note mode), or are just unavailable because
    Novation made it so.
 
-   On the Launchpad Pro, instances can also be selected using the upper button
-   row at the bottom, and the bottommost row has the following functions:
+   On the Launchpad Pro, instances can also be selected using the track select
+   buttons, and the bottommost row has the following functions:
 
    Record Arm/Mute/Solo: These are mapped to the bypass/mute/latch toggles,
    which are also on the launch grid, albeit in a different order (see above).
