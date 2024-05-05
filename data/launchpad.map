@@ -48,22 +48,24 @@
      guides. (The Launchpad Mini MK3 works the same, although it doesn't offer
      the velocity-sensitive fader operation of its two siblings.)
 
-   - A fifth "Extra" fader bank that replicates the Launchkey's Device knobs,
+   - A fifth "Extra" fader bank that replicates the Launchkey's Device bank,
      which has some frequently used performance controls bound to it.
 
    - The hardware buttons surrounding the launch grid which are used for
      switching fader banks, selecting Raptor instances and presets, and for
-     other MIDI-mapped Raptor functions, while retaining full integration with
+     other special Raptor functions, while retaining full integration with
      Launchpad's built-in functionality such as the note and drum views.
 
    Some of the hardware buttons work differently than what you might be used
-   to from Ableton Live, however. In particular, the Mute, Solo, and Record
-   Arm buttons are bound to Raptor's mute, latch, and bypass "voice" controls.
+   to from Ableton Live. In particular, the Mute, Solo, and Record Arm buttons
+   are bound to Raptor's mute, latch, and bypass toggles in the panel. (With
+   Ableton Live and other DAW programs, these buttons are usually part of the
+   mixer interface instead.)
 
-   On the Launchpad Pro, the Clear button toggles between Launchpad's note and
-   drum views when in note mode. On the Launchpad X, you can just press the
-   Notes button instead, while the Mini lets you switch between the two custom
-   layouts by pressing the Keys and Drums buttons.
+   The Launchpad Pro has some extra controls in the vertical strip of buttons
+   on the left and the two strips of buttons at the bottom. The driver binds
+   these to the transport and looper controls, as well as some frequently used
+   mixer and performance functions, see HARDWARE BUTTONS below for details.
 
    In the following we discuss each of the elements of the Raptor mapping in
    more detail.
@@ -137,10 +139,6 @@
    are bipolar, as are all of the faders on bank 2 (Pan) except gain. The
    other faders are unipolar.
 
-   NB: This table and the following one are also included in the distribution
-   as a nicely formatted pdf document, see doc/raptor7-cheatsheet.pdf. You
-   might want to print this and stick it to your Launchpad for reference. :)
-
    LAUNCH GRID: Other functions are accessible using the launch grid in
    session view. The pre-assigned functions are color-coded and laid out in
    the two pad rows at the bottom, following the same layout as the two button
@@ -150,8 +148,20 @@
    [mute] [latch] [bypass]  [      ] [      ] [load] [save] [loop]
                   [raptor]  [rewind]          [prev] [next] [play]
 
-   NB: The mute, latch, and bypass toggles are also accessible using hardware
+   The mute, latch, and bypass toggles are also accessible using hardware
    buttons, see below.
+
+   The two tables from above are also included in the distribution as a nicely
+   formatted pdf document, see doc/raptor7-cheatsheet.pdf. You might want to
+   print this and stick it to your Launchpad for reference. :)
+
+   NOTE: Obviously, the Launchpad was designed as an Ableton Live controller,
+   so not all the button labels will make a lot of sense in the context of
+   Raptor which isn't a DAW by any stretch of the imagination. In spite of
+   this, we tried to come up with a mapping that is intuitive and usable. The
+   rationale behind the fader mapping is explained in the launchcontrol.map
+   file, and you can use the cheat sheet or create your own scribble strips to
+   get familiar with the mapping of the buttons and faders.
 
    PAD CONTROLS: The pads on the launch grid have a sensitivity threshold; a
    medium touch will trigger them, while a light touch just displays the
@@ -175,26 +185,26 @@
 
    Here is a rundown of the available functions:
 
-   The "Play" and "Capture MIDI" buttons on the Launchpad Pro, as well as the
-   "Capture MIDI" button on the Launchpad X, are bound to Raptor's play and
-   loop functions, respectively. If you don't have these then you can use the
+   The "Play" and "Record" buttons on the Launchpad Pro, as well as the
+   "Record" button on the Launchpad X, are bound to Raptor's play and loop
+   functions, respectively. If you don't have these then you can use the
    corresponding pads in the session view instead (see above).
 
    The "Duplicate/Double", "Quantise", and "Fixed Length" buttons on the
-   Launchpad Pro act like shift buttons which bring up an overlay for the
+   Launchpad Pro work like shift buttons which bring up an overlay for the
    strip of track select buttons which is normally used to select Raptor
-   instances (see below). The three overlays available at present let you
-   select tempo (presets 1-8), division (1-7), and loop size (1-8). To use
-   this, press the button for the overlay that you want, make your selection
-   with the eight track buttons, then release the button to return the track
-   buttons to their default function.
+   instances (see below). The three overlays let you select tempo (presets
+   1-8), division (1-7), and loop size (1-8). To use these, press and hold the
+   button for the overlay that you want, make your selection with the eight
+   track buttons, then release the button to return the track buttons to their
+   default function.
 
    The "Note" button on the Launchpad X toggles between the note and drumrack
-   views in note mode. On the Launchpad Pro, you have the same function on the
-   "Clear" botton on the left. (That's because on the Pro the Note button
-   itself generates no MIDI data in note mode. Also note that this function
-   isn't available on the Mini, because it has no dedicated note mode, but you
-   can use the custom Keys and Drums modes instead.)
+   views in note mode. Alas, this doesn't seem possible on the Launchpad Pro,
+   thus we have provided the same function with the "Clear" button in the
+   left-hand side strip instead. (The Mini lacks a dedicated note mode, so
+   this function isn't available there either. Use the Key and Drum custom
+   modes instead.)
 
    The left and right arrow buttons can be used to select the current Raptor
    instance, while the up and down arrow buttons change presets. Note that
@@ -245,10 +255,10 @@
   [39] = { [33] = { "mute", true } },
   [29] = { [33] = { "latch", true } },
   [19] = { [33] = { "bypass", true } },
-  -- Play and Capture MIDI buttons (LP Pro)
+  -- Play and Record buttons (LP Pro)
   [20] = { [33] = { "play", true } },
   [10] = { [33] = { "loop", true } },
-  -- Capture MIDI button (LP X)
+  -- Record button (LP X)
   [98] = { [33] = { "loop", true } },
   -- send A (min value) faders
   [13] = { [37] = "minvel" },
