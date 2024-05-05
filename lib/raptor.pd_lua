@@ -3583,15 +3583,28 @@ function raptor:launchpad_ctl(atoms)
 	    if self:check_master() then
 	       lp_tempo[portno] = val > 0
 	       if val > 0 then
-		  local i = param_i["tempo"]
-		  local bpm = math.floor(i and self.param_val[i] or 0)
-		  i = 0
-		  for j = 1, 8 do
-		     if lp_tempo_presets[j] == bpm then
-			i = j
-			break
+		  local function tempo_select()
+		     local i = param_i["tempo"]
+		     local bpm = math.floor(i and self.param_val[i] or 0)
+		     if bpm < lp_tempo_presets[1]-10 or
+			bpm > lp_tempo_presets[8]+10 then
+			-- out of range
+			return 0
 		     end
+		     -- round to the nearest preset value that we have
+		     local d = 1000
+		     i = 0
+		     for j = 1, 8 do
+			local c = math.abs(lp_tempo_presets[j] - bpm)
+			if c <= d then
+			   i = j
+			   d = c
+			end
+		     end
+		     --assert(d < 1000 and i > 0)
+		     return i
 		  end
+		  local i = tempo_select()
 		  self:lp_set_overlay(i, assigned)
 	       else
 		  self:lp_reset_overlay()
