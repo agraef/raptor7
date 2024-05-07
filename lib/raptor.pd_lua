@@ -7183,6 +7183,14 @@ function raptor:in_1(sel, atoms)
       local res, val = self:looper(name, cmd)
       if res then
 	 self:outlet(1, res, {val})
+	 if res == "loopsize" then
+	    local i = param_i[res]
+	    if i then
+	       -- update the parameter in internal storage so that it can be
+	       -- picked up by the loopsize overlay of the Launchpad
+	       self.param_val[i] = val
+	    end
+	 end
       end
       if last_loopstate ~= self.arp.loopstate then
 	 -- djcontrol and launchpad tie-in, updates the LOOP buttons
