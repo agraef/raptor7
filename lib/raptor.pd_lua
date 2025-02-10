@@ -4202,7 +4202,7 @@ local lkgrid = 0
 
 local launchkey_master = nil
 
-local launchkey_models = { [15] = "MK3", [18] = "MK3 88" }
+local launchkey_models = { [15] = "MK3", [18] = "MK3 88", [19] = "MK4 Mini", [20] = "MK4" }
 
 local function launchkey_model_name(id)
    return launchkey_models[id] or "??"
@@ -4590,8 +4590,12 @@ function raptor:launchkey_sysex(atoms, portno)
 	 local rid = atoms[8]
 	 -- 02h = LK Mini, 34h-37h = LK 25-61, 40h = LK 88; we can all treat
 	 -- these the same, except the LK 88 which has a different sysex id
-	 local id = rid==0x64 and 18 or
+	 local id = rid==0x40 and 18 or
 	    (rid==0x02 or rid>=0x34 and rid<=0x37) and 15
+	 -- XXXFIXME: MK4 devices: I only have the LK Mini MK4 37 which
+	 -- identifies as 0x42, so we assume for now that any id > 0x40 is a
+	 -- MK4 device, but this needs to be verified
+	 --id = id or (rid > 0x42 and 20) or (rid > 0x40 and 19)
 	 if not id then
 	    pd.post(string.format("WARNING: unknown Launchkey device %xh on port #%d", rid, portno))
 	 elseif launchkey_id == id then
