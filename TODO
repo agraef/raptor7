@@ -1,0 +1,5 @@
+not a table / no atoms error in testing branch if no devices detected? might
+be an issue with the drivers returning a non-table value which then gets send
+to an outlet, maybe a nil value?
+
+Launchkey MK4 not working, needs adjustments in the driver
