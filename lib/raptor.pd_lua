@@ -6235,11 +6235,16 @@ function raptor:in_1_ctl(atoms)
    -- simple pass-through; we do *not* check the MIDI channel here, but we do
    -- check for ccmaster to direct messages to the right instance
    if self:check_ccmaster() then
-      if atoms[2] == 7 and self.deck > 0 then
+      if atoms[2] == 16 and ch == 1 then
+	 -- CC16 on channel 1 selects preset (experimental)
+	 self:in_1_preset({atoms[1]+1})
+      elseif atoms[2] == 7 and self.deck > 0 then
 	 -- volume CC, tie-in with cross fade control (djcontrol)
 	 self.djdata.vol[self.deck] = atoms[1]
+	 self:outlet(1, "ctl", self:rechan(atoms))
+      else
+	 self:outlet(1, "ctl", self:rechan(atoms))
       end
-      self:outlet(1, "ctl", self:rechan(atoms))
    end
 end
 
