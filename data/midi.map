@@ -269,23 +269,27 @@
     [37] = "mode"
   },
   [80] = {
+    [1] = "mute",
     [17] = { "loop-load", true },
     [25] = "pos",
     [32] = "pos",
     [37] = "pos"
   },
   [81] = {
+    [1] = "latch",
     [17] = { "loop-save", true },
     [25] = "tempo",
     [32] = "tempo",
     [37] = "tempo"
   },
   [82] = {
+    [1] = "bypass",
     [25] = "meter-num",
     [32] = "meter-num",
     [37] = "meter-num"
   },
   [83] = {
+    [1] = "loop",
     [25] = "meter-denom",
     [32] = "meter-denom",
     [37] = "meter-denom"
