@@ -2271,7 +2271,7 @@ function raptor:initialize(sel, atoms)
    self.last_chan = nil
 
    -- midi parameters
-   self.pgmset = false
+   self.pgmset = 0
    self.pgm = 0
    self.inchan = 0
    self.outchan = 0
@@ -6250,7 +6250,7 @@ end
 
 function raptor:in_1_pgmset(atoms)
    if type(atoms[1]) == "number" then
-      self.pgmset = atoms[1] ~= 0
+      self.pgmset = atoms[1]
    end
 end
 
@@ -6258,16 +6258,17 @@ function raptor:in_1_pgm(atoms)
    -- kludge: this can be either an SMMF or a parameter set/get message, we
    -- deal with that here on the fly
    if #atoms > 1 then
-      if self.pgmset then
-	 -- pgmset mode: interpret program changes as preset switches, rather
-	 -- than passing them on to a connected synth (this is disabled by
-	 -- default and can be set with the init subpatch of the main patch)
+      if self.pgmset > 0 then
+	 -- pgmset mode: interpret program changes as preset switches (this is
+	 -- disabled by default and can be set with the init subpatch of the
+	 -- main patch)
 	 if self:check_ccmaster() then
 	    self:in_1_preset({atoms[1]})
 	 end
-      elseif self:check_ccmaster() then
-	 -- similar to CC, we don't require the input channel to match, but we
-	 -- do check ccmaster to direct the PC to the right instance(s)
+      elseif self.pgmset < 0 and self:check_ccmaster() then
+	 -- pass-through mode: similar to CC, we don't require the input
+	 -- channel to match, but we do check ccmaster to direct the PC to the
+	 -- right instance(s)
 	 self:outlet(1, "pgm", self:rechan(atoms))
       end
    else
