@@ -3,3 +3,10 @@ be an issue with the drivers returning a non-table value which then gets send
 to an outlet, maybe a nil value?
 
 Launchkey MK4 not working, needs adjustments in the driver
+
+pickup mode doesn't seem to work correctly, it sometimes fails to pickup the
+value just changed before, and also fails if multiple controls are operated at
+the same time; also, turning off pickup mode doesn't seem to make a difference
+
+need to add some macro controls (four would be a good number) which can be
+configured to change multiple parameters at once
