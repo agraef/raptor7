@@ -1,0 +1,13 @@
+#N canvas 326 390 474 321 12;
+#X declare -path lib;
+#X obj 30 100 loadbang;
+#X text 30 130 set meter and tempo \, enable latch;
+#X obj 160 30 declare -path lib;
+#X text 30 70 additional setup:;
+#X obj 30 260 s arp-arp;
+#X msg 70 200 \; arp vis 1;
+#X msg 30 160 meter 9 8 \, tempo 120 \, latch 1 \, inchan 1;
+#X obj 30 30 raptor7-pc2 arp 1;
+#X connect 0 0 6 0;
+#X connect 0 0 5 0;
+#X connect 6 0 4 0;
