@@ -7209,6 +7209,9 @@ function raptor:in_1(sel, atoms)
 	 self:launchkey_loop(self.arp.loopstate)
 	 self:apcmini_loop(self.arp.loopstate)
       end
+   elseif sel == "pgmoff" then
+      -- pass-through
+      self:outlet(1, "pgmoff", atoms)
    else
       local i = param_i[sel]
       if self.midi_learn == 1 and atoms[1] and i then
