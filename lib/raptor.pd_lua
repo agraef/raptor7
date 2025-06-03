@@ -6242,7 +6242,7 @@ function raptor:in_1_ctl(atoms)
 	 -- volume CC, tie-in with cross fade control (djcontrol)
 	 self.djdata.vol[self.deck] = atoms[1]
 	 self:outlet(1, "ctl", self:rechan(atoms))
-      else
+      elseif not self.ctloff then -- CC pass-through disabled
 	 self:outlet(1, "ctl", self:rechan(atoms))
       end
    end
@@ -7210,8 +7210,13 @@ function raptor:in_1(sel, atoms)
 	 self:apcmini_loop(self.arp.loopstate)
       end
    elseif sel == "pgmoff" then
-      -- pass-through
+      -- pass through, this is handled in the main patch
       self:outlet(1, "pgmoff", atoms)
+   elseif sel == "ctloff" then
+      if type(atoms[1]) == "number" then
+	 -- disable CC pass-through
+	 self.ctloff = atoms[1] ~= 0
+      end
    else
       local i = param_i[sel]
       if self.midi_learn == 1 and atoms[1] and i then
