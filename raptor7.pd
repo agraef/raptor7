@@ -1,4 +1,4 @@
-#N canvas 819 399 587 407 10;
+#N canvas 822 399 587 407 10;
 #X declare -path lib;
 #X obj 101 84 bng 25 250 50 0 \$0-midi-learn-bang empty empty 17 7
 0 10 #fcfcfc #000000 #000000;
@@ -138,7 +138,7 @@ program changes will be passed through to MIDI output instead, f 51
 #X msg 20 120 stop;
 #X text 143 318 tempo (bpm);
 #X floatatom 210 340 5 30 960 0 - #0-tempo-sync -, f 5;
-#N canvas 993 237 623 621 time 0;
+#N canvas 998 237 623 621 time 0;
 #X obj 460 210 inlet;
 #X obj 230 20 tgl 15 1 empty \$0-master-toggle M 17 7 0 10 #fcfcfc
 #000000 #000000 1 1;
@@ -589,6 +589,7 @@ doing..., f 45;
 #X obj 320 193 change 1;
 #X obj 396 170 s kill-switch;
 #X obj 320 220 t f f f;
+#X obj 530 210 r all-play;
 #X connect 0 0 78 0;
 #X connect 1 0 43 0;
 #X connect 2 0 67 0;
@@ -690,9 +691,10 @@ doing..., f 45;
 #X connect 88 0 36 1;
 #X connect 88 1 35 1;
 #X connect 88 2 78 1;
+#X connect 89 0 78 0;
 #X coords 0 -1 1 1 187 21 1 113 17;
 #X restore 20 30 pd time;
-#N canvas 301 252 423 381 input 0;
+#N canvas 303 252 423 381 input 0;
 #X obj 20 20 midi-input;
 #X obj 20 90 r \$0-arp;
 #X obj 20 70 r all-arp;
@@ -1303,7 +1305,6 @@ d denotes a subdivision of the base pulse. (E.g. \, d=2 denotes duplets
 #X text 246 343 #20;
 #X obj 65 190 tgl 15 0 empty \$0-click click -34 5 0 10 #fcfcfc #000000
 #000000 0 1;
-#X obj 110 57 pc \$0 2 4 1 8 9 12 13 15;
 #X connect 5 0 25 0;
 #X connect 5 1 25 1;
 #X connect 5 2 33 0;
